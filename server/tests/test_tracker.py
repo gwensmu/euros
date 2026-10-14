@@ -185,7 +185,7 @@ def test_contract_fixture_and_missing_vendor_labels(service):
     command=json.loads((Path(__file__).resolve().parents[2]/'contracts/tracker-import.json').read_text())
     tracker.ingest(command)
     result=tracker.read(command['records'][0]['source_key'])['workout']
-    assert result['training_benefit'] is None and result['polar_zone_definitions'] is None
+    assert result['training_benefit'] is None and result['polar_zone_definitions']['boundaries_bpm'] == [95,114,133,152,171,190]
     assert result['heart_rate_source_ids']==['synthetic-hr-1']
 
 
@@ -205,3 +205,25 @@ def test_sport_identity_does_not_infer_other_sports():
     assert sport_identity(workout())['sport'] is None
     assert sport_identity({**workout(), 'source_title': 'Running'})['display_name'] == 'Running'
     assert sport_identity({**workout(), 'source_package': 'other', 'exercise_type': 44})['sport'] is None
+
+
+def test_personal_zone_boundaries_are_distinct_from_custom_bands():
+    w=workout();start=datetime.fromisoformat(w['start_at'].replace('Z','+00:00'))
+    values=[94,95,114,133,152,171,190,191,100]
+    w['heart_rate_samples']=[{'at':(start+timedelta(seconds=i*10)).isoformat(),'bpm':bpm} for i,bpm in enumerate(values)]
+    result=metrics(w,[120,160]);zones=result['hr_zones']
+    assert [z['covered_seconds'] for z in zones['zones']]==[10]*5
+    assert zones['below_range_seconds']==10 and zones['above_range_seconds']==20
+    assert zones['uncovered_seconds']==520
+    assert sum(result['time_bands']['covered_seconds'])==80
+    assert zones['boundaries_bpm']==[95,114,133,152,171,190]
+
+
+def test_personal_zones_exclude_gaps_and_no_coverage():
+    w=workout();r=metrics(w)
+    z=r['hr_zones']
+    assert sum(x['covered_seconds'] for x in z['zones'])+z['below_range_seconds']+z['above_range_seconds']==r['covered_seconds']
+    for samples in ([],w['heart_rate_samples'][:1]):
+        w['heart_rate_samples']=samples;z=metrics(w)['hr_zones']
+        assert all(x['covered_seconds']==0 for x in z['zones'])
+        assert z['uncovered_seconds']==600

@@ -8,6 +8,13 @@ from .domain import DomainError, canonical, instant, MAX_SQLITE_INTEGER
 POLAR = 'fi.polar.polarflow'
 ZONE = ZoneInfo('America/Chicago')
 MAX_SAMPLES = 20000
+PERSONAL_ZONE_PROFILE = {
+    'id': 'personal-polar-2026-10-14',
+    'boundaries_bpm': [95, 114, 133, 152, 171, 190],
+    'provenance': 'User-confirmed Polar zone screenshot, October 14, 2026; screenshot not retained in repository',
+    'convention': 'lower inclusive, upper exclusive; below 95 and at/above 190 reported separately',
+    'estimate': True,
+}
 
 
 def text(value, field, limit=500):
@@ -84,6 +91,7 @@ def metrics(payload, boundaries=None):
     intervals = []
     total = weighted = 0.0
     bands = [0.0] * (len(boundaries)+1) if boundaries is not None else None
+    zone_seconds = [0.0] * 7
     segments = []
     for a, b in zip(samples, samples[1:]):
         left, right = instant(a['at'], 'at'), instant(b['at'], 'at')
@@ -91,6 +99,7 @@ def metrics(payload, boundaries=None):
         if seconds <= 60:
             total += seconds
             weighted += seconds*a['bpm']
+            zone_seconds[sum(a['bpm'] >= cut for cut in PERSONAL_ZONE_PROFILE['boundaries_bpm'])] += seconds
             segments.append((left, right, a['bpm']))
             if bands is not None:
                 bands[sum(a['bpm'] >= cut for cut in boundaries)] += seconds
@@ -122,6 +131,11 @@ def metrics(payload, boundaries=None):
             'sample_average_bpm': round(sum(s['bpm'] for s in samples)/len(samples), 2) if samples else None,
             'curve': curve, 'curve_method': 'ordered_bucket_min_max', 'curve_downsampled': len(curve)<len(samples),
             'intervals': intervals, 'interval_seconds': 300,
+            'hr_zones': {**PERSONAL_ZONE_PROFILE, 'zones': [
+                {'name': f'Zone {i}', 'lower_bpm': PERSONAL_ZONE_PROFILE['boundaries_bpm'][i-1],
+                 'upper_bpm_exclusive': PERSONAL_ZONE_PROFILE['boundaries_bpm'][i], 'covered_seconds': zone_seconds[i]}
+                for i in range(1, 6)], 'below_range_seconds': zone_seconds[0],
+                'above_range_seconds': zone_seconds[6], 'uncovered_seconds': duration-total},
             'time_bands': None if bands is None else {'boundaries_bpm': boundaries, 'covered_seconds': bands,
                 'convention': 'lower inclusive, upper exclusive; not Polar zones'},
             'method': 'time-weighted previous-sample hold; only adjacent gaps <=60s; no leading/trailing extrapolation'}
@@ -209,7 +223,7 @@ class TrackerStore:
         payload = json.loads(row['payload'])
         return {'workout': {**header, **{k:v for k,v in payload.items() if k != 'heart_rate_samples'},
                             'heart_rate_source_ids': sorted({s['source_id'] for s in payload['heart_rate_samples']}),
-                            **sport_identity(payload), 'training_benefit': None, 'polar_zone_definitions': None,
+                            **sport_identity(payload), 'training_benefit': None, 'polar_zone_definitions': PERSONAL_ZONE_PROFILE,
                             'metrics': metrics(payload,boundaries)}}
 
     def list(self, date_from, date_to):

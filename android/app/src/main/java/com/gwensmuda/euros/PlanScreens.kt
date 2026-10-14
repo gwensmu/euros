@@ -260,13 +260,25 @@ object PlanDisplay {
     val range=(high-low).coerceAtLeast(1).toFloat()
     listOf(0f,.5f,1f).forEach{y->drawLine(Color(0xFFDCE3EF),Offset(0f,size.height*y),Offset(size.width,size.height*y),1f)}
     fun point(s:HeartSample)=Offset((s.time.toEpochMilli()-from).toFloat()/duration*size.width,size.height-(s.bpm-low)/range*size.height)
-    r.samples.zipWithNext().filter{Duration.between(it.first.time,it.second.time).seconds in 0..60}.forEach{(a,b)->drawLine(Accent,point(a),point(b),2.dp.toPx())}
+    r.samples.zipWithNext().filter{Duration.between(it.first.time,it.second.time)<=Duration.ofSeconds(60)}.forEach{(a,b)->drawLine(Accent,point(a),point(b),2.dp.toPx())}
     if(r.samples.size==1)drawCircle(Accent,3.dp.toPx(),point(r.samples.single()))
    }
   }
   Row(Modifier.fillMaxWidth().padding(start=34.dp),horizontalArrangement=Arrangement.SpaceBetween){Text(r.session.start.atZone(PlanDomain.zone).format(clock),style=MaterialTheme.typography.labelSmall,color=Color.Gray);Text(r.session.end.atZone(PlanDomain.zone).format(clock),style=MaterialTheme.typography.labelSmall,color=Color.Gray)}
  }
- Text("${r.coveredSeconds/60} min of heart-rate coverage",style=MaterialTheme.typography.bodySmall,color=MaterialTheme.colorScheme.onSurfaceVariant)
+ Text("Estimated time in zones",style=MaterialTheme.typography.titleMedium,fontWeight=FontWeight.SemiBold)
+ val duration=Duration.between(r.session.start,r.session.end).toMillis()/1000.0
+ fun minutes(seconds:Double)="%.1f min".format(seconds/60)
+ (1..5).forEach { i ->
+  val label="Zone $i · ${HeartRateZones.boundaries[i-1]}–<${HeartRateZones.boundaries[i]} bpm"
+  Column(verticalArrangement=Arrangement.spacedBy(4.dp)) {
+   Row(Modifier.fillMaxWidth(),horizontalArrangement=Arrangement.SpaceBetween){Text(label,style=MaterialTheme.typography.bodySmall);Text(if(r.coveredSeconds>0)minutes(r.zones[i]) else "—",style=MaterialTheme.typography.bodySmall)}
+   LinearProgressIndicator(progress={if(duration>0)(r.zones[i]/duration).toFloat().coerceIn(0f,1f) else 0f},modifier=Modifier.fillMaxWidth(),color=Accent,trackColor=Color(0xFFE5EAF2))
+  }
+ }
+ if(r.zones[0]>0)Text("Below 95 bpm · ${minutes(r.zones[0])}",style=MaterialTheme.typography.bodySmall)
+ if(r.zones[6]>0)Text("190+ bpm · ${minutes(r.zones[6])}",style=MaterialTheme.typography.bodySmall)
+ Text("${minutes(r.coveredSeconds)} covered · ${minutes((duration-r.coveredSeconds).coerceAtLeast(0.0))} without HR",style=MaterialTheme.typography.bodySmall,color=MaterialTheme.colorScheme.onSurfaceVariant)
 }
 @Composable fun MovementCard(repo:Repository,date:LocalDate) {
  val context=LocalContext.current;var movement by remember(date){mutableStateOf<MovementSummary?>(null)}

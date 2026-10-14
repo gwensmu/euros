@@ -115,9 +115,10 @@ def create_app(store, api_token, mcp_token, public_hosts=(), model_service=None)
 
         The curve preserves bucket extrema with at most 600 points; summary metrics use
         original samples. Covered HR uses adjacent sample gaps <=60s without extrapolation.
-        Windows are elapsed time, never assumed rounds. Time bands require explicit supplied
-        cutoffs; do not infer max HR or Polar zones from observed peak. Training benefit and
-        Polar zone definitions are unavailable, not generated. No cortisol/CNS/readiness claims.
+        Windows are elapsed time, never assumed rounds. Named HR zones use the user-confirmed
+        Polar screenshot cutoffs, with provenance; computed totals may differ from Polar.
+        Optional custom time bands remain separate. Do not infer max HR from observed peak.
+        Training benefit is unavailable. No cortisol/CNS/readiness claims.
         """
         return trackers.read(source_key, zone_boundaries_bpm)
 

@@ -24,7 +24,7 @@ import kotlin.reflect.KClass
 data class ImportedSession(val sourceKey:String,val sourcePackage:String,val start:Instant,val end:Instant,val exerciseType:Int,val deleted:Boolean=false)
 data class ImportedWeight(val sourceKey:String,val sourcePackage:String,val recordedAt:Instant,val weightLb:Double)
 data class HeartSample(val time:Instant,val bpm:Long)
-data class SessionRecap(val session:ImportedSession,val samples:List<HeartSample>,val coveredSeconds:Long,val averageBpm:Double?,val peakBpm:Long?)
+data class SessionRecap(val session:ImportedSession,val samples:List<HeartSample>,val coveredSeconds:Double,val averageBpm:Double?,val peakBpm:Long?,val zones:List<Double>)
 data class MovementSummary(val workoutWalkMinutes:Long?,val walkCount:Int,val sourcePackage:String=HealthSources.FITBIT)
 data class HealthImportSummary(val sessions:Int,val heartRateRecords:Int,val messages:List<String>,val weightRecords:Int=0)
 class HealthImport(private val context:Context,private val dao:EurosDao) {
@@ -90,9 +90,7 @@ class HealthImport(private val context:Context,private val dao:EurosDao) {
     val values=r.getJSONArray("samples");for(i in 0 until values.length()) { val item=values.getJSONObject(i);val at=Instant.parse(item.getString("time"));if(at>=session.start && at<=session.end) samples.add(HeartSample(at,item.getLong("bpm"))) }
    }
   }
-  val unique=HealthSnapshots.deduplicateSamples(samples);val covered=HealthCoverage.coveredSeconds(session.start,session.end,unique.map{it.time})
-  var weighted=0.0;unique.zipWithNext().forEach{(a,b)->val gap=Duration.between(a.time,b.time).seconds;if(gap in 1..60) weighted+=a.bpm*gap.toDouble()}
-  return SessionRecap(session,unique,covered,if(covered>0) weighted/covered else null,unique.maxOfOrNull{it.bpm})
+  return HeartRateZones.recap(session,samples)
  }
  suspend fun sessions(startDate:LocalDate,endDate:LocalDate):List<ImportedSession> = mutex.withLock {
   require(!endDate.isBefore(startDate))
