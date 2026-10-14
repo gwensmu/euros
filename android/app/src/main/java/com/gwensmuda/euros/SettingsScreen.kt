@@ -25,6 +25,8 @@ import java.time.LocalTime
  var diagnostics by rememberSaveable { mutableStateOf(false) }
  val context=LocalContext.current
  val plan=remember { AuthoredPlan(context).json() }
+ val connection=(context.applicationContext as EurosApplication).connection
+ val syncState by connection.state.collectAsState()
  var reminderSummary by remember { mutableStateOf("Off") }
  var healthSummary by remember { mutableStateOf("No imported records") }
  LaunchedEffect(section) {
@@ -47,6 +49,7 @@ import java.time.LocalTime
  }
  if(section=="Settings") {
   Column {
+   SettingsRow("Sync",if(syncState.syncing) "Syncing…" else if(syncState.error!=null) "Connection needs attention" else if(syncState.connected) "Connected · ${pending.size} pending" else "Not connected"){section="Sync"}
    SettingsRow("Health Connect",healthSummary){section="Health Connect"}
    SettingsRow("Notifications",reminderSummary){section="Notifications"}
    val goal=plan.getJSONObject("goal")
@@ -57,7 +60,7 @@ import java.time.LocalTime
   }
   TextButton(onClick={diagnostics=!diagnostics}){Text(if(diagnostics)"Hide diagnostics" else "Diagnostics")}
   if(diagnostics) ConnectionDiagnostics(repo,pending)
- } else SettingsExtras(repo,records,section)
+ } else if(section=="Sync") ConnectionDiagnostics(repo,pending) else SettingsExtras(repo,records,section)
 }
 
 @Composable private fun SettingsRow(title:String,value:String,onClick:()->Unit) {
@@ -86,7 +89,14 @@ import java.time.LocalTime
  var busy by remember { mutableStateOf(false) }
  var connection by remember { mutableStateOf(false) }
  val scope=rememberCoroutineScope()
- LaunchedEffect(Unit){server=repo.dao.meta("server") ?: ""}
+ val context=LocalContext.current
+ val controller=(context.applicationContext as EurosApplication).connection
+ val state by controller.state.collectAsState()
+ LaunchedEffect(Unit){controller.initialize();server=state.server.ifBlank{repo.dao.meta("server") ?: ""}}
+ Text(if(state.syncing) "Syncing…" else if(state.connected) "Connected" else "Not connected")
+ state.lastSuccess?.let { time -> Text("Last synced "+java.time.Instant.parse(time).atZone(java.time.ZoneId.systemDefault()).format(java.time.format.DateTimeFormatter.ofPattern("MMM d · h:mm a"))) }
+ state.error?.let{Text(it,color=MaterialTheme.colorScheme.error)}
+ if(state.connected) TextButton(enabled=!state.syncing && !busy,onClick={scope.launch{withContext(Dispatchers.IO){controller.sync()}}}){Text("Sync now")}
  Text("${pending.size} pending changes",style=MaterialTheme.typography.bodyMedium)
  pending.filter{it.error!=null}.forEach { p ->
   Text(p.error!!,color=MaterialTheme.colorScheme.error)
@@ -94,19 +104,25 @@ import java.time.LocalTime
   TextButton(onClick={confirm=true}){Text("Use server version")}
   if(confirm) AlertDialog(onDismissRequest={confirm=false},title={Text("Discard local change?")},text={Text("This record will use the server version.")},confirmButton={TextButton(onClick={scope.launch{runCatching{repo.acceptServer(p)}.onFailure{message=it.message};confirm=false}}){Text("Discard")}},dismissButton={TextButton(onClick={confirm=false}){Text("Cancel")}})
  }
- TextButton(onClick={connection=!connection}){Text("Development connection")}
+ TextButton(onClick={connection=!connection}){Text(if(state.connected) "Update connection" else "Connect to server")}
  if(connection) {
   OutlinedTextField(server,{server=it},label={Text("Server URL")},singleLine=true,modifier=Modifier.fillMaxWidth())
   OutlinedTextField(token,{token=it},label={Text("Access token")},singleLine=true,visualTransformation=PasswordVisualTransformation(),modifier=Modifier.fillMaxWidth())
-  Button(enabled=!busy && server.isNotBlank() && token.isNotBlank(),onClick={scope.launch{
+  Button(enabled=!busy && !state.syncing && server.isNotBlank() && token.isNotBlank(),onClick={scope.launch{
    busy=true
-   try { withContext(Dispatchers.IO){repo.sync(Api(server,token));repo.dao.meta(Metadata("server",server))};message="Connected until Euros restarts" }
+   try { withContext(Dispatchers.IO){controller.connect(server,token)};token="";connection=false;message="Connected" }
    catch(e:kotlinx.coroutines.CancellationException){throw e}
-   catch(e:Exception){message=e.message ?: "Couldn't sync"}
+   catch(e:Exception){message=syncFailureMessage(e)}
    finally{busy=false}
   }}){Text(if(busy)"Syncing…" else "Sync")}
  }
- TextButton(onClick={repo.disconnectInterpretation();token="";message="Disconnected"}){Text("Disconnect model requests")}
+ if(state.connected || state.error!=null) TextButton(enabled=!busy && !state.syncing,onClick={scope.launch{
+  busy=true
+  try{withContext(Dispatchers.IO){controller.disconnect()};token="";message="Disconnected"}
+  catch(e:kotlinx.coroutines.CancellationException){throw e}
+  catch(_:Exception){message="Couldn't disconnect. Try again"}
+  finally{busy=false}
+ }}){Text("Disconnect")}
  TextButton(enabled=!busy,onClick={scope.launch{
   busy=true
   try { NanoDraftInterpreter().use{message=when(it.availability().state){"available"->"On-device model available";"downloadable"->"Model download needed";"downloading"->"Model downloading";else->"On-device model unavailable"}} }

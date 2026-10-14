@@ -14,6 +14,7 @@ class Repository(private val db:EurosDatabase, llmClient:LlmClient?=null) {
  suspend fun interpretFood(text:String):JSONObject = requireInterpreter().interpretFood(text)
  suspend fun reviewWeek(weekStart:java.time.LocalDate,records:List<Record>):JSONObject = requireInterpreter().reviewWeek(weekStart,records)
  private fun requireInterpreter():LlmClient = interpreter ?: error("Connect to your server in Settings to continue")
+ fun connectInterpretation(api:SyncApi) { interpreter=BackendLlmClient(api) }
  fun disconnectInterpretation() { interpreter=null }
 
  val dao=db.dao(); private val mutex=Mutex()

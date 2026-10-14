@@ -1,6 +1,7 @@
 package com.gwensmuda.euros
 
 import android.os.Bundle
+import androidx.lifecycle.lifecycleScope
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.compose.BackHandler
@@ -18,15 +19,28 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import java.time.LocalDate
 
 class EurosApplication:android.app.Application() {
  val repository by lazy { Repository(EurosDatabase.open(this)) }
+ val connection by lazy { SyncConnection(repository,SecureEnrollmentStore(this),BackgroundSync(this),reconcile={
+  ReminderScheduler(this,repository.dao).reconcile(repository.dao.recordsIncludingDeleted().filter{!it.deleted})
+ }) }
+ private val applicationScope=kotlinx.coroutines.CoroutineScope(kotlinx.coroutines.SupervisorJob()+Dispatchers.IO)
+ override fun onCreate(){super.onCreate();applicationScope.launch {
+  connection.initialize()
+  val trigger=PendingSyncTrigger()
+  repository.dao.observePending().collect { if(trigger.changed(it))connection.request() }
+ }}
 }
 class MainActivity:ComponentActivity() {
  private var notificationId by mutableStateOf<String?>(null)
+ override fun onStart(){super.onStart();(application as EurosApplication).let { app ->
+  lifecycleScope.launch(Dispatchers.IO){app.connection.initialize();app.connection.request()}
+ }}
  override fun onNewIntent(intent:android.content.Intent){super.onNewIntent(intent);setIntent(intent);notificationId=intent.getStringExtra("activity_id")}
  override fun onCreate(savedInstanceState:Bundle?) {
   super.onCreate(savedInstanceState)
