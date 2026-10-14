@@ -194,8 +194,6 @@ def test_recovery_intake_and_rest(store):
     store.command(c)
     base = command("water", kind="recovery", recovery_step_type="hydration")
     store.command(base)
-    with pytest.raises(DomainError, match="actual_intake_required"):
-        store.command(command("water",1,kind="recovery",recovery_step_type="hydration",status="done"))
     for intake in [{"kind":"hydration","amount":0,"unit":"ml"}, {"kind":"hydration","amount":500,"unit":"oz"}, {"kind":"supplement","amount":300,"unit":"mg"}]:
         with pytest.raises(DomainError):
             store.command(command("water",1,kind="recovery",recovery_step_type="hydration",status="done",recovery_intake=intake))
@@ -288,3 +286,20 @@ def test_concurrent_weight_selection_has_one_winner(store):
     assert sum("record" in result for result in results) == 1
     assert {result["error"] for result in results if "error" in result} == {"weekly_anchor_already_selected"}
     assert len(store.changes()["changes"]) == 1
+
+
+def test_hydration_checklist_completion_does_not_invent_volume(store):
+    c = command("water-check", kind="recovery", recovery_step_type="hydration", status="done",
+                title="12–20 oz of water")
+    result = store.command(c)
+    assert result["record"]["payload"] == c["payload"]
+    assert "recovery_intake" not in result["record"]["payload"]
+    assert store.command(c) == result
+    assert Store(store.path).records()["records"][0]["payload"] == c["payload"]
+    assert len(store.changes()["changes"]) == 1
+
+
+def test_supplement_completion_still_requires_actual_dose(store):
+    with pytest.raises(DomainError, match="actual_intake_required"):
+        store.command(command("supplement", kind="recovery", recovery_step_type="supplement", status="done"))
+    assert store.changes()["changes"] == []

@@ -20,7 +20,7 @@ object RecordValidation {
     require(p.optString("status") in setOf("pending","done","skipped"))
     val intake=p.optJSONObject("recovery_intake")
     val substance=p.optString("recovery_step_type") in setOf("hydration","supplement")
-    if(p.getString("status")=="done" && substance) require(intake!=null) { "Enter the actual amount" }
+    if(p.getString("status")=="done" && p.optString("recovery_step_type")=="supplement") require(intake!=null) { "Enter the actual amount" }
     if(intake!=null) {
      require(p.getString("kind")=="recovery" && p.getString("status")=="done")
      quantity(intake.opt("amount"),true)

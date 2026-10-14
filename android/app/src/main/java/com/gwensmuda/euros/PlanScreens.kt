@@ -37,6 +37,7 @@ object PlanDisplay {
   return p.optJSONObject("plan_snapshot")?.optJSONObject("template") ?: p.optJSONObject("prescription") ?: JSONObject()
  }
  fun detail(record:Record):String? {
+  if(PlanDomain.payload(record).optString("recovery_step_type")=="hydration")return "12–20 oz of water"
   val t=template(record)
   val instruction=t.optString("instructions").takeIf{it.isNotBlank() && it!="null"}
   if(instruction!=null) return instruction
@@ -159,7 +160,7 @@ object PlanDisplay {
  }catch(e:Exception){error=e.message}finally{busy=false}}}
  Row(Modifier.fillMaxWidth(),verticalAlignment=Alignment.CenterVertically){
   if(logging !in setOf(LoggingMode.STEPS,LoggingMode.WEIGHT,LoggingMode.UNSUPPORTED)) {
-   Button(enabled=!busy,onClick={if(logging==LoggingMode.FOOD)onFood() else finish("done")}){Text(if(kind in setOf("weights","rest"))"Done" else "Log")}
+   Button(enabled=!busy,onClick={if(logging==LoggingMode.FOOD)onFood() else finish("done")}){Text(if(kind in setOf("weights","rest") || p.optString("recovery_step_type")=="hydration")"Done" else "Log")}
    Spacer(Modifier.width(8.dp));OutlinedButton(enabled=!busy,onClick={finish("skipped")}){Text(if(kind=="weights")"Skipped" else "Skip")}
   }
   Spacer(Modifier.weight(1f));IconButton(onClick=onClose){Icon(Icons.Outlined.Close,"Close")}
@@ -176,7 +177,7 @@ object PlanDisplay {
  else if(logging==LoggingMode.WEIGHT) WeightPanel(repo,records,PlanDomain.day(record),record,onClose)
  else {
   val snapshot=p.optJSONObject("plan_snapshot");val template=snapshot?.optJSONObject("template") ?: snapshot
-  template?.optString("instructions")?.takeIf{it.isNotBlank()}?.let{Text(it)}
+  PlanDisplay.detail(record)?.let{Text(it)}
   template?.optJSONArray("exercises")?.let{e->for(i in 0 until e.length()){
    val ex=e.getJSONObject(i)
    Column(Modifier.fillMaxWidth().padding(vertical=10.dp),verticalArrangement=Arrangement.spacedBy(5.dp)){

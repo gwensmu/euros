@@ -554,8 +554,8 @@
       "id": "hydration",
       "kind": "recovery",
       "title": "Hydration",
-      "instructions": "",
-      "sourceRef": "recoveryDraft"
+      "instructions": "12–20 oz of water",
+      "sourceRef": "currentReview"
     },
     {
       "id": "tissue",

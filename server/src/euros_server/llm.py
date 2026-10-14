@@ -12,7 +12,7 @@ import httpx
 from .domain import DomainError, NUTRIENTS, TYPES, canonical, instant, number, validate_payload
 
 ZONE = ZoneInfo("America/Chicago")
-PROMPT_VERSION = "euros-2026-10-14-v1"
+PROMPT_VERSION = "euros-2026-10-14-v2"
 
 
 def object_schema(properties):
@@ -46,6 +46,7 @@ misses, physiological readiness, or unrecorded food/training. Do not invent tota
 measurements, techniques, sleep, or trends. Use numeric facts exactly as supplied. Food totals are only recorded intake, never
 assume a whole day was logged or compare these subtotals against full-day targets. Suggestions
 are optional considerations for the user to discuss outside this app, never changes made.
+The BJJ category competition means competition practice, not a tournament or competition event.
 Moderate/heavy share nutrition. Emphasize recovery after heavy training. No automatic calorie
 adjustments, no 2050 rule, no extra exercise or eating less rewards. No follow-up question,
 plan editor, motivational filler, or medical/dose advice. Return summary and up to 3 brief

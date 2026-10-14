@@ -44,7 +44,7 @@ class DayPlanTest {
  @Test fun intakeRequiresRecoveryKindAndChildrenTakePrecedence() {
   listOf("hydration","supplement").forEach { step->
    val parent=record(kind="recovery",step=step)
-   assertEquals(LoggingMode.INTAKE,DayPlanComposer.item(parent,emptyList()).logging)
+   assertEquals(if(step=="hydration")LoggingMode.COMPLETION else LoggingMode.INTAKE,DayPlanComposer.item(parent,emptyList()).logging)
    assertEquals(LoggingMode.STEPS,DayPlanComposer.item(parent,listOf(record("child",parent="a"))).logging)
   }
   assertEquals(LoggingMode.COMPLETION,DayPlanComposer.item(record(kind="recovery",step="unknown"),emptyList()).logging)

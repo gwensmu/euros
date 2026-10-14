@@ -24,7 +24,7 @@ object DayPlanComposer {
   val steps=PlanDomain.children(record,records)
   val logging=when {
    steps.isNotEmpty()->LoggingMode.STEPS
-   kind==PlanItemKind.RECOVERY && payload.optString("recovery_step_type") in setOf("hydration","supplement")->LoggingMode.INTAKE
+   kind==PlanItemKind.RECOVERY && payload.optString("recovery_step_type")=="supplement"->LoggingMode.INTAKE
    else->when(kind) {
     PlanItemKind.BJJ->LoggingMode.SESSION
     PlanItemKind.WEIGHTS,PlanItemKind.REST,PlanItemKind.RECOVERY,PlanItemKind.MORNING->LoggingMode.COMPLETION

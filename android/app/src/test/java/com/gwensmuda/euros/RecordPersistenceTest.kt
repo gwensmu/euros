@@ -62,15 +62,22 @@ class RecordPersistenceTest {
   assertTrue(r.dao.record("food_entries","meal")!!.deleted);assertEquals(3L,r.dao.record("food_entries","meal")!!.revision)
   db.close();c.deleteDatabase("euros.db")
  }
- @Test fun recoveryRequiresActualDoseAndSkipRemovesIt()=runBlocking<Unit> {
+ @Test fun hydrationCompletionDoesNotInventVolumeAndExistingAmountsRemainValid()=runBlocking<Unit> {
   val c=ApplicationProvider.getApplicationContext<Context>();c.deleteDatabase("euros.db")
   val db=EurosDatabase.open(c);val r=Repository(db)
   val p=activity().put("recovery_step_type","hydration")
   r.upsert("activities","water",p)
-  assertTrue(runCatching{r.complete(r.dao.record("activities","water")!!,"done")}.isFailure)
-  assertEquals(1,r.dao.pending().size)
+  r.complete(r.dao.record("activities","water")!!,"done")
+  val completed=JSONObject(r.dao.record("activities","water")!!.payload)
+  assertEquals("done",completed.getString("status"));assertFalse(completed.has("recovery_intake"))
+  assertEquals(2,r.dao.pending().size)
+  val supplement=activity().put("recovery_step_type","supplement").put("status","done")
+  assertTrue(runCatching{RecordValidation.validate("activities",supplement)}.isFailure)
   p.put("status","done").put("recovery_intake",JSONObject().put("kind","hydration").put("amount",500).put("unit","ml"))
-  r.upsert("activities","water",p);r.complete(r.dao.record("activities","water")!!,"skipped")
+  r.upsert("activities","water",p)
+  r.complete(r.dao.record("activities","water")!!,"done")
+  assertEquals(500,JSONObject(r.dao.record("activities","water")!!.payload).getJSONObject("recovery_intake").getInt("amount"))
+  r.complete(r.dao.record("activities","water")!!,"skipped")
   assertFalse(JSONObject(r.dao.record("activities","water")!!.payload).has("recovery_intake"))
   db.close();c.deleteDatabase("euros.db")
  }

@@ -61,7 +61,7 @@ def validate_payload(kind, p):
             raise DomainError("invalid_activity_status")
         intake = p.get("recovery_intake")
         substance = p.get("recovery_step_type") in ("hydration", "supplement")
-        if substance and p["status"] == "done" and intake is None:
+        if p.get("recovery_step_type") == "supplement" and p["status"] == "done" and intake is None:
             raise DomainError("actual_intake_required")
         if intake is not None:
             if not isinstance(intake, dict) or p["kind"] != "recovery" or p["status"] != "done":
