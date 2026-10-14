@@ -1,0 +1,14 @@
+{
+  "command_id": "fixture-complete-activity",
+  "entity_type": "activities",
+  "entity_id": "fixture-activity",
+  "expected_revision": 1,
+  "operation": "upsert",
+  "payload": {
+    "title": "Weights",
+    "kind": "weights",
+    "scheduled_at": "2026-10-14T18:00:00-05:00",
+    "status": "done",
+    "plan_revision": "contract-fixture"
+  }
+}

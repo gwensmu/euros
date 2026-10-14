@@ -1,0 +1,13 @@
+{
+  "command_id": "fixture-create-food",
+  "entity_type": "food_entries",
+  "entity_id": "fixture-food",
+  "expected_revision": 0,
+  "operation": "upsert",
+  "payload": {
+    "consumed_at": "2026-10-14T08:00:00-05:00",
+    "local_date": "2026-10-14",
+    "raw_text": "Contract fixture, not actual intake",
+    "nutrients": { "kcal": 320, "protein_g": null, "carbs_g": 0, "fat_g": 12 }
+  }
+}

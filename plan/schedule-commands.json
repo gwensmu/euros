@@ -1,0 +1,3637 @@
+[
+  {
+    "command_id": "create-capacity-2026-10-14-breathing-wed",
+    "entity_type": "activities",
+    "entity_id": "capacity-2026-10-14-breathing-wed",
+    "expected_revision": 0,
+    "operation": "upsert",
+    "payload": {
+      "title": "Breathing",
+      "kind": "recovery",
+      "scheduled_at": "2026-10-14T08:00:00-05:00",
+      "status": "pending",
+      "plan_revision": "2026-10-14-capacity-schedule",
+      "template_id": "breathing",
+      "phase_id": "capacity",
+      "time_zone": "America/Chicago",
+      "schedule_source": "implementationTimingDefaults",
+      "prescription": {
+        "id": "breathing",
+        "kind": "recovery",
+        "title": "Breathing",
+        "instructions": "Five minutes of physiological sighing.",
+        "sourceRef": "recoveryDraft"
+      },
+      "plan_snapshot": {
+        "template": {
+          "id": "breathing",
+          "kind": "recovery",
+          "title": "Breathing",
+          "instructions": "Five minutes of physiological sighing.",
+          "sourceRef": "recoveryDraft"
+        },
+        "category": null,
+        "nutrition_profile": null
+      },
+      "parent_id": "capacity-2026-10-14-rest-wed"
+    }
+  },
+  {
+    "command_id": "create-capacity-2026-10-14-rest-wed",
+    "entity_type": "activities",
+    "entity_id": "capacity-2026-10-14-rest-wed",
+    "expected_revision": 0,
+    "operation": "upsert",
+    "payload": {
+      "title": "Rest day",
+      "kind": "rest",
+      "scheduled_at": "2026-10-14T08:00:00-05:00",
+      "status": "pending",
+      "plan_revision": "2026-10-14-capacity-schedule",
+      "template_id": "rest",
+      "phase_id": "capacity",
+      "time_zone": "America/Chicago",
+      "schedule_source": "implementationTimingDefaults",
+      "prescription": {
+        "id": "rest",
+        "kind": "rest",
+        "title": "Rest day",
+        "instructions": "",
+        "sourceRef": "currentReview"
+      },
+      "plan_snapshot": {
+        "template": {
+          "id": "rest",
+          "kind": "rest",
+          "title": "Rest day",
+          "instructions": "",
+          "sourceRef": "currentReview"
+        },
+        "category": null,
+        "nutrition_profile": null
+      }
+    }
+  },
+  {
+    "command_id": "create-capacity-2026-10-14-hydration-wed",
+    "entity_type": "activities",
+    "entity_id": "capacity-2026-10-14-hydration-wed",
+    "expected_revision": 0,
+    "operation": "upsert",
+    "payload": {
+      "title": "Hydration",
+      "kind": "recovery",
+      "scheduled_at": "2026-10-14T08:05:00-05:00",
+      "status": "pending",
+      "plan_revision": "2026-10-14-capacity-schedule",
+      "template_id": "hydration",
+      "phase_id": "capacity",
+      "time_zone": "America/Chicago",
+      "schedule_source": "implementationTimingDefaults",
+      "prescription": {
+        "id": "hydration",
+        "kind": "recovery",
+        "title": "Hydration",
+        "instructions": "",
+        "sourceRef": "recoveryDraft"
+      },
+      "plan_snapshot": {
+        "template": {
+          "id": "hydration",
+          "kind": "recovery",
+          "title": "Hydration",
+          "instructions": "",
+          "sourceRef": "recoveryDraft"
+        },
+        "category": null,
+        "nutrition_profile": null
+      },
+      "parent_id": "capacity-2026-10-14-rest-wed",
+      "recovery_step_type": "hydration"
+    }
+  },
+  {
+    "command_id": "create-capacity-2026-10-14-tissue-wed",
+    "entity_type": "activities",
+    "entity_id": "capacity-2026-10-14-tissue-wed",
+    "expected_revision": 0,
+    "operation": "upsert",
+    "payload": {
+      "title": "Tissue work",
+      "kind": "recovery",
+      "scheduled_at": "2026-10-14T08:10:00-05:00",
+      "status": "pending",
+      "plan_revision": "2026-10-14-capacity-schedule",
+      "template_id": "tissue",
+      "phase_id": "capacity",
+      "time_zone": "America/Chicago",
+      "schedule_source": "implementationTimingDefaults",
+      "prescription": {
+        "id": "tissue",
+        "kind": "recovery",
+        "title": "Tissue work",
+        "instructions": "Massage gun: 60 seconds per muscle group, quads, outer glutes and calves. Psoas stretch: 60 seconds per side. Figure-four stretch: 90 seconds per side.",
+        "sourceRef": "recoveryDraft"
+      },
+      "plan_snapshot": {
+        "template": {
+          "id": "tissue",
+          "kind": "recovery",
+          "title": "Tissue work",
+          "instructions": "Massage gun: 60 seconds per muscle group, quads, outer glutes and calves. Psoas stretch: 60 seconds per side. Figure-four stretch: 90 seconds per side.",
+          "sourceRef": "recoveryDraft"
+        },
+        "category": null,
+        "nutrition_profile": null
+      },
+      "parent_id": "capacity-2026-10-14-rest-wed"
+    }
+  },
+  {
+    "command_id": "create-capacity-2026-10-14-legs-wed",
+    "entity_type": "activities",
+    "entity_id": "capacity-2026-10-14-legs-wed",
+    "expected_revision": 0,
+    "operation": "upsert",
+    "payload": {
+      "title": "Legs up",
+      "kind": "recovery",
+      "scheduled_at": "2026-10-14T08:20:00-05:00",
+      "status": "pending",
+      "plan_revision": "2026-10-14-capacity-schedule",
+      "template_id": "legs",
+      "phase_id": "capacity",
+      "time_zone": "America/Chicago",
+      "schedule_source": "implementationTimingDefaults",
+      "prescription": {
+        "id": "legs",
+        "kind": "recovery",
+        "title": "Legs up",
+        "instructions": "Eight to ten minutes.",
+        "sourceRef": "recoveryDraft"
+      },
+      "plan_snapshot": {
+        "template": {
+          "id": "legs",
+          "kind": "recovery",
+          "title": "Legs up",
+          "instructions": "Eight to ten minutes.",
+          "sourceRef": "recoveryDraft"
+        },
+        "category": null,
+        "nutrition_profile": null
+      },
+      "parent_id": "capacity-2026-10-14-rest-wed"
+    }
+  },
+  {
+    "command_id": "create-capacity-2026-10-15-weights-thu",
+    "entity_type": "activities",
+    "entity_id": "capacity-2026-10-15-weights-thu",
+    "expected_revision": 0,
+    "operation": "upsert",
+    "payload": {
+      "title": "Accessory session",
+      "kind": "weights",
+      "scheduled_at": "2026-10-15T16:00:00-05:00",
+      "status": "pending",
+      "plan_revision": "2026-10-14-capacity-schedule",
+      "template_id": "accessory",
+      "phase_id": "capacity",
+      "time_zone": "America/Chicago",
+      "schedule_source": "scheduleConfirmation",
+      "prescription": {
+        "id": "accessory",
+        "kind": "weights",
+        "title": "Accessory session",
+        "weeklyFrequency": {
+          "min": 2,
+          "max": 2
+        },
+        "phaseIds": [
+          "capacity"
+        ],
+        "durationMinutes": null,
+        "sourceRef": "roadmap",
+        "exercises": [
+          {
+            "name": "Hollow-body holds",
+            "sets": null,
+            "holdSeconds": null,
+            "sourceRef": "roadmap"
+          },
+          {
+            "name": "Single-leg hip thrusts",
+            "sets": null,
+            "reps": null,
+            "loadLb": null,
+            "sourceRef": "roadmap"
+          },
+          {
+            "name": "Anti-extension core work",
+            "exercise": null,
+            "sets": null,
+            "reps": null,
+            "sourceRef": "roadmap"
+          }
+        ]
+      },
+      "plan_snapshot": {
+        "template": {
+          "id": "accessory",
+          "kind": "weights",
+          "title": "Accessory session",
+          "weeklyFrequency": {
+            "min": 2,
+            "max": 2
+          },
+          "phaseIds": [
+            "capacity"
+          ],
+          "durationMinutes": null,
+          "sourceRef": "roadmap",
+          "exercises": [
+            {
+              "name": "Hollow-body holds",
+              "sets": null,
+              "holdSeconds": null,
+              "sourceRef": "roadmap"
+            },
+            {
+              "name": "Single-leg hip thrusts",
+              "sets": null,
+              "reps": null,
+              "loadLb": null,
+              "sourceRef": "roadmap"
+            },
+            {
+              "name": "Anti-extension core work",
+              "exercise": null,
+              "sets": null,
+              "reps": null,
+              "sourceRef": "roadmap"
+            }
+          ]
+        },
+        "category": null,
+        "nutrition_profile": null
+      }
+    }
+  },
+  {
+    "command_id": "create-capacity-2026-10-15-flow-thu",
+    "entity_type": "activities",
+    "entity_id": "capacity-2026-10-15-flow-thu",
+    "expected_revision": 0,
+    "operation": "upsert",
+    "payload": {
+      "title": "Technical flow",
+      "kind": "bjj",
+      "scheduled_at": "2026-10-15T20:30:00-05:00",
+      "status": "pending",
+      "plan_revision": "2026-10-14-capacity-schedule",
+      "template_id": "bjj-flow",
+      "phase_id": "capacity",
+      "time_zone": "America/Chicago",
+      "schedule_source": "scheduleConfirmation",
+      "prescription": {
+        "id": "bjj-flow",
+        "kind": "bjj",
+        "title": "Technical flow",
+        "category": "flow",
+        "weeklyFrequency": {
+          "min": 1,
+          "max": 1
+        },
+        "durationMinutes": null,
+        "sourceRef": "roadmap"
+      },
+      "plan_snapshot": {
+        "template": {
+          "id": "bjj-flow",
+          "kind": "bjj",
+          "title": "Technical flow",
+          "category": "flow",
+          "weeklyFrequency": {
+            "min": 1,
+            "max": 1
+          },
+          "durationMinutes": null,
+          "sourceRef": "roadmap"
+        },
+        "category": "flow",
+        "nutrition_profile": "flowRest"
+      },
+      "category": "flow"
+    }
+  },
+  {
+    "command_id": "create-capacity-2026-10-17-moderate-sat",
+    "entity_type": "activities",
+    "entity_id": "capacity-2026-10-17-moderate-sat",
+    "expected_revision": 0,
+    "operation": "upsert",
+    "payload": {
+      "title": "Moderate BJJ",
+      "kind": "bjj",
+      "scheduled_at": "2026-10-17T10:00:00-05:00",
+      "status": "pending",
+      "plan_revision": "2026-10-14-capacity-schedule",
+      "template_id": "bjj-moderate",
+      "phase_id": "capacity",
+      "time_zone": "America/Chicago",
+      "schedule_source": "scheduleConfirmation",
+      "prescription": {
+        "id": "bjj-moderate",
+        "kind": "bjj",
+        "title": "Moderate BJJ",
+        "category": "moderate",
+        "weeklyFrequency": {
+          "min": 1,
+          "max": 2
+        },
+        "durationMinutes": null,
+        "sourceRef": "roadmap"
+      },
+      "plan_snapshot": {
+        "template": {
+          "id": "bjj-moderate",
+          "kind": "bjj",
+          "title": "Moderate BJJ",
+          "category": "moderate",
+          "weeklyFrequency": {
+            "min": 1,
+            "max": 2
+          },
+          "durationMinutes": null,
+          "sourceRef": "roadmap"
+        },
+        "category": "moderate",
+        "nutrition_profile": "trainingAB"
+      },
+      "category": "moderate"
+    }
+  },
+  {
+    "command_id": "create-capacity-2026-10-18-weight-sun",
+    "entity_type": "activities",
+    "entity_id": "capacity-2026-10-18-weight-sun",
+    "expected_revision": 0,
+    "operation": "upsert",
+    "payload": {
+      "title": "Weekly weigh-in",
+      "kind": "weight",
+      "scheduled_at": "2026-10-18T09:00:00-05:00",
+      "status": "pending",
+      "plan_revision": "2026-10-14-capacity-schedule",
+      "template_id": "weekly-weight",
+      "phase_id": "capacity",
+      "time_zone": "America/Chicago",
+      "schedule_source": "implementationTimingDefaults",
+      "prescription": {
+        "id": "weekly-weight",
+        "kind": "weight",
+        "title": "Weekly weigh-in",
+        "instructions": "After waking.",
+        "sourceRef": "currentReview"
+      },
+      "plan_snapshot": {
+        "template": {
+          "id": "weekly-weight",
+          "kind": "weight",
+          "title": "Weekly weigh-in",
+          "instructions": "After waking.",
+          "sourceRef": "currentReview"
+        },
+        "category": null,
+        "nutrition_profile": null
+      }
+    }
+  },
+  {
+    "command_id": "create-capacity-2026-10-18-weights-sun",
+    "entity_type": "activities",
+    "entity_id": "capacity-2026-10-18-weights-sun",
+    "expected_revision": 0,
+    "operation": "upsert",
+    "payload": {
+      "title": "Accessory session",
+      "kind": "weights",
+      "scheduled_at": "2026-10-18T11:00:00-05:00",
+      "status": "pending",
+      "plan_revision": "2026-10-14-capacity-schedule",
+      "template_id": "accessory",
+      "phase_id": "capacity",
+      "time_zone": "America/Chicago",
+      "schedule_source": "scheduleConfirmation",
+      "prescription": {
+        "id": "accessory",
+        "kind": "weights",
+        "title": "Accessory session",
+        "weeklyFrequency": {
+          "min": 2,
+          "max": 2
+        },
+        "phaseIds": [
+          "capacity"
+        ],
+        "durationMinutes": null,
+        "sourceRef": "roadmap",
+        "exercises": [
+          {
+            "name": "Hollow-body holds",
+            "sets": null,
+            "holdSeconds": null,
+            "sourceRef": "roadmap"
+          },
+          {
+            "name": "Single-leg hip thrusts",
+            "sets": null,
+            "reps": null,
+            "loadLb": null,
+            "sourceRef": "roadmap"
+          },
+          {
+            "name": "Anti-extension core work",
+            "exercise": null,
+            "sets": null,
+            "reps": null,
+            "sourceRef": "roadmap"
+          }
+        ]
+      },
+      "plan_snapshot": {
+        "template": {
+          "id": "accessory",
+          "kind": "weights",
+          "title": "Accessory session",
+          "weeklyFrequency": {
+            "min": 2,
+            "max": 2
+          },
+          "phaseIds": [
+            "capacity"
+          ],
+          "durationMinutes": null,
+          "sourceRef": "roadmap",
+          "exercises": [
+            {
+              "name": "Hollow-body holds",
+              "sets": null,
+              "holdSeconds": null,
+              "sourceRef": "roadmap"
+            },
+            {
+              "name": "Single-leg hip thrusts",
+              "sets": null,
+              "reps": null,
+              "loadLb": null,
+              "sourceRef": "roadmap"
+            },
+            {
+              "name": "Anti-extension core work",
+              "exercise": null,
+              "sets": null,
+              "reps": null,
+              "sourceRef": "roadmap"
+            }
+          ]
+        },
+        "category": null,
+        "nutrition_profile": null
+      }
+    }
+  },
+  {
+    "command_id": "create-capacity-2026-10-19-moderate-mon",
+    "entity_type": "activities",
+    "entity_id": "capacity-2026-10-19-moderate-mon",
+    "expected_revision": 0,
+    "operation": "upsert",
+    "payload": {
+      "title": "Moderate BJJ",
+      "kind": "bjj",
+      "scheduled_at": "2026-10-19T11:00:00-05:00",
+      "status": "pending",
+      "plan_revision": "2026-10-14-capacity-schedule",
+      "template_id": "bjj-moderate",
+      "phase_id": "capacity",
+      "time_zone": "America/Chicago",
+      "schedule_source": "scheduleConfirmation",
+      "prescription": {
+        "id": "bjj-moderate",
+        "kind": "bjj",
+        "title": "Moderate BJJ",
+        "category": "moderate",
+        "weeklyFrequency": {
+          "min": 1,
+          "max": 2
+        },
+        "durationMinutes": null,
+        "sourceRef": "roadmap"
+      },
+      "plan_snapshot": {
+        "template": {
+          "id": "bjj-moderate",
+          "kind": "bjj",
+          "title": "Moderate BJJ",
+          "category": "moderate",
+          "weeklyFrequency": {
+            "min": 1,
+            "max": 2
+          },
+          "durationMinutes": null,
+          "sourceRef": "roadmap"
+        },
+        "category": "moderate",
+        "nutrition_profile": "trainingAB"
+      },
+      "category": "moderate"
+    }
+  },
+  {
+    "command_id": "create-capacity-2026-10-20-competition-tue",
+    "entity_type": "activities",
+    "entity_id": "capacity-2026-10-20-competition-tue",
+    "expected_revision": 0,
+    "operation": "upsert",
+    "payload": {
+      "title": "Competition practice",
+      "kind": "bjj",
+      "scheduled_at": "2026-10-20T18:00:00-05:00",
+      "status": "pending",
+      "plan_revision": "2026-10-14-capacity-schedule",
+      "template_id": "bjj-competition",
+      "phase_id": "capacity",
+      "time_zone": "America/Chicago",
+      "schedule_source": "scheduleConfirmation",
+      "prescription": {
+        "id": "bjj-competition",
+        "kind": "bjj",
+        "title": "Competition practice",
+        "category": "competition",
+        "weeklyFrequency": {
+          "min": 1,
+          "max": 1
+        },
+        "durationMinutes": null,
+        "sourceRef": "roadmap"
+      },
+      "plan_snapshot": {
+        "template": {
+          "id": "bjj-competition",
+          "kind": "bjj",
+          "title": "Competition practice",
+          "category": "competition",
+          "weeklyFrequency": {
+            "min": 1,
+            "max": 1
+          },
+          "durationMinutes": null,
+          "sourceRef": "roadmap"
+        },
+        "category": "competition",
+        "nutrition_profile": "trainingAB"
+      },
+      "category": "competition"
+    }
+  },
+  {
+    "command_id": "create-capacity-2026-10-20-breathing-tue",
+    "entity_type": "activities",
+    "entity_id": "capacity-2026-10-20-breathing-tue",
+    "expected_revision": 0,
+    "operation": "upsert",
+    "payload": {
+      "title": "Breathing",
+      "kind": "recovery",
+      "scheduled_at": "2026-10-20T20:00:00-05:00",
+      "status": "pending",
+      "plan_revision": "2026-10-14-capacity-schedule",
+      "template_id": "breathing",
+      "phase_id": "capacity",
+      "time_zone": "America/Chicago",
+      "schedule_source": "implementationTimingDefaults",
+      "prescription": {
+        "id": "breathing",
+        "kind": "recovery",
+        "title": "Breathing",
+        "instructions": "Five minutes of physiological sighing.",
+        "sourceRef": "recoveryDraft"
+      },
+      "plan_snapshot": {
+        "template": {
+          "id": "breathing",
+          "kind": "recovery",
+          "title": "Breathing",
+          "instructions": "Five minutes of physiological sighing.",
+          "sourceRef": "recoveryDraft"
+        },
+        "category": null,
+        "nutrition_profile": null
+      },
+      "parent_id": "capacity-2026-10-20-recovery-tue"
+    }
+  },
+  {
+    "command_id": "create-capacity-2026-10-20-recovery-tue",
+    "entity_type": "activities",
+    "entity_id": "capacity-2026-10-20-recovery-tue",
+    "expected_revision": 0,
+    "operation": "upsert",
+    "payload": {
+      "title": "Recovery",
+      "kind": "recovery",
+      "scheduled_at": "2026-10-20T20:00:00-05:00",
+      "status": "pending",
+      "plan_revision": "2026-10-14-capacity-schedule",
+      "template_id": "recovery",
+      "phase_id": "capacity",
+      "time_zone": "America/Chicago",
+      "schedule_source": "implementationTimingDefaults",
+      "prescription": {
+        "id": "recovery",
+        "kind": "recovery",
+        "title": "Recovery",
+        "instructions": "",
+        "sourceRef": "recoveryDraft"
+      },
+      "plan_snapshot": {
+        "template": {
+          "id": "recovery",
+          "kind": "recovery",
+          "title": "Recovery",
+          "instructions": "",
+          "sourceRef": "recoveryDraft"
+        },
+        "category": null,
+        "nutrition_profile": null
+      },
+      "linked_session_id": "capacity-2026-10-20-competition-tue"
+    }
+  },
+  {
+    "command_id": "create-capacity-2026-10-20-hydration-tue",
+    "entity_type": "activities",
+    "entity_id": "capacity-2026-10-20-hydration-tue",
+    "expected_revision": 0,
+    "operation": "upsert",
+    "payload": {
+      "title": "Hydration",
+      "kind": "recovery",
+      "scheduled_at": "2026-10-20T20:05:00-05:00",
+      "status": "pending",
+      "plan_revision": "2026-10-14-capacity-schedule",
+      "template_id": "hydration",
+      "phase_id": "capacity",
+      "time_zone": "America/Chicago",
+      "schedule_source": "implementationTimingDefaults",
+      "prescription": {
+        "id": "hydration",
+        "kind": "recovery",
+        "title": "Hydration",
+        "instructions": "",
+        "sourceRef": "recoveryDraft"
+      },
+      "plan_snapshot": {
+        "template": {
+          "id": "hydration",
+          "kind": "recovery",
+          "title": "Hydration",
+          "instructions": "",
+          "sourceRef": "recoveryDraft"
+        },
+        "category": null,
+        "nutrition_profile": null
+      },
+      "parent_id": "capacity-2026-10-20-recovery-tue",
+      "recovery_step_type": "hydration"
+    }
+  },
+  {
+    "command_id": "create-capacity-2026-10-20-tissue-tue",
+    "entity_type": "activities",
+    "entity_id": "capacity-2026-10-20-tissue-tue",
+    "expected_revision": 0,
+    "operation": "upsert",
+    "payload": {
+      "title": "Tissue work",
+      "kind": "recovery",
+      "scheduled_at": "2026-10-20T20:10:00-05:00",
+      "status": "pending",
+      "plan_revision": "2026-10-14-capacity-schedule",
+      "template_id": "tissue",
+      "phase_id": "capacity",
+      "time_zone": "America/Chicago",
+      "schedule_source": "implementationTimingDefaults",
+      "prescription": {
+        "id": "tissue",
+        "kind": "recovery",
+        "title": "Tissue work",
+        "instructions": "Massage gun: 60 seconds per muscle group, quads, outer glutes and calves. Psoas stretch: 60 seconds per side. Figure-four stretch: 90 seconds per side.",
+        "sourceRef": "recoveryDraft"
+      },
+      "plan_snapshot": {
+        "template": {
+          "id": "tissue",
+          "kind": "recovery",
+          "title": "Tissue work",
+          "instructions": "Massage gun: 60 seconds per muscle group, quads, outer glutes and calves. Psoas stretch: 60 seconds per side. Figure-four stretch: 90 seconds per side.",
+          "sourceRef": "recoveryDraft"
+        },
+        "category": null,
+        "nutrition_profile": null
+      },
+      "parent_id": "capacity-2026-10-20-recovery-tue"
+    }
+  },
+  {
+    "command_id": "create-capacity-2026-10-20-legs-tue",
+    "entity_type": "activities",
+    "entity_id": "capacity-2026-10-20-legs-tue",
+    "expected_revision": 0,
+    "operation": "upsert",
+    "payload": {
+      "title": "Legs up",
+      "kind": "recovery",
+      "scheduled_at": "2026-10-20T20:20:00-05:00",
+      "status": "pending",
+      "plan_revision": "2026-10-14-capacity-schedule",
+      "template_id": "legs",
+      "phase_id": "capacity",
+      "time_zone": "America/Chicago",
+      "schedule_source": "implementationTimingDefaults",
+      "prescription": {
+        "id": "legs",
+        "kind": "recovery",
+        "title": "Legs up",
+        "instructions": "Eight to ten minutes.",
+        "sourceRef": "recoveryDraft"
+      },
+      "plan_snapshot": {
+        "template": {
+          "id": "legs",
+          "kind": "recovery",
+          "title": "Legs up",
+          "instructions": "Eight to ten minutes.",
+          "sourceRef": "recoveryDraft"
+        },
+        "category": null,
+        "nutrition_profile": null
+      },
+      "parent_id": "capacity-2026-10-20-recovery-tue"
+    }
+  },
+  {
+    "command_id": "create-capacity-2026-10-21-breathing-wed",
+    "entity_type": "activities",
+    "entity_id": "capacity-2026-10-21-breathing-wed",
+    "expected_revision": 0,
+    "operation": "upsert",
+    "payload": {
+      "title": "Breathing",
+      "kind": "recovery",
+      "scheduled_at": "2026-10-21T08:00:00-05:00",
+      "status": "pending",
+      "plan_revision": "2026-10-14-capacity-schedule",
+      "template_id": "breathing",
+      "phase_id": "capacity",
+      "time_zone": "America/Chicago",
+      "schedule_source": "implementationTimingDefaults",
+      "prescription": {
+        "id": "breathing",
+        "kind": "recovery",
+        "title": "Breathing",
+        "instructions": "Five minutes of physiological sighing.",
+        "sourceRef": "recoveryDraft"
+      },
+      "plan_snapshot": {
+        "template": {
+          "id": "breathing",
+          "kind": "recovery",
+          "title": "Breathing",
+          "instructions": "Five minutes of physiological sighing.",
+          "sourceRef": "recoveryDraft"
+        },
+        "category": null,
+        "nutrition_profile": null
+      },
+      "parent_id": "capacity-2026-10-21-rest-wed"
+    }
+  },
+  {
+    "command_id": "create-capacity-2026-10-21-rest-wed",
+    "entity_type": "activities",
+    "entity_id": "capacity-2026-10-21-rest-wed",
+    "expected_revision": 0,
+    "operation": "upsert",
+    "payload": {
+      "title": "Rest day",
+      "kind": "rest",
+      "scheduled_at": "2026-10-21T08:00:00-05:00",
+      "status": "pending",
+      "plan_revision": "2026-10-14-capacity-schedule",
+      "template_id": "rest",
+      "phase_id": "capacity",
+      "time_zone": "America/Chicago",
+      "schedule_source": "implementationTimingDefaults",
+      "prescription": {
+        "id": "rest",
+        "kind": "rest",
+        "title": "Rest day",
+        "instructions": "",
+        "sourceRef": "currentReview"
+      },
+      "plan_snapshot": {
+        "template": {
+          "id": "rest",
+          "kind": "rest",
+          "title": "Rest day",
+          "instructions": "",
+          "sourceRef": "currentReview"
+        },
+        "category": null,
+        "nutrition_profile": null
+      }
+    }
+  },
+  {
+    "command_id": "create-capacity-2026-10-21-hydration-wed",
+    "entity_type": "activities",
+    "entity_id": "capacity-2026-10-21-hydration-wed",
+    "expected_revision": 0,
+    "operation": "upsert",
+    "payload": {
+      "title": "Hydration",
+      "kind": "recovery",
+      "scheduled_at": "2026-10-21T08:05:00-05:00",
+      "status": "pending",
+      "plan_revision": "2026-10-14-capacity-schedule",
+      "template_id": "hydration",
+      "phase_id": "capacity",
+      "time_zone": "America/Chicago",
+      "schedule_source": "implementationTimingDefaults",
+      "prescription": {
+        "id": "hydration",
+        "kind": "recovery",
+        "title": "Hydration",
+        "instructions": "",
+        "sourceRef": "recoveryDraft"
+      },
+      "plan_snapshot": {
+        "template": {
+          "id": "hydration",
+          "kind": "recovery",
+          "title": "Hydration",
+          "instructions": "",
+          "sourceRef": "recoveryDraft"
+        },
+        "category": null,
+        "nutrition_profile": null
+      },
+      "parent_id": "capacity-2026-10-21-rest-wed",
+      "recovery_step_type": "hydration"
+    }
+  },
+  {
+    "command_id": "create-capacity-2026-10-21-tissue-wed",
+    "entity_type": "activities",
+    "entity_id": "capacity-2026-10-21-tissue-wed",
+    "expected_revision": 0,
+    "operation": "upsert",
+    "payload": {
+      "title": "Tissue work",
+      "kind": "recovery",
+      "scheduled_at": "2026-10-21T08:10:00-05:00",
+      "status": "pending",
+      "plan_revision": "2026-10-14-capacity-schedule",
+      "template_id": "tissue",
+      "phase_id": "capacity",
+      "time_zone": "America/Chicago",
+      "schedule_source": "implementationTimingDefaults",
+      "prescription": {
+        "id": "tissue",
+        "kind": "recovery",
+        "title": "Tissue work",
+        "instructions": "Massage gun: 60 seconds per muscle group, quads, outer glutes and calves. Psoas stretch: 60 seconds per side. Figure-four stretch: 90 seconds per side.",
+        "sourceRef": "recoveryDraft"
+      },
+      "plan_snapshot": {
+        "template": {
+          "id": "tissue",
+          "kind": "recovery",
+          "title": "Tissue work",
+          "instructions": "Massage gun: 60 seconds per muscle group, quads, outer glutes and calves. Psoas stretch: 60 seconds per side. Figure-four stretch: 90 seconds per side.",
+          "sourceRef": "recoveryDraft"
+        },
+        "category": null,
+        "nutrition_profile": null
+      },
+      "parent_id": "capacity-2026-10-21-rest-wed"
+    }
+  },
+  {
+    "command_id": "create-capacity-2026-10-21-legs-wed",
+    "entity_type": "activities",
+    "entity_id": "capacity-2026-10-21-legs-wed",
+    "expected_revision": 0,
+    "operation": "upsert",
+    "payload": {
+      "title": "Legs up",
+      "kind": "recovery",
+      "scheduled_at": "2026-10-21T08:20:00-05:00",
+      "status": "pending",
+      "plan_revision": "2026-10-14-capacity-schedule",
+      "template_id": "legs",
+      "phase_id": "capacity",
+      "time_zone": "America/Chicago",
+      "schedule_source": "implementationTimingDefaults",
+      "prescription": {
+        "id": "legs",
+        "kind": "recovery",
+        "title": "Legs up",
+        "instructions": "Eight to ten minutes.",
+        "sourceRef": "recoveryDraft"
+      },
+      "plan_snapshot": {
+        "template": {
+          "id": "legs",
+          "kind": "recovery",
+          "title": "Legs up",
+          "instructions": "Eight to ten minutes.",
+          "sourceRef": "recoveryDraft"
+        },
+        "category": null,
+        "nutrition_profile": null
+      },
+      "parent_id": "capacity-2026-10-21-rest-wed"
+    }
+  },
+  {
+    "command_id": "create-capacity-2026-10-22-weights-thu",
+    "entity_type": "activities",
+    "entity_id": "capacity-2026-10-22-weights-thu",
+    "expected_revision": 0,
+    "operation": "upsert",
+    "payload": {
+      "title": "Accessory session",
+      "kind": "weights",
+      "scheduled_at": "2026-10-22T16:00:00-05:00",
+      "status": "pending",
+      "plan_revision": "2026-10-14-capacity-schedule",
+      "template_id": "accessory",
+      "phase_id": "capacity",
+      "time_zone": "America/Chicago",
+      "schedule_source": "scheduleConfirmation",
+      "prescription": {
+        "id": "accessory",
+        "kind": "weights",
+        "title": "Accessory session",
+        "weeklyFrequency": {
+          "min": 2,
+          "max": 2
+        },
+        "phaseIds": [
+          "capacity"
+        ],
+        "durationMinutes": null,
+        "sourceRef": "roadmap",
+        "exercises": [
+          {
+            "name": "Hollow-body holds",
+            "sets": null,
+            "holdSeconds": null,
+            "sourceRef": "roadmap"
+          },
+          {
+            "name": "Single-leg hip thrusts",
+            "sets": null,
+            "reps": null,
+            "loadLb": null,
+            "sourceRef": "roadmap"
+          },
+          {
+            "name": "Anti-extension core work",
+            "exercise": null,
+            "sets": null,
+            "reps": null,
+            "sourceRef": "roadmap"
+          }
+        ]
+      },
+      "plan_snapshot": {
+        "template": {
+          "id": "accessory",
+          "kind": "weights",
+          "title": "Accessory session",
+          "weeklyFrequency": {
+            "min": 2,
+            "max": 2
+          },
+          "phaseIds": [
+            "capacity"
+          ],
+          "durationMinutes": null,
+          "sourceRef": "roadmap",
+          "exercises": [
+            {
+              "name": "Hollow-body holds",
+              "sets": null,
+              "holdSeconds": null,
+              "sourceRef": "roadmap"
+            },
+            {
+              "name": "Single-leg hip thrusts",
+              "sets": null,
+              "reps": null,
+              "loadLb": null,
+              "sourceRef": "roadmap"
+            },
+            {
+              "name": "Anti-extension core work",
+              "exercise": null,
+              "sets": null,
+              "reps": null,
+              "sourceRef": "roadmap"
+            }
+          ]
+        },
+        "category": null,
+        "nutrition_profile": null
+      }
+    }
+  },
+  {
+    "command_id": "create-capacity-2026-10-22-flow-thu",
+    "entity_type": "activities",
+    "entity_id": "capacity-2026-10-22-flow-thu",
+    "expected_revision": 0,
+    "operation": "upsert",
+    "payload": {
+      "title": "Technical flow",
+      "kind": "bjj",
+      "scheduled_at": "2026-10-22T20:30:00-05:00",
+      "status": "pending",
+      "plan_revision": "2026-10-14-capacity-schedule",
+      "template_id": "bjj-flow",
+      "phase_id": "capacity",
+      "time_zone": "America/Chicago",
+      "schedule_source": "scheduleConfirmation",
+      "prescription": {
+        "id": "bjj-flow",
+        "kind": "bjj",
+        "title": "Technical flow",
+        "category": "flow",
+        "weeklyFrequency": {
+          "min": 1,
+          "max": 1
+        },
+        "durationMinutes": null,
+        "sourceRef": "roadmap"
+      },
+      "plan_snapshot": {
+        "template": {
+          "id": "bjj-flow",
+          "kind": "bjj",
+          "title": "Technical flow",
+          "category": "flow",
+          "weeklyFrequency": {
+            "min": 1,
+            "max": 1
+          },
+          "durationMinutes": null,
+          "sourceRef": "roadmap"
+        },
+        "category": "flow",
+        "nutrition_profile": "flowRest"
+      },
+      "category": "flow"
+    }
+  },
+  {
+    "command_id": "create-capacity-2026-10-24-moderate-sat",
+    "entity_type": "activities",
+    "entity_id": "capacity-2026-10-24-moderate-sat",
+    "expected_revision": 0,
+    "operation": "upsert",
+    "payload": {
+      "title": "Moderate BJJ",
+      "kind": "bjj",
+      "scheduled_at": "2026-10-24T10:00:00-05:00",
+      "status": "pending",
+      "plan_revision": "2026-10-14-capacity-schedule",
+      "template_id": "bjj-moderate",
+      "phase_id": "capacity",
+      "time_zone": "America/Chicago",
+      "schedule_source": "scheduleConfirmation",
+      "prescription": {
+        "id": "bjj-moderate",
+        "kind": "bjj",
+        "title": "Moderate BJJ",
+        "category": "moderate",
+        "weeklyFrequency": {
+          "min": 1,
+          "max": 2
+        },
+        "durationMinutes": null,
+        "sourceRef": "roadmap"
+      },
+      "plan_snapshot": {
+        "template": {
+          "id": "bjj-moderate",
+          "kind": "bjj",
+          "title": "Moderate BJJ",
+          "category": "moderate",
+          "weeklyFrequency": {
+            "min": 1,
+            "max": 2
+          },
+          "durationMinutes": null,
+          "sourceRef": "roadmap"
+        },
+        "category": "moderate",
+        "nutrition_profile": "trainingAB"
+      },
+      "category": "moderate"
+    }
+  },
+  {
+    "command_id": "create-capacity-2026-10-25-weight-sun",
+    "entity_type": "activities",
+    "entity_id": "capacity-2026-10-25-weight-sun",
+    "expected_revision": 0,
+    "operation": "upsert",
+    "payload": {
+      "title": "Weekly weigh-in",
+      "kind": "weight",
+      "scheduled_at": "2026-10-25T09:00:00-05:00",
+      "status": "pending",
+      "plan_revision": "2026-10-14-capacity-schedule",
+      "template_id": "weekly-weight",
+      "phase_id": "capacity",
+      "time_zone": "America/Chicago",
+      "schedule_source": "implementationTimingDefaults",
+      "prescription": {
+        "id": "weekly-weight",
+        "kind": "weight",
+        "title": "Weekly weigh-in",
+        "instructions": "After waking.",
+        "sourceRef": "currentReview"
+      },
+      "plan_snapshot": {
+        "template": {
+          "id": "weekly-weight",
+          "kind": "weight",
+          "title": "Weekly weigh-in",
+          "instructions": "After waking.",
+          "sourceRef": "currentReview"
+        },
+        "category": null,
+        "nutrition_profile": null
+      }
+    }
+  },
+  {
+    "command_id": "create-capacity-2026-10-25-weights-sun",
+    "entity_type": "activities",
+    "entity_id": "capacity-2026-10-25-weights-sun",
+    "expected_revision": 0,
+    "operation": "upsert",
+    "payload": {
+      "title": "Accessory session",
+      "kind": "weights",
+      "scheduled_at": "2026-10-25T11:00:00-05:00",
+      "status": "pending",
+      "plan_revision": "2026-10-14-capacity-schedule",
+      "template_id": "accessory",
+      "phase_id": "capacity",
+      "time_zone": "America/Chicago",
+      "schedule_source": "scheduleConfirmation",
+      "prescription": {
+        "id": "accessory",
+        "kind": "weights",
+        "title": "Accessory session",
+        "weeklyFrequency": {
+          "min": 2,
+          "max": 2
+        },
+        "phaseIds": [
+          "capacity"
+        ],
+        "durationMinutes": null,
+        "sourceRef": "roadmap",
+        "exercises": [
+          {
+            "name": "Hollow-body holds",
+            "sets": null,
+            "holdSeconds": null,
+            "sourceRef": "roadmap"
+          },
+          {
+            "name": "Single-leg hip thrusts",
+            "sets": null,
+            "reps": null,
+            "loadLb": null,
+            "sourceRef": "roadmap"
+          },
+          {
+            "name": "Anti-extension core work",
+            "exercise": null,
+            "sets": null,
+            "reps": null,
+            "sourceRef": "roadmap"
+          }
+        ]
+      },
+      "plan_snapshot": {
+        "template": {
+          "id": "accessory",
+          "kind": "weights",
+          "title": "Accessory session",
+          "weeklyFrequency": {
+            "min": 2,
+            "max": 2
+          },
+          "phaseIds": [
+            "capacity"
+          ],
+          "durationMinutes": null,
+          "sourceRef": "roadmap",
+          "exercises": [
+            {
+              "name": "Hollow-body holds",
+              "sets": null,
+              "holdSeconds": null,
+              "sourceRef": "roadmap"
+            },
+            {
+              "name": "Single-leg hip thrusts",
+              "sets": null,
+              "reps": null,
+              "loadLb": null,
+              "sourceRef": "roadmap"
+            },
+            {
+              "name": "Anti-extension core work",
+              "exercise": null,
+              "sets": null,
+              "reps": null,
+              "sourceRef": "roadmap"
+            }
+          ]
+        },
+        "category": null,
+        "nutrition_profile": null
+      }
+    }
+  },
+  {
+    "command_id": "create-capacity-2026-10-26-moderate-mon",
+    "entity_type": "activities",
+    "entity_id": "capacity-2026-10-26-moderate-mon",
+    "expected_revision": 0,
+    "operation": "upsert",
+    "payload": {
+      "title": "Moderate BJJ",
+      "kind": "bjj",
+      "scheduled_at": "2026-10-26T11:00:00-05:00",
+      "status": "pending",
+      "plan_revision": "2026-10-14-capacity-schedule",
+      "template_id": "bjj-moderate",
+      "phase_id": "capacity",
+      "time_zone": "America/Chicago",
+      "schedule_source": "scheduleConfirmation",
+      "prescription": {
+        "id": "bjj-moderate",
+        "kind": "bjj",
+        "title": "Moderate BJJ",
+        "category": "moderate",
+        "weeklyFrequency": {
+          "min": 1,
+          "max": 2
+        },
+        "durationMinutes": null,
+        "sourceRef": "roadmap"
+      },
+      "plan_snapshot": {
+        "template": {
+          "id": "bjj-moderate",
+          "kind": "bjj",
+          "title": "Moderate BJJ",
+          "category": "moderate",
+          "weeklyFrequency": {
+            "min": 1,
+            "max": 2
+          },
+          "durationMinutes": null,
+          "sourceRef": "roadmap"
+        },
+        "category": "moderate",
+        "nutrition_profile": "trainingAB"
+      },
+      "category": "moderate"
+    }
+  },
+  {
+    "command_id": "create-capacity-2026-10-27-competition-tue",
+    "entity_type": "activities",
+    "entity_id": "capacity-2026-10-27-competition-tue",
+    "expected_revision": 0,
+    "operation": "upsert",
+    "payload": {
+      "title": "Competition practice",
+      "kind": "bjj",
+      "scheduled_at": "2026-10-27T18:00:00-05:00",
+      "status": "pending",
+      "plan_revision": "2026-10-14-capacity-schedule",
+      "template_id": "bjj-competition",
+      "phase_id": "capacity",
+      "time_zone": "America/Chicago",
+      "schedule_source": "scheduleConfirmation",
+      "prescription": {
+        "id": "bjj-competition",
+        "kind": "bjj",
+        "title": "Competition practice",
+        "category": "competition",
+        "weeklyFrequency": {
+          "min": 1,
+          "max": 1
+        },
+        "durationMinutes": null,
+        "sourceRef": "roadmap"
+      },
+      "plan_snapshot": {
+        "template": {
+          "id": "bjj-competition",
+          "kind": "bjj",
+          "title": "Competition practice",
+          "category": "competition",
+          "weeklyFrequency": {
+            "min": 1,
+            "max": 1
+          },
+          "durationMinutes": null,
+          "sourceRef": "roadmap"
+        },
+        "category": "competition",
+        "nutrition_profile": "trainingAB"
+      },
+      "category": "competition"
+    }
+  },
+  {
+    "command_id": "create-capacity-2026-10-27-breathing-tue",
+    "entity_type": "activities",
+    "entity_id": "capacity-2026-10-27-breathing-tue",
+    "expected_revision": 0,
+    "operation": "upsert",
+    "payload": {
+      "title": "Breathing",
+      "kind": "recovery",
+      "scheduled_at": "2026-10-27T20:00:00-05:00",
+      "status": "pending",
+      "plan_revision": "2026-10-14-capacity-schedule",
+      "template_id": "breathing",
+      "phase_id": "capacity",
+      "time_zone": "America/Chicago",
+      "schedule_source": "implementationTimingDefaults",
+      "prescription": {
+        "id": "breathing",
+        "kind": "recovery",
+        "title": "Breathing",
+        "instructions": "Five minutes of physiological sighing.",
+        "sourceRef": "recoveryDraft"
+      },
+      "plan_snapshot": {
+        "template": {
+          "id": "breathing",
+          "kind": "recovery",
+          "title": "Breathing",
+          "instructions": "Five minutes of physiological sighing.",
+          "sourceRef": "recoveryDraft"
+        },
+        "category": null,
+        "nutrition_profile": null
+      },
+      "parent_id": "capacity-2026-10-27-recovery-tue"
+    }
+  },
+  {
+    "command_id": "create-capacity-2026-10-27-recovery-tue",
+    "entity_type": "activities",
+    "entity_id": "capacity-2026-10-27-recovery-tue",
+    "expected_revision": 0,
+    "operation": "upsert",
+    "payload": {
+      "title": "Recovery",
+      "kind": "recovery",
+      "scheduled_at": "2026-10-27T20:00:00-05:00",
+      "status": "pending",
+      "plan_revision": "2026-10-14-capacity-schedule",
+      "template_id": "recovery",
+      "phase_id": "capacity",
+      "time_zone": "America/Chicago",
+      "schedule_source": "implementationTimingDefaults",
+      "prescription": {
+        "id": "recovery",
+        "kind": "recovery",
+        "title": "Recovery",
+        "instructions": "",
+        "sourceRef": "recoveryDraft"
+      },
+      "plan_snapshot": {
+        "template": {
+          "id": "recovery",
+          "kind": "recovery",
+          "title": "Recovery",
+          "instructions": "",
+          "sourceRef": "recoveryDraft"
+        },
+        "category": null,
+        "nutrition_profile": null
+      },
+      "linked_session_id": "capacity-2026-10-27-competition-tue"
+    }
+  },
+  {
+    "command_id": "create-capacity-2026-10-27-hydration-tue",
+    "entity_type": "activities",
+    "entity_id": "capacity-2026-10-27-hydration-tue",
+    "expected_revision": 0,
+    "operation": "upsert",
+    "payload": {
+      "title": "Hydration",
+      "kind": "recovery",
+      "scheduled_at": "2026-10-27T20:05:00-05:00",
+      "status": "pending",
+      "plan_revision": "2026-10-14-capacity-schedule",
+      "template_id": "hydration",
+      "phase_id": "capacity",
+      "time_zone": "America/Chicago",
+      "schedule_source": "implementationTimingDefaults",
+      "prescription": {
+        "id": "hydration",
+        "kind": "recovery",
+        "title": "Hydration",
+        "instructions": "",
+        "sourceRef": "recoveryDraft"
+      },
+      "plan_snapshot": {
+        "template": {
+          "id": "hydration",
+          "kind": "recovery",
+          "title": "Hydration",
+          "instructions": "",
+          "sourceRef": "recoveryDraft"
+        },
+        "category": null,
+        "nutrition_profile": null
+      },
+      "parent_id": "capacity-2026-10-27-recovery-tue",
+      "recovery_step_type": "hydration"
+    }
+  },
+  {
+    "command_id": "create-capacity-2026-10-27-tissue-tue",
+    "entity_type": "activities",
+    "entity_id": "capacity-2026-10-27-tissue-tue",
+    "expected_revision": 0,
+    "operation": "upsert",
+    "payload": {
+      "title": "Tissue work",
+      "kind": "recovery",
+      "scheduled_at": "2026-10-27T20:10:00-05:00",
+      "status": "pending",
+      "plan_revision": "2026-10-14-capacity-schedule",
+      "template_id": "tissue",
+      "phase_id": "capacity",
+      "time_zone": "America/Chicago",
+      "schedule_source": "implementationTimingDefaults",
+      "prescription": {
+        "id": "tissue",
+        "kind": "recovery",
+        "title": "Tissue work",
+        "instructions": "Massage gun: 60 seconds per muscle group, quads, outer glutes and calves. Psoas stretch: 60 seconds per side. Figure-four stretch: 90 seconds per side.",
+        "sourceRef": "recoveryDraft"
+      },
+      "plan_snapshot": {
+        "template": {
+          "id": "tissue",
+          "kind": "recovery",
+          "title": "Tissue work",
+          "instructions": "Massage gun: 60 seconds per muscle group, quads, outer glutes and calves. Psoas stretch: 60 seconds per side. Figure-four stretch: 90 seconds per side.",
+          "sourceRef": "recoveryDraft"
+        },
+        "category": null,
+        "nutrition_profile": null
+      },
+      "parent_id": "capacity-2026-10-27-recovery-tue"
+    }
+  },
+  {
+    "command_id": "create-capacity-2026-10-27-legs-tue",
+    "entity_type": "activities",
+    "entity_id": "capacity-2026-10-27-legs-tue",
+    "expected_revision": 0,
+    "operation": "upsert",
+    "payload": {
+      "title": "Legs up",
+      "kind": "recovery",
+      "scheduled_at": "2026-10-27T20:20:00-05:00",
+      "status": "pending",
+      "plan_revision": "2026-10-14-capacity-schedule",
+      "template_id": "legs",
+      "phase_id": "capacity",
+      "time_zone": "America/Chicago",
+      "schedule_source": "implementationTimingDefaults",
+      "prescription": {
+        "id": "legs",
+        "kind": "recovery",
+        "title": "Legs up",
+        "instructions": "Eight to ten minutes.",
+        "sourceRef": "recoveryDraft"
+      },
+      "plan_snapshot": {
+        "template": {
+          "id": "legs",
+          "kind": "recovery",
+          "title": "Legs up",
+          "instructions": "Eight to ten minutes.",
+          "sourceRef": "recoveryDraft"
+        },
+        "category": null,
+        "nutrition_profile": null
+      },
+      "parent_id": "capacity-2026-10-27-recovery-tue"
+    }
+  },
+  {
+    "command_id": "create-capacity-2026-10-28-breathing-wed",
+    "entity_type": "activities",
+    "entity_id": "capacity-2026-10-28-breathing-wed",
+    "expected_revision": 0,
+    "operation": "upsert",
+    "payload": {
+      "title": "Breathing",
+      "kind": "recovery",
+      "scheduled_at": "2026-10-28T08:00:00-05:00",
+      "status": "pending",
+      "plan_revision": "2026-10-14-capacity-schedule",
+      "template_id": "breathing",
+      "phase_id": "capacity",
+      "time_zone": "America/Chicago",
+      "schedule_source": "implementationTimingDefaults",
+      "prescription": {
+        "id": "breathing",
+        "kind": "recovery",
+        "title": "Breathing",
+        "instructions": "Five minutes of physiological sighing.",
+        "sourceRef": "recoveryDraft"
+      },
+      "plan_snapshot": {
+        "template": {
+          "id": "breathing",
+          "kind": "recovery",
+          "title": "Breathing",
+          "instructions": "Five minutes of physiological sighing.",
+          "sourceRef": "recoveryDraft"
+        },
+        "category": null,
+        "nutrition_profile": null
+      },
+      "parent_id": "capacity-2026-10-28-rest-wed"
+    }
+  },
+  {
+    "command_id": "create-capacity-2026-10-28-rest-wed",
+    "entity_type": "activities",
+    "entity_id": "capacity-2026-10-28-rest-wed",
+    "expected_revision": 0,
+    "operation": "upsert",
+    "payload": {
+      "title": "Rest day",
+      "kind": "rest",
+      "scheduled_at": "2026-10-28T08:00:00-05:00",
+      "status": "pending",
+      "plan_revision": "2026-10-14-capacity-schedule",
+      "template_id": "rest",
+      "phase_id": "capacity",
+      "time_zone": "America/Chicago",
+      "schedule_source": "implementationTimingDefaults",
+      "prescription": {
+        "id": "rest",
+        "kind": "rest",
+        "title": "Rest day",
+        "instructions": "",
+        "sourceRef": "currentReview"
+      },
+      "plan_snapshot": {
+        "template": {
+          "id": "rest",
+          "kind": "rest",
+          "title": "Rest day",
+          "instructions": "",
+          "sourceRef": "currentReview"
+        },
+        "category": null,
+        "nutrition_profile": null
+      }
+    }
+  },
+  {
+    "command_id": "create-capacity-2026-10-28-hydration-wed",
+    "entity_type": "activities",
+    "entity_id": "capacity-2026-10-28-hydration-wed",
+    "expected_revision": 0,
+    "operation": "upsert",
+    "payload": {
+      "title": "Hydration",
+      "kind": "recovery",
+      "scheduled_at": "2026-10-28T08:05:00-05:00",
+      "status": "pending",
+      "plan_revision": "2026-10-14-capacity-schedule",
+      "template_id": "hydration",
+      "phase_id": "capacity",
+      "time_zone": "America/Chicago",
+      "schedule_source": "implementationTimingDefaults",
+      "prescription": {
+        "id": "hydration",
+        "kind": "recovery",
+        "title": "Hydration",
+        "instructions": "",
+        "sourceRef": "recoveryDraft"
+      },
+      "plan_snapshot": {
+        "template": {
+          "id": "hydration",
+          "kind": "recovery",
+          "title": "Hydration",
+          "instructions": "",
+          "sourceRef": "recoveryDraft"
+        },
+        "category": null,
+        "nutrition_profile": null
+      },
+      "parent_id": "capacity-2026-10-28-rest-wed",
+      "recovery_step_type": "hydration"
+    }
+  },
+  {
+    "command_id": "create-capacity-2026-10-28-tissue-wed",
+    "entity_type": "activities",
+    "entity_id": "capacity-2026-10-28-tissue-wed",
+    "expected_revision": 0,
+    "operation": "upsert",
+    "payload": {
+      "title": "Tissue work",
+      "kind": "recovery",
+      "scheduled_at": "2026-10-28T08:10:00-05:00",
+      "status": "pending",
+      "plan_revision": "2026-10-14-capacity-schedule",
+      "template_id": "tissue",
+      "phase_id": "capacity",
+      "time_zone": "America/Chicago",
+      "schedule_source": "implementationTimingDefaults",
+      "prescription": {
+        "id": "tissue",
+        "kind": "recovery",
+        "title": "Tissue work",
+        "instructions": "Massage gun: 60 seconds per muscle group, quads, outer glutes and calves. Psoas stretch: 60 seconds per side. Figure-four stretch: 90 seconds per side.",
+        "sourceRef": "recoveryDraft"
+      },
+      "plan_snapshot": {
+        "template": {
+          "id": "tissue",
+          "kind": "recovery",
+          "title": "Tissue work",
+          "instructions": "Massage gun: 60 seconds per muscle group, quads, outer glutes and calves. Psoas stretch: 60 seconds per side. Figure-four stretch: 90 seconds per side.",
+          "sourceRef": "recoveryDraft"
+        },
+        "category": null,
+        "nutrition_profile": null
+      },
+      "parent_id": "capacity-2026-10-28-rest-wed"
+    }
+  },
+  {
+    "command_id": "create-capacity-2026-10-28-legs-wed",
+    "entity_type": "activities",
+    "entity_id": "capacity-2026-10-28-legs-wed",
+    "expected_revision": 0,
+    "operation": "upsert",
+    "payload": {
+      "title": "Legs up",
+      "kind": "recovery",
+      "scheduled_at": "2026-10-28T08:20:00-05:00",
+      "status": "pending",
+      "plan_revision": "2026-10-14-capacity-schedule",
+      "template_id": "legs",
+      "phase_id": "capacity",
+      "time_zone": "America/Chicago",
+      "schedule_source": "implementationTimingDefaults",
+      "prescription": {
+        "id": "legs",
+        "kind": "recovery",
+        "title": "Legs up",
+        "instructions": "Eight to ten minutes.",
+        "sourceRef": "recoveryDraft"
+      },
+      "plan_snapshot": {
+        "template": {
+          "id": "legs",
+          "kind": "recovery",
+          "title": "Legs up",
+          "instructions": "Eight to ten minutes.",
+          "sourceRef": "recoveryDraft"
+        },
+        "category": null,
+        "nutrition_profile": null
+      },
+      "parent_id": "capacity-2026-10-28-rest-wed"
+    }
+  },
+  {
+    "command_id": "create-capacity-2026-10-29-weights-thu",
+    "entity_type": "activities",
+    "entity_id": "capacity-2026-10-29-weights-thu",
+    "expected_revision": 0,
+    "operation": "upsert",
+    "payload": {
+      "title": "Accessory session",
+      "kind": "weights",
+      "scheduled_at": "2026-10-29T16:00:00-05:00",
+      "status": "pending",
+      "plan_revision": "2026-10-14-capacity-schedule",
+      "template_id": "accessory",
+      "phase_id": "capacity",
+      "time_zone": "America/Chicago",
+      "schedule_source": "scheduleConfirmation",
+      "prescription": {
+        "id": "accessory",
+        "kind": "weights",
+        "title": "Accessory session",
+        "weeklyFrequency": {
+          "min": 2,
+          "max": 2
+        },
+        "phaseIds": [
+          "capacity"
+        ],
+        "durationMinutes": null,
+        "sourceRef": "roadmap",
+        "exercises": [
+          {
+            "name": "Hollow-body holds",
+            "sets": null,
+            "holdSeconds": null,
+            "sourceRef": "roadmap"
+          },
+          {
+            "name": "Single-leg hip thrusts",
+            "sets": null,
+            "reps": null,
+            "loadLb": null,
+            "sourceRef": "roadmap"
+          },
+          {
+            "name": "Anti-extension core work",
+            "exercise": null,
+            "sets": null,
+            "reps": null,
+            "sourceRef": "roadmap"
+          }
+        ]
+      },
+      "plan_snapshot": {
+        "template": {
+          "id": "accessory",
+          "kind": "weights",
+          "title": "Accessory session",
+          "weeklyFrequency": {
+            "min": 2,
+            "max": 2
+          },
+          "phaseIds": [
+            "capacity"
+          ],
+          "durationMinutes": null,
+          "sourceRef": "roadmap",
+          "exercises": [
+            {
+              "name": "Hollow-body holds",
+              "sets": null,
+              "holdSeconds": null,
+              "sourceRef": "roadmap"
+            },
+            {
+              "name": "Single-leg hip thrusts",
+              "sets": null,
+              "reps": null,
+              "loadLb": null,
+              "sourceRef": "roadmap"
+            },
+            {
+              "name": "Anti-extension core work",
+              "exercise": null,
+              "sets": null,
+              "reps": null,
+              "sourceRef": "roadmap"
+            }
+          ]
+        },
+        "category": null,
+        "nutrition_profile": null
+      }
+    }
+  },
+  {
+    "command_id": "create-capacity-2026-10-29-flow-thu",
+    "entity_type": "activities",
+    "entity_id": "capacity-2026-10-29-flow-thu",
+    "expected_revision": 0,
+    "operation": "upsert",
+    "payload": {
+      "title": "Technical flow",
+      "kind": "bjj",
+      "scheduled_at": "2026-10-29T20:30:00-05:00",
+      "status": "pending",
+      "plan_revision": "2026-10-14-capacity-schedule",
+      "template_id": "bjj-flow",
+      "phase_id": "capacity",
+      "time_zone": "America/Chicago",
+      "schedule_source": "scheduleConfirmation",
+      "prescription": {
+        "id": "bjj-flow",
+        "kind": "bjj",
+        "title": "Technical flow",
+        "category": "flow",
+        "weeklyFrequency": {
+          "min": 1,
+          "max": 1
+        },
+        "durationMinutes": null,
+        "sourceRef": "roadmap"
+      },
+      "plan_snapshot": {
+        "template": {
+          "id": "bjj-flow",
+          "kind": "bjj",
+          "title": "Technical flow",
+          "category": "flow",
+          "weeklyFrequency": {
+            "min": 1,
+            "max": 1
+          },
+          "durationMinutes": null,
+          "sourceRef": "roadmap"
+        },
+        "category": "flow",
+        "nutrition_profile": "flowRest"
+      },
+      "category": "flow"
+    }
+  },
+  {
+    "command_id": "create-capacity-2026-10-31-moderate-sat",
+    "entity_type": "activities",
+    "entity_id": "capacity-2026-10-31-moderate-sat",
+    "expected_revision": 0,
+    "operation": "upsert",
+    "payload": {
+      "title": "Moderate BJJ",
+      "kind": "bjj",
+      "scheduled_at": "2026-10-31T10:00:00-05:00",
+      "status": "pending",
+      "plan_revision": "2026-10-14-capacity-schedule",
+      "template_id": "bjj-moderate",
+      "phase_id": "capacity",
+      "time_zone": "America/Chicago",
+      "schedule_source": "scheduleConfirmation",
+      "prescription": {
+        "id": "bjj-moderate",
+        "kind": "bjj",
+        "title": "Moderate BJJ",
+        "category": "moderate",
+        "weeklyFrequency": {
+          "min": 1,
+          "max": 2
+        },
+        "durationMinutes": null,
+        "sourceRef": "roadmap"
+      },
+      "plan_snapshot": {
+        "template": {
+          "id": "bjj-moderate",
+          "kind": "bjj",
+          "title": "Moderate BJJ",
+          "category": "moderate",
+          "weeklyFrequency": {
+            "min": 1,
+            "max": 2
+          },
+          "durationMinutes": null,
+          "sourceRef": "roadmap"
+        },
+        "category": "moderate",
+        "nutrition_profile": "trainingAB"
+      },
+      "category": "moderate"
+    }
+  },
+  {
+    "command_id": "create-capacity-2026-11-01-weight-sun",
+    "entity_type": "activities",
+    "entity_id": "capacity-2026-11-01-weight-sun",
+    "expected_revision": 0,
+    "operation": "upsert",
+    "payload": {
+      "title": "Weekly weigh-in",
+      "kind": "weight",
+      "scheduled_at": "2026-11-01T09:00:00-06:00",
+      "status": "pending",
+      "plan_revision": "2026-10-14-capacity-schedule",
+      "template_id": "weekly-weight",
+      "phase_id": "capacity",
+      "time_zone": "America/Chicago",
+      "schedule_source": "implementationTimingDefaults",
+      "prescription": {
+        "id": "weekly-weight",
+        "kind": "weight",
+        "title": "Weekly weigh-in",
+        "instructions": "After waking.",
+        "sourceRef": "currentReview"
+      },
+      "plan_snapshot": {
+        "template": {
+          "id": "weekly-weight",
+          "kind": "weight",
+          "title": "Weekly weigh-in",
+          "instructions": "After waking.",
+          "sourceRef": "currentReview"
+        },
+        "category": null,
+        "nutrition_profile": null
+      }
+    }
+  },
+  {
+    "command_id": "create-capacity-2026-11-01-weights-sun",
+    "entity_type": "activities",
+    "entity_id": "capacity-2026-11-01-weights-sun",
+    "expected_revision": 0,
+    "operation": "upsert",
+    "payload": {
+      "title": "Accessory session",
+      "kind": "weights",
+      "scheduled_at": "2026-11-01T11:00:00-06:00",
+      "status": "pending",
+      "plan_revision": "2026-10-14-capacity-schedule",
+      "template_id": "accessory",
+      "phase_id": "capacity",
+      "time_zone": "America/Chicago",
+      "schedule_source": "scheduleConfirmation",
+      "prescription": {
+        "id": "accessory",
+        "kind": "weights",
+        "title": "Accessory session",
+        "weeklyFrequency": {
+          "min": 2,
+          "max": 2
+        },
+        "phaseIds": [
+          "capacity"
+        ],
+        "durationMinutes": null,
+        "sourceRef": "roadmap",
+        "exercises": [
+          {
+            "name": "Hollow-body holds",
+            "sets": null,
+            "holdSeconds": null,
+            "sourceRef": "roadmap"
+          },
+          {
+            "name": "Single-leg hip thrusts",
+            "sets": null,
+            "reps": null,
+            "loadLb": null,
+            "sourceRef": "roadmap"
+          },
+          {
+            "name": "Anti-extension core work",
+            "exercise": null,
+            "sets": null,
+            "reps": null,
+            "sourceRef": "roadmap"
+          }
+        ]
+      },
+      "plan_snapshot": {
+        "template": {
+          "id": "accessory",
+          "kind": "weights",
+          "title": "Accessory session",
+          "weeklyFrequency": {
+            "min": 2,
+            "max": 2
+          },
+          "phaseIds": [
+            "capacity"
+          ],
+          "durationMinutes": null,
+          "sourceRef": "roadmap",
+          "exercises": [
+            {
+              "name": "Hollow-body holds",
+              "sets": null,
+              "holdSeconds": null,
+              "sourceRef": "roadmap"
+            },
+            {
+              "name": "Single-leg hip thrusts",
+              "sets": null,
+              "reps": null,
+              "loadLb": null,
+              "sourceRef": "roadmap"
+            },
+            {
+              "name": "Anti-extension core work",
+              "exercise": null,
+              "sets": null,
+              "reps": null,
+              "sourceRef": "roadmap"
+            }
+          ]
+        },
+        "category": null,
+        "nutrition_profile": null
+      }
+    }
+  },
+  {
+    "command_id": "create-capacity-2026-11-02-moderate-mon",
+    "entity_type": "activities",
+    "entity_id": "capacity-2026-11-02-moderate-mon",
+    "expected_revision": 0,
+    "operation": "upsert",
+    "payload": {
+      "title": "Moderate BJJ",
+      "kind": "bjj",
+      "scheduled_at": "2026-11-02T11:00:00-06:00",
+      "status": "pending",
+      "plan_revision": "2026-10-14-capacity-schedule",
+      "template_id": "bjj-moderate",
+      "phase_id": "capacity",
+      "time_zone": "America/Chicago",
+      "schedule_source": "scheduleConfirmation",
+      "prescription": {
+        "id": "bjj-moderate",
+        "kind": "bjj",
+        "title": "Moderate BJJ",
+        "category": "moderate",
+        "weeklyFrequency": {
+          "min": 1,
+          "max": 2
+        },
+        "durationMinutes": null,
+        "sourceRef": "roadmap"
+      },
+      "plan_snapshot": {
+        "template": {
+          "id": "bjj-moderate",
+          "kind": "bjj",
+          "title": "Moderate BJJ",
+          "category": "moderate",
+          "weeklyFrequency": {
+            "min": 1,
+            "max": 2
+          },
+          "durationMinutes": null,
+          "sourceRef": "roadmap"
+        },
+        "category": "moderate",
+        "nutrition_profile": "trainingAB"
+      },
+      "category": "moderate"
+    }
+  },
+  {
+    "command_id": "create-capacity-2026-11-03-competition-tue",
+    "entity_type": "activities",
+    "entity_id": "capacity-2026-11-03-competition-tue",
+    "expected_revision": 0,
+    "operation": "upsert",
+    "payload": {
+      "title": "Competition practice",
+      "kind": "bjj",
+      "scheduled_at": "2026-11-03T18:00:00-06:00",
+      "status": "pending",
+      "plan_revision": "2026-10-14-capacity-schedule",
+      "template_id": "bjj-competition",
+      "phase_id": "capacity",
+      "time_zone": "America/Chicago",
+      "schedule_source": "scheduleConfirmation",
+      "prescription": {
+        "id": "bjj-competition",
+        "kind": "bjj",
+        "title": "Competition practice",
+        "category": "competition",
+        "weeklyFrequency": {
+          "min": 1,
+          "max": 1
+        },
+        "durationMinutes": null,
+        "sourceRef": "roadmap"
+      },
+      "plan_snapshot": {
+        "template": {
+          "id": "bjj-competition",
+          "kind": "bjj",
+          "title": "Competition practice",
+          "category": "competition",
+          "weeklyFrequency": {
+            "min": 1,
+            "max": 1
+          },
+          "durationMinutes": null,
+          "sourceRef": "roadmap"
+        },
+        "category": "competition",
+        "nutrition_profile": "trainingAB"
+      },
+      "category": "competition"
+    }
+  },
+  {
+    "command_id": "create-capacity-2026-11-03-breathing-tue",
+    "entity_type": "activities",
+    "entity_id": "capacity-2026-11-03-breathing-tue",
+    "expected_revision": 0,
+    "operation": "upsert",
+    "payload": {
+      "title": "Breathing",
+      "kind": "recovery",
+      "scheduled_at": "2026-11-03T20:00:00-06:00",
+      "status": "pending",
+      "plan_revision": "2026-10-14-capacity-schedule",
+      "template_id": "breathing",
+      "phase_id": "capacity",
+      "time_zone": "America/Chicago",
+      "schedule_source": "implementationTimingDefaults",
+      "prescription": {
+        "id": "breathing",
+        "kind": "recovery",
+        "title": "Breathing",
+        "instructions": "Five minutes of physiological sighing.",
+        "sourceRef": "recoveryDraft"
+      },
+      "plan_snapshot": {
+        "template": {
+          "id": "breathing",
+          "kind": "recovery",
+          "title": "Breathing",
+          "instructions": "Five minutes of physiological sighing.",
+          "sourceRef": "recoveryDraft"
+        },
+        "category": null,
+        "nutrition_profile": null
+      },
+      "parent_id": "capacity-2026-11-03-recovery-tue"
+    }
+  },
+  {
+    "command_id": "create-capacity-2026-11-03-recovery-tue",
+    "entity_type": "activities",
+    "entity_id": "capacity-2026-11-03-recovery-tue",
+    "expected_revision": 0,
+    "operation": "upsert",
+    "payload": {
+      "title": "Recovery",
+      "kind": "recovery",
+      "scheduled_at": "2026-11-03T20:00:00-06:00",
+      "status": "pending",
+      "plan_revision": "2026-10-14-capacity-schedule",
+      "template_id": "recovery",
+      "phase_id": "capacity",
+      "time_zone": "America/Chicago",
+      "schedule_source": "implementationTimingDefaults",
+      "prescription": {
+        "id": "recovery",
+        "kind": "recovery",
+        "title": "Recovery",
+        "instructions": "",
+        "sourceRef": "recoveryDraft"
+      },
+      "plan_snapshot": {
+        "template": {
+          "id": "recovery",
+          "kind": "recovery",
+          "title": "Recovery",
+          "instructions": "",
+          "sourceRef": "recoveryDraft"
+        },
+        "category": null,
+        "nutrition_profile": null
+      },
+      "linked_session_id": "capacity-2026-11-03-competition-tue"
+    }
+  },
+  {
+    "command_id": "create-capacity-2026-11-03-hydration-tue",
+    "entity_type": "activities",
+    "entity_id": "capacity-2026-11-03-hydration-tue",
+    "expected_revision": 0,
+    "operation": "upsert",
+    "payload": {
+      "title": "Hydration",
+      "kind": "recovery",
+      "scheduled_at": "2026-11-03T20:05:00-06:00",
+      "status": "pending",
+      "plan_revision": "2026-10-14-capacity-schedule",
+      "template_id": "hydration",
+      "phase_id": "capacity",
+      "time_zone": "America/Chicago",
+      "schedule_source": "implementationTimingDefaults",
+      "prescription": {
+        "id": "hydration",
+        "kind": "recovery",
+        "title": "Hydration",
+        "instructions": "",
+        "sourceRef": "recoveryDraft"
+      },
+      "plan_snapshot": {
+        "template": {
+          "id": "hydration",
+          "kind": "recovery",
+          "title": "Hydration",
+          "instructions": "",
+          "sourceRef": "recoveryDraft"
+        },
+        "category": null,
+        "nutrition_profile": null
+      },
+      "parent_id": "capacity-2026-11-03-recovery-tue",
+      "recovery_step_type": "hydration"
+    }
+  },
+  {
+    "command_id": "create-capacity-2026-11-03-tissue-tue",
+    "entity_type": "activities",
+    "entity_id": "capacity-2026-11-03-tissue-tue",
+    "expected_revision": 0,
+    "operation": "upsert",
+    "payload": {
+      "title": "Tissue work",
+      "kind": "recovery",
+      "scheduled_at": "2026-11-03T20:10:00-06:00",
+      "status": "pending",
+      "plan_revision": "2026-10-14-capacity-schedule",
+      "template_id": "tissue",
+      "phase_id": "capacity",
+      "time_zone": "America/Chicago",
+      "schedule_source": "implementationTimingDefaults",
+      "prescription": {
+        "id": "tissue",
+        "kind": "recovery",
+        "title": "Tissue work",
+        "instructions": "Massage gun: 60 seconds per muscle group, quads, outer glutes and calves. Psoas stretch: 60 seconds per side. Figure-four stretch: 90 seconds per side.",
+        "sourceRef": "recoveryDraft"
+      },
+      "plan_snapshot": {
+        "template": {
+          "id": "tissue",
+          "kind": "recovery",
+          "title": "Tissue work",
+          "instructions": "Massage gun: 60 seconds per muscle group, quads, outer glutes and calves. Psoas stretch: 60 seconds per side. Figure-four stretch: 90 seconds per side.",
+          "sourceRef": "recoveryDraft"
+        },
+        "category": null,
+        "nutrition_profile": null
+      },
+      "parent_id": "capacity-2026-11-03-recovery-tue"
+    }
+  },
+  {
+    "command_id": "create-capacity-2026-11-03-legs-tue",
+    "entity_type": "activities",
+    "entity_id": "capacity-2026-11-03-legs-tue",
+    "expected_revision": 0,
+    "operation": "upsert",
+    "payload": {
+      "title": "Legs up",
+      "kind": "recovery",
+      "scheduled_at": "2026-11-03T20:20:00-06:00",
+      "status": "pending",
+      "plan_revision": "2026-10-14-capacity-schedule",
+      "template_id": "legs",
+      "phase_id": "capacity",
+      "time_zone": "America/Chicago",
+      "schedule_source": "implementationTimingDefaults",
+      "prescription": {
+        "id": "legs",
+        "kind": "recovery",
+        "title": "Legs up",
+        "instructions": "Eight to ten minutes.",
+        "sourceRef": "recoveryDraft"
+      },
+      "plan_snapshot": {
+        "template": {
+          "id": "legs",
+          "kind": "recovery",
+          "title": "Legs up",
+          "instructions": "Eight to ten minutes.",
+          "sourceRef": "recoveryDraft"
+        },
+        "category": null,
+        "nutrition_profile": null
+      },
+      "parent_id": "capacity-2026-11-03-recovery-tue"
+    }
+  },
+  {
+    "command_id": "create-capacity-2026-11-04-breathing-wed",
+    "entity_type": "activities",
+    "entity_id": "capacity-2026-11-04-breathing-wed",
+    "expected_revision": 0,
+    "operation": "upsert",
+    "payload": {
+      "title": "Breathing",
+      "kind": "recovery",
+      "scheduled_at": "2026-11-04T08:00:00-06:00",
+      "status": "pending",
+      "plan_revision": "2026-10-14-capacity-schedule",
+      "template_id": "breathing",
+      "phase_id": "capacity",
+      "time_zone": "America/Chicago",
+      "schedule_source": "implementationTimingDefaults",
+      "prescription": {
+        "id": "breathing",
+        "kind": "recovery",
+        "title": "Breathing",
+        "instructions": "Five minutes of physiological sighing.",
+        "sourceRef": "recoveryDraft"
+      },
+      "plan_snapshot": {
+        "template": {
+          "id": "breathing",
+          "kind": "recovery",
+          "title": "Breathing",
+          "instructions": "Five minutes of physiological sighing.",
+          "sourceRef": "recoveryDraft"
+        },
+        "category": null,
+        "nutrition_profile": null
+      },
+      "parent_id": "capacity-2026-11-04-rest-wed"
+    }
+  },
+  {
+    "command_id": "create-capacity-2026-11-04-rest-wed",
+    "entity_type": "activities",
+    "entity_id": "capacity-2026-11-04-rest-wed",
+    "expected_revision": 0,
+    "operation": "upsert",
+    "payload": {
+      "title": "Rest day",
+      "kind": "rest",
+      "scheduled_at": "2026-11-04T08:00:00-06:00",
+      "status": "pending",
+      "plan_revision": "2026-10-14-capacity-schedule",
+      "template_id": "rest",
+      "phase_id": "capacity",
+      "time_zone": "America/Chicago",
+      "schedule_source": "implementationTimingDefaults",
+      "prescription": {
+        "id": "rest",
+        "kind": "rest",
+        "title": "Rest day",
+        "instructions": "",
+        "sourceRef": "currentReview"
+      },
+      "plan_snapshot": {
+        "template": {
+          "id": "rest",
+          "kind": "rest",
+          "title": "Rest day",
+          "instructions": "",
+          "sourceRef": "currentReview"
+        },
+        "category": null,
+        "nutrition_profile": null
+      }
+    }
+  },
+  {
+    "command_id": "create-capacity-2026-11-04-hydration-wed",
+    "entity_type": "activities",
+    "entity_id": "capacity-2026-11-04-hydration-wed",
+    "expected_revision": 0,
+    "operation": "upsert",
+    "payload": {
+      "title": "Hydration",
+      "kind": "recovery",
+      "scheduled_at": "2026-11-04T08:05:00-06:00",
+      "status": "pending",
+      "plan_revision": "2026-10-14-capacity-schedule",
+      "template_id": "hydration",
+      "phase_id": "capacity",
+      "time_zone": "America/Chicago",
+      "schedule_source": "implementationTimingDefaults",
+      "prescription": {
+        "id": "hydration",
+        "kind": "recovery",
+        "title": "Hydration",
+        "instructions": "",
+        "sourceRef": "recoveryDraft"
+      },
+      "plan_snapshot": {
+        "template": {
+          "id": "hydration",
+          "kind": "recovery",
+          "title": "Hydration",
+          "instructions": "",
+          "sourceRef": "recoveryDraft"
+        },
+        "category": null,
+        "nutrition_profile": null
+      },
+      "parent_id": "capacity-2026-11-04-rest-wed",
+      "recovery_step_type": "hydration"
+    }
+  },
+  {
+    "command_id": "create-capacity-2026-11-04-tissue-wed",
+    "entity_type": "activities",
+    "entity_id": "capacity-2026-11-04-tissue-wed",
+    "expected_revision": 0,
+    "operation": "upsert",
+    "payload": {
+      "title": "Tissue work",
+      "kind": "recovery",
+      "scheduled_at": "2026-11-04T08:10:00-06:00",
+      "status": "pending",
+      "plan_revision": "2026-10-14-capacity-schedule",
+      "template_id": "tissue",
+      "phase_id": "capacity",
+      "time_zone": "America/Chicago",
+      "schedule_source": "implementationTimingDefaults",
+      "prescription": {
+        "id": "tissue",
+        "kind": "recovery",
+        "title": "Tissue work",
+        "instructions": "Massage gun: 60 seconds per muscle group, quads, outer glutes and calves. Psoas stretch: 60 seconds per side. Figure-four stretch: 90 seconds per side.",
+        "sourceRef": "recoveryDraft"
+      },
+      "plan_snapshot": {
+        "template": {
+          "id": "tissue",
+          "kind": "recovery",
+          "title": "Tissue work",
+          "instructions": "Massage gun: 60 seconds per muscle group, quads, outer glutes and calves. Psoas stretch: 60 seconds per side. Figure-four stretch: 90 seconds per side.",
+          "sourceRef": "recoveryDraft"
+        },
+        "category": null,
+        "nutrition_profile": null
+      },
+      "parent_id": "capacity-2026-11-04-rest-wed"
+    }
+  },
+  {
+    "command_id": "create-capacity-2026-11-04-legs-wed",
+    "entity_type": "activities",
+    "entity_id": "capacity-2026-11-04-legs-wed",
+    "expected_revision": 0,
+    "operation": "upsert",
+    "payload": {
+      "title": "Legs up",
+      "kind": "recovery",
+      "scheduled_at": "2026-11-04T08:20:00-06:00",
+      "status": "pending",
+      "plan_revision": "2026-10-14-capacity-schedule",
+      "template_id": "legs",
+      "phase_id": "capacity",
+      "time_zone": "America/Chicago",
+      "schedule_source": "implementationTimingDefaults",
+      "prescription": {
+        "id": "legs",
+        "kind": "recovery",
+        "title": "Legs up",
+        "instructions": "Eight to ten minutes.",
+        "sourceRef": "recoveryDraft"
+      },
+      "plan_snapshot": {
+        "template": {
+          "id": "legs",
+          "kind": "recovery",
+          "title": "Legs up",
+          "instructions": "Eight to ten minutes.",
+          "sourceRef": "recoveryDraft"
+        },
+        "category": null,
+        "nutrition_profile": null
+      },
+      "parent_id": "capacity-2026-11-04-rest-wed"
+    }
+  },
+  {
+    "command_id": "create-capacity-2026-11-05-weights-thu",
+    "entity_type": "activities",
+    "entity_id": "capacity-2026-11-05-weights-thu",
+    "expected_revision": 0,
+    "operation": "upsert",
+    "payload": {
+      "title": "Accessory session",
+      "kind": "weights",
+      "scheduled_at": "2026-11-05T16:00:00-06:00",
+      "status": "pending",
+      "plan_revision": "2026-10-14-capacity-schedule",
+      "template_id": "accessory",
+      "phase_id": "capacity",
+      "time_zone": "America/Chicago",
+      "schedule_source": "scheduleConfirmation",
+      "prescription": {
+        "id": "accessory",
+        "kind": "weights",
+        "title": "Accessory session",
+        "weeklyFrequency": {
+          "min": 2,
+          "max": 2
+        },
+        "phaseIds": [
+          "capacity"
+        ],
+        "durationMinutes": null,
+        "sourceRef": "roadmap",
+        "exercises": [
+          {
+            "name": "Hollow-body holds",
+            "sets": null,
+            "holdSeconds": null,
+            "sourceRef": "roadmap"
+          },
+          {
+            "name": "Single-leg hip thrusts",
+            "sets": null,
+            "reps": null,
+            "loadLb": null,
+            "sourceRef": "roadmap"
+          },
+          {
+            "name": "Anti-extension core work",
+            "exercise": null,
+            "sets": null,
+            "reps": null,
+            "sourceRef": "roadmap"
+          }
+        ]
+      },
+      "plan_snapshot": {
+        "template": {
+          "id": "accessory",
+          "kind": "weights",
+          "title": "Accessory session",
+          "weeklyFrequency": {
+            "min": 2,
+            "max": 2
+          },
+          "phaseIds": [
+            "capacity"
+          ],
+          "durationMinutes": null,
+          "sourceRef": "roadmap",
+          "exercises": [
+            {
+              "name": "Hollow-body holds",
+              "sets": null,
+              "holdSeconds": null,
+              "sourceRef": "roadmap"
+            },
+            {
+              "name": "Single-leg hip thrusts",
+              "sets": null,
+              "reps": null,
+              "loadLb": null,
+              "sourceRef": "roadmap"
+            },
+            {
+              "name": "Anti-extension core work",
+              "exercise": null,
+              "sets": null,
+              "reps": null,
+              "sourceRef": "roadmap"
+            }
+          ]
+        },
+        "category": null,
+        "nutrition_profile": null
+      }
+    }
+  },
+  {
+    "command_id": "create-capacity-2026-11-05-flow-thu",
+    "entity_type": "activities",
+    "entity_id": "capacity-2026-11-05-flow-thu",
+    "expected_revision": 0,
+    "operation": "upsert",
+    "payload": {
+      "title": "Technical flow",
+      "kind": "bjj",
+      "scheduled_at": "2026-11-05T20:30:00-06:00",
+      "status": "pending",
+      "plan_revision": "2026-10-14-capacity-schedule",
+      "template_id": "bjj-flow",
+      "phase_id": "capacity",
+      "time_zone": "America/Chicago",
+      "schedule_source": "scheduleConfirmation",
+      "prescription": {
+        "id": "bjj-flow",
+        "kind": "bjj",
+        "title": "Technical flow",
+        "category": "flow",
+        "weeklyFrequency": {
+          "min": 1,
+          "max": 1
+        },
+        "durationMinutes": null,
+        "sourceRef": "roadmap"
+      },
+      "plan_snapshot": {
+        "template": {
+          "id": "bjj-flow",
+          "kind": "bjj",
+          "title": "Technical flow",
+          "category": "flow",
+          "weeklyFrequency": {
+            "min": 1,
+            "max": 1
+          },
+          "durationMinutes": null,
+          "sourceRef": "roadmap"
+        },
+        "category": "flow",
+        "nutrition_profile": "flowRest"
+      },
+      "category": "flow"
+    }
+  },
+  {
+    "command_id": "create-capacity-2026-11-07-moderate-sat",
+    "entity_type": "activities",
+    "entity_id": "capacity-2026-11-07-moderate-sat",
+    "expected_revision": 0,
+    "operation": "upsert",
+    "payload": {
+      "title": "Moderate BJJ",
+      "kind": "bjj",
+      "scheduled_at": "2026-11-07T10:00:00-06:00",
+      "status": "pending",
+      "plan_revision": "2026-10-14-capacity-schedule",
+      "template_id": "bjj-moderate",
+      "phase_id": "capacity",
+      "time_zone": "America/Chicago",
+      "schedule_source": "scheduleConfirmation",
+      "prescription": {
+        "id": "bjj-moderate",
+        "kind": "bjj",
+        "title": "Moderate BJJ",
+        "category": "moderate",
+        "weeklyFrequency": {
+          "min": 1,
+          "max": 2
+        },
+        "durationMinutes": null,
+        "sourceRef": "roadmap"
+      },
+      "plan_snapshot": {
+        "template": {
+          "id": "bjj-moderate",
+          "kind": "bjj",
+          "title": "Moderate BJJ",
+          "category": "moderate",
+          "weeklyFrequency": {
+            "min": 1,
+            "max": 2
+          },
+          "durationMinutes": null,
+          "sourceRef": "roadmap"
+        },
+        "category": "moderate",
+        "nutrition_profile": "trainingAB"
+      },
+      "category": "moderate"
+    }
+  },
+  {
+    "command_id": "create-capacity-2026-11-08-weight-sun",
+    "entity_type": "activities",
+    "entity_id": "capacity-2026-11-08-weight-sun",
+    "expected_revision": 0,
+    "operation": "upsert",
+    "payload": {
+      "title": "Weekly weigh-in",
+      "kind": "weight",
+      "scheduled_at": "2026-11-08T09:00:00-06:00",
+      "status": "pending",
+      "plan_revision": "2026-10-14-capacity-schedule",
+      "template_id": "weekly-weight",
+      "phase_id": "capacity",
+      "time_zone": "America/Chicago",
+      "schedule_source": "implementationTimingDefaults",
+      "prescription": {
+        "id": "weekly-weight",
+        "kind": "weight",
+        "title": "Weekly weigh-in",
+        "instructions": "After waking.",
+        "sourceRef": "currentReview"
+      },
+      "plan_snapshot": {
+        "template": {
+          "id": "weekly-weight",
+          "kind": "weight",
+          "title": "Weekly weigh-in",
+          "instructions": "After waking.",
+          "sourceRef": "currentReview"
+        },
+        "category": null,
+        "nutrition_profile": null
+      }
+    }
+  },
+  {
+    "command_id": "create-capacity-2026-11-08-weights-sun",
+    "entity_type": "activities",
+    "entity_id": "capacity-2026-11-08-weights-sun",
+    "expected_revision": 0,
+    "operation": "upsert",
+    "payload": {
+      "title": "Accessory session",
+      "kind": "weights",
+      "scheduled_at": "2026-11-08T11:00:00-06:00",
+      "status": "pending",
+      "plan_revision": "2026-10-14-capacity-schedule",
+      "template_id": "accessory",
+      "phase_id": "capacity",
+      "time_zone": "America/Chicago",
+      "schedule_source": "scheduleConfirmation",
+      "prescription": {
+        "id": "accessory",
+        "kind": "weights",
+        "title": "Accessory session",
+        "weeklyFrequency": {
+          "min": 2,
+          "max": 2
+        },
+        "phaseIds": [
+          "capacity"
+        ],
+        "durationMinutes": null,
+        "sourceRef": "roadmap",
+        "exercises": [
+          {
+            "name": "Hollow-body holds",
+            "sets": null,
+            "holdSeconds": null,
+            "sourceRef": "roadmap"
+          },
+          {
+            "name": "Single-leg hip thrusts",
+            "sets": null,
+            "reps": null,
+            "loadLb": null,
+            "sourceRef": "roadmap"
+          },
+          {
+            "name": "Anti-extension core work",
+            "exercise": null,
+            "sets": null,
+            "reps": null,
+            "sourceRef": "roadmap"
+          }
+        ]
+      },
+      "plan_snapshot": {
+        "template": {
+          "id": "accessory",
+          "kind": "weights",
+          "title": "Accessory session",
+          "weeklyFrequency": {
+            "min": 2,
+            "max": 2
+          },
+          "phaseIds": [
+            "capacity"
+          ],
+          "durationMinutes": null,
+          "sourceRef": "roadmap",
+          "exercises": [
+            {
+              "name": "Hollow-body holds",
+              "sets": null,
+              "holdSeconds": null,
+              "sourceRef": "roadmap"
+            },
+            {
+              "name": "Single-leg hip thrusts",
+              "sets": null,
+              "reps": null,
+              "loadLb": null,
+              "sourceRef": "roadmap"
+            },
+            {
+              "name": "Anti-extension core work",
+              "exercise": null,
+              "sets": null,
+              "reps": null,
+              "sourceRef": "roadmap"
+            }
+          ]
+        },
+        "category": null,
+        "nutrition_profile": null
+      }
+    }
+  },
+  {
+    "command_id": "create-capacity-2026-11-09-moderate-mon",
+    "entity_type": "activities",
+    "entity_id": "capacity-2026-11-09-moderate-mon",
+    "expected_revision": 0,
+    "operation": "upsert",
+    "payload": {
+      "title": "Moderate BJJ",
+      "kind": "bjj",
+      "scheduled_at": "2026-11-09T11:00:00-06:00",
+      "status": "pending",
+      "plan_revision": "2026-10-14-capacity-schedule",
+      "template_id": "bjj-moderate",
+      "phase_id": "capacity",
+      "time_zone": "America/Chicago",
+      "schedule_source": "scheduleConfirmation",
+      "prescription": {
+        "id": "bjj-moderate",
+        "kind": "bjj",
+        "title": "Moderate BJJ",
+        "category": "moderate",
+        "weeklyFrequency": {
+          "min": 1,
+          "max": 2
+        },
+        "durationMinutes": null,
+        "sourceRef": "roadmap"
+      },
+      "plan_snapshot": {
+        "template": {
+          "id": "bjj-moderate",
+          "kind": "bjj",
+          "title": "Moderate BJJ",
+          "category": "moderate",
+          "weeklyFrequency": {
+            "min": 1,
+            "max": 2
+          },
+          "durationMinutes": null,
+          "sourceRef": "roadmap"
+        },
+        "category": "moderate",
+        "nutrition_profile": "trainingAB"
+      },
+      "category": "moderate"
+    }
+  },
+  {
+    "command_id": "create-capacity-2026-11-10-competition-tue",
+    "entity_type": "activities",
+    "entity_id": "capacity-2026-11-10-competition-tue",
+    "expected_revision": 0,
+    "operation": "upsert",
+    "payload": {
+      "title": "Competition practice",
+      "kind": "bjj",
+      "scheduled_at": "2026-11-10T18:00:00-06:00",
+      "status": "pending",
+      "plan_revision": "2026-10-14-capacity-schedule",
+      "template_id": "bjj-competition",
+      "phase_id": "capacity",
+      "time_zone": "America/Chicago",
+      "schedule_source": "scheduleConfirmation",
+      "prescription": {
+        "id": "bjj-competition",
+        "kind": "bjj",
+        "title": "Competition practice",
+        "category": "competition",
+        "weeklyFrequency": {
+          "min": 1,
+          "max": 1
+        },
+        "durationMinutes": null,
+        "sourceRef": "roadmap"
+      },
+      "plan_snapshot": {
+        "template": {
+          "id": "bjj-competition",
+          "kind": "bjj",
+          "title": "Competition practice",
+          "category": "competition",
+          "weeklyFrequency": {
+            "min": 1,
+            "max": 1
+          },
+          "durationMinutes": null,
+          "sourceRef": "roadmap"
+        },
+        "category": "competition",
+        "nutrition_profile": "trainingAB"
+      },
+      "category": "competition"
+    }
+  },
+  {
+    "command_id": "create-capacity-2026-11-10-breathing-tue",
+    "entity_type": "activities",
+    "entity_id": "capacity-2026-11-10-breathing-tue",
+    "expected_revision": 0,
+    "operation": "upsert",
+    "payload": {
+      "title": "Breathing",
+      "kind": "recovery",
+      "scheduled_at": "2026-11-10T20:00:00-06:00",
+      "status": "pending",
+      "plan_revision": "2026-10-14-capacity-schedule",
+      "template_id": "breathing",
+      "phase_id": "capacity",
+      "time_zone": "America/Chicago",
+      "schedule_source": "implementationTimingDefaults",
+      "prescription": {
+        "id": "breathing",
+        "kind": "recovery",
+        "title": "Breathing",
+        "instructions": "Five minutes of physiological sighing.",
+        "sourceRef": "recoveryDraft"
+      },
+      "plan_snapshot": {
+        "template": {
+          "id": "breathing",
+          "kind": "recovery",
+          "title": "Breathing",
+          "instructions": "Five minutes of physiological sighing.",
+          "sourceRef": "recoveryDraft"
+        },
+        "category": null,
+        "nutrition_profile": null
+      },
+      "parent_id": "capacity-2026-11-10-recovery-tue"
+    }
+  },
+  {
+    "command_id": "create-capacity-2026-11-10-recovery-tue",
+    "entity_type": "activities",
+    "entity_id": "capacity-2026-11-10-recovery-tue",
+    "expected_revision": 0,
+    "operation": "upsert",
+    "payload": {
+      "title": "Recovery",
+      "kind": "recovery",
+      "scheduled_at": "2026-11-10T20:00:00-06:00",
+      "status": "pending",
+      "plan_revision": "2026-10-14-capacity-schedule",
+      "template_id": "recovery",
+      "phase_id": "capacity",
+      "time_zone": "America/Chicago",
+      "schedule_source": "implementationTimingDefaults",
+      "prescription": {
+        "id": "recovery",
+        "kind": "recovery",
+        "title": "Recovery",
+        "instructions": "",
+        "sourceRef": "recoveryDraft"
+      },
+      "plan_snapshot": {
+        "template": {
+          "id": "recovery",
+          "kind": "recovery",
+          "title": "Recovery",
+          "instructions": "",
+          "sourceRef": "recoveryDraft"
+        },
+        "category": null,
+        "nutrition_profile": null
+      },
+      "linked_session_id": "capacity-2026-11-10-competition-tue"
+    }
+  },
+  {
+    "command_id": "create-capacity-2026-11-10-hydration-tue",
+    "entity_type": "activities",
+    "entity_id": "capacity-2026-11-10-hydration-tue",
+    "expected_revision": 0,
+    "operation": "upsert",
+    "payload": {
+      "title": "Hydration",
+      "kind": "recovery",
+      "scheduled_at": "2026-11-10T20:05:00-06:00",
+      "status": "pending",
+      "plan_revision": "2026-10-14-capacity-schedule",
+      "template_id": "hydration",
+      "phase_id": "capacity",
+      "time_zone": "America/Chicago",
+      "schedule_source": "implementationTimingDefaults",
+      "prescription": {
+        "id": "hydration",
+        "kind": "recovery",
+        "title": "Hydration",
+        "instructions": "",
+        "sourceRef": "recoveryDraft"
+      },
+      "plan_snapshot": {
+        "template": {
+          "id": "hydration",
+          "kind": "recovery",
+          "title": "Hydration",
+          "instructions": "",
+          "sourceRef": "recoveryDraft"
+        },
+        "category": null,
+        "nutrition_profile": null
+      },
+      "parent_id": "capacity-2026-11-10-recovery-tue",
+      "recovery_step_type": "hydration"
+    }
+  },
+  {
+    "command_id": "create-capacity-2026-11-10-tissue-tue",
+    "entity_type": "activities",
+    "entity_id": "capacity-2026-11-10-tissue-tue",
+    "expected_revision": 0,
+    "operation": "upsert",
+    "payload": {
+      "title": "Tissue work",
+      "kind": "recovery",
+      "scheduled_at": "2026-11-10T20:10:00-06:00",
+      "status": "pending",
+      "plan_revision": "2026-10-14-capacity-schedule",
+      "template_id": "tissue",
+      "phase_id": "capacity",
+      "time_zone": "America/Chicago",
+      "schedule_source": "implementationTimingDefaults",
+      "prescription": {
+        "id": "tissue",
+        "kind": "recovery",
+        "title": "Tissue work",
+        "instructions": "Massage gun: 60 seconds per muscle group, quads, outer glutes and calves. Psoas stretch: 60 seconds per side. Figure-four stretch: 90 seconds per side.",
+        "sourceRef": "recoveryDraft"
+      },
+      "plan_snapshot": {
+        "template": {
+          "id": "tissue",
+          "kind": "recovery",
+          "title": "Tissue work",
+          "instructions": "Massage gun: 60 seconds per muscle group, quads, outer glutes and calves. Psoas stretch: 60 seconds per side. Figure-four stretch: 90 seconds per side.",
+          "sourceRef": "recoveryDraft"
+        },
+        "category": null,
+        "nutrition_profile": null
+      },
+      "parent_id": "capacity-2026-11-10-recovery-tue"
+    }
+  },
+  {
+    "command_id": "create-capacity-2026-11-10-legs-tue",
+    "entity_type": "activities",
+    "entity_id": "capacity-2026-11-10-legs-tue",
+    "expected_revision": 0,
+    "operation": "upsert",
+    "payload": {
+      "title": "Legs up",
+      "kind": "recovery",
+      "scheduled_at": "2026-11-10T20:20:00-06:00",
+      "status": "pending",
+      "plan_revision": "2026-10-14-capacity-schedule",
+      "template_id": "legs",
+      "phase_id": "capacity",
+      "time_zone": "America/Chicago",
+      "schedule_source": "implementationTimingDefaults",
+      "prescription": {
+        "id": "legs",
+        "kind": "recovery",
+        "title": "Legs up",
+        "instructions": "Eight to ten minutes.",
+        "sourceRef": "recoveryDraft"
+      },
+      "plan_snapshot": {
+        "template": {
+          "id": "legs",
+          "kind": "recovery",
+          "title": "Legs up",
+          "instructions": "Eight to ten minutes.",
+          "sourceRef": "recoveryDraft"
+        },
+        "category": null,
+        "nutrition_profile": null
+      },
+      "parent_id": "capacity-2026-11-10-recovery-tue"
+    }
+  },
+  {
+    "command_id": "create-capacity-2026-11-11-breathing-wed",
+    "entity_type": "activities",
+    "entity_id": "capacity-2026-11-11-breathing-wed",
+    "expected_revision": 0,
+    "operation": "upsert",
+    "payload": {
+      "title": "Breathing",
+      "kind": "recovery",
+      "scheduled_at": "2026-11-11T08:00:00-06:00",
+      "status": "pending",
+      "plan_revision": "2026-10-14-capacity-schedule",
+      "template_id": "breathing",
+      "phase_id": "capacity",
+      "time_zone": "America/Chicago",
+      "schedule_source": "implementationTimingDefaults",
+      "prescription": {
+        "id": "breathing",
+        "kind": "recovery",
+        "title": "Breathing",
+        "instructions": "Five minutes of physiological sighing.",
+        "sourceRef": "recoveryDraft"
+      },
+      "plan_snapshot": {
+        "template": {
+          "id": "breathing",
+          "kind": "recovery",
+          "title": "Breathing",
+          "instructions": "Five minutes of physiological sighing.",
+          "sourceRef": "recoveryDraft"
+        },
+        "category": null,
+        "nutrition_profile": null
+      },
+      "parent_id": "capacity-2026-11-11-rest-wed"
+    }
+  },
+  {
+    "command_id": "create-capacity-2026-11-11-rest-wed",
+    "entity_type": "activities",
+    "entity_id": "capacity-2026-11-11-rest-wed",
+    "expected_revision": 0,
+    "operation": "upsert",
+    "payload": {
+      "title": "Rest day",
+      "kind": "rest",
+      "scheduled_at": "2026-11-11T08:00:00-06:00",
+      "status": "pending",
+      "plan_revision": "2026-10-14-capacity-schedule",
+      "template_id": "rest",
+      "phase_id": "capacity",
+      "time_zone": "America/Chicago",
+      "schedule_source": "implementationTimingDefaults",
+      "prescription": {
+        "id": "rest",
+        "kind": "rest",
+        "title": "Rest day",
+        "instructions": "",
+        "sourceRef": "currentReview"
+      },
+      "plan_snapshot": {
+        "template": {
+          "id": "rest",
+          "kind": "rest",
+          "title": "Rest day",
+          "instructions": "",
+          "sourceRef": "currentReview"
+        },
+        "category": null,
+        "nutrition_profile": null
+      }
+    }
+  },
+  {
+    "command_id": "create-capacity-2026-11-11-hydration-wed",
+    "entity_type": "activities",
+    "entity_id": "capacity-2026-11-11-hydration-wed",
+    "expected_revision": 0,
+    "operation": "upsert",
+    "payload": {
+      "title": "Hydration",
+      "kind": "recovery",
+      "scheduled_at": "2026-11-11T08:05:00-06:00",
+      "status": "pending",
+      "plan_revision": "2026-10-14-capacity-schedule",
+      "template_id": "hydration",
+      "phase_id": "capacity",
+      "time_zone": "America/Chicago",
+      "schedule_source": "implementationTimingDefaults",
+      "prescription": {
+        "id": "hydration",
+        "kind": "recovery",
+        "title": "Hydration",
+        "instructions": "",
+        "sourceRef": "recoveryDraft"
+      },
+      "plan_snapshot": {
+        "template": {
+          "id": "hydration",
+          "kind": "recovery",
+          "title": "Hydration",
+          "instructions": "",
+          "sourceRef": "recoveryDraft"
+        },
+        "category": null,
+        "nutrition_profile": null
+      },
+      "parent_id": "capacity-2026-11-11-rest-wed",
+      "recovery_step_type": "hydration"
+    }
+  },
+  {
+    "command_id": "create-capacity-2026-11-11-tissue-wed",
+    "entity_type": "activities",
+    "entity_id": "capacity-2026-11-11-tissue-wed",
+    "expected_revision": 0,
+    "operation": "upsert",
+    "payload": {
+      "title": "Tissue work",
+      "kind": "recovery",
+      "scheduled_at": "2026-11-11T08:10:00-06:00",
+      "status": "pending",
+      "plan_revision": "2026-10-14-capacity-schedule",
+      "template_id": "tissue",
+      "phase_id": "capacity",
+      "time_zone": "America/Chicago",
+      "schedule_source": "implementationTimingDefaults",
+      "prescription": {
+        "id": "tissue",
+        "kind": "recovery",
+        "title": "Tissue work",
+        "instructions": "Massage gun: 60 seconds per muscle group, quads, outer glutes and calves. Psoas stretch: 60 seconds per side. Figure-four stretch: 90 seconds per side.",
+        "sourceRef": "recoveryDraft"
+      },
+      "plan_snapshot": {
+        "template": {
+          "id": "tissue",
+          "kind": "recovery",
+          "title": "Tissue work",
+          "instructions": "Massage gun: 60 seconds per muscle group, quads, outer glutes and calves. Psoas stretch: 60 seconds per side. Figure-four stretch: 90 seconds per side.",
+          "sourceRef": "recoveryDraft"
+        },
+        "category": null,
+        "nutrition_profile": null
+      },
+      "parent_id": "capacity-2026-11-11-rest-wed"
+    }
+  },
+  {
+    "command_id": "create-capacity-2026-11-11-legs-wed",
+    "entity_type": "activities",
+    "entity_id": "capacity-2026-11-11-legs-wed",
+    "expected_revision": 0,
+    "operation": "upsert",
+    "payload": {
+      "title": "Legs up",
+      "kind": "recovery",
+      "scheduled_at": "2026-11-11T08:20:00-06:00",
+      "status": "pending",
+      "plan_revision": "2026-10-14-capacity-schedule",
+      "template_id": "legs",
+      "phase_id": "capacity",
+      "time_zone": "America/Chicago",
+      "schedule_source": "implementationTimingDefaults",
+      "prescription": {
+        "id": "legs",
+        "kind": "recovery",
+        "title": "Legs up",
+        "instructions": "Eight to ten minutes.",
+        "sourceRef": "recoveryDraft"
+      },
+      "plan_snapshot": {
+        "template": {
+          "id": "legs",
+          "kind": "recovery",
+          "title": "Legs up",
+          "instructions": "Eight to ten minutes.",
+          "sourceRef": "recoveryDraft"
+        },
+        "category": null,
+        "nutrition_profile": null
+      },
+      "parent_id": "capacity-2026-11-11-rest-wed"
+    }
+  },
+  {
+    "command_id": "create-capacity-2026-11-12-weights-thu",
+    "entity_type": "activities",
+    "entity_id": "capacity-2026-11-12-weights-thu",
+    "expected_revision": 0,
+    "operation": "upsert",
+    "payload": {
+      "title": "Accessory session",
+      "kind": "weights",
+      "scheduled_at": "2026-11-12T16:00:00-06:00",
+      "status": "pending",
+      "plan_revision": "2026-10-14-capacity-schedule",
+      "template_id": "accessory",
+      "phase_id": "capacity",
+      "time_zone": "America/Chicago",
+      "schedule_source": "scheduleConfirmation",
+      "prescription": {
+        "id": "accessory",
+        "kind": "weights",
+        "title": "Accessory session",
+        "weeklyFrequency": {
+          "min": 2,
+          "max": 2
+        },
+        "phaseIds": [
+          "capacity"
+        ],
+        "durationMinutes": null,
+        "sourceRef": "roadmap",
+        "exercises": [
+          {
+            "name": "Hollow-body holds",
+            "sets": null,
+            "holdSeconds": null,
+            "sourceRef": "roadmap"
+          },
+          {
+            "name": "Single-leg hip thrusts",
+            "sets": null,
+            "reps": null,
+            "loadLb": null,
+            "sourceRef": "roadmap"
+          },
+          {
+            "name": "Anti-extension core work",
+            "exercise": null,
+            "sets": null,
+            "reps": null,
+            "sourceRef": "roadmap"
+          }
+        ]
+      },
+      "plan_snapshot": {
+        "template": {
+          "id": "accessory",
+          "kind": "weights",
+          "title": "Accessory session",
+          "weeklyFrequency": {
+            "min": 2,
+            "max": 2
+          },
+          "phaseIds": [
+            "capacity"
+          ],
+          "durationMinutes": null,
+          "sourceRef": "roadmap",
+          "exercises": [
+            {
+              "name": "Hollow-body holds",
+              "sets": null,
+              "holdSeconds": null,
+              "sourceRef": "roadmap"
+            },
+            {
+              "name": "Single-leg hip thrusts",
+              "sets": null,
+              "reps": null,
+              "loadLb": null,
+              "sourceRef": "roadmap"
+            },
+            {
+              "name": "Anti-extension core work",
+              "exercise": null,
+              "sets": null,
+              "reps": null,
+              "sourceRef": "roadmap"
+            }
+          ]
+        },
+        "category": null,
+        "nutrition_profile": null
+      }
+    }
+  },
+  {
+    "command_id": "create-capacity-2026-11-12-flow-thu",
+    "entity_type": "activities",
+    "entity_id": "capacity-2026-11-12-flow-thu",
+    "expected_revision": 0,
+    "operation": "upsert",
+    "payload": {
+      "title": "Technical flow",
+      "kind": "bjj",
+      "scheduled_at": "2026-11-12T20:30:00-06:00",
+      "status": "pending",
+      "plan_revision": "2026-10-14-capacity-schedule",
+      "template_id": "bjj-flow",
+      "phase_id": "capacity",
+      "time_zone": "America/Chicago",
+      "schedule_source": "scheduleConfirmation",
+      "prescription": {
+        "id": "bjj-flow",
+        "kind": "bjj",
+        "title": "Technical flow",
+        "category": "flow",
+        "weeklyFrequency": {
+          "min": 1,
+          "max": 1
+        },
+        "durationMinutes": null,
+        "sourceRef": "roadmap"
+      },
+      "plan_snapshot": {
+        "template": {
+          "id": "bjj-flow",
+          "kind": "bjj",
+          "title": "Technical flow",
+          "category": "flow",
+          "weeklyFrequency": {
+            "min": 1,
+            "max": 1
+          },
+          "durationMinutes": null,
+          "sourceRef": "roadmap"
+        },
+        "category": "flow",
+        "nutrition_profile": "flowRest"
+      },
+      "category": "flow"
+    }
+  },
+  {
+    "command_id": "create-capacity-2026-11-14-moderate-sat",
+    "entity_type": "activities",
+    "entity_id": "capacity-2026-11-14-moderate-sat",
+    "expected_revision": 0,
+    "operation": "upsert",
+    "payload": {
+      "title": "Moderate BJJ",
+      "kind": "bjj",
+      "scheduled_at": "2026-11-14T10:00:00-06:00",
+      "status": "pending",
+      "plan_revision": "2026-10-14-capacity-schedule",
+      "template_id": "bjj-moderate",
+      "phase_id": "capacity",
+      "time_zone": "America/Chicago",
+      "schedule_source": "scheduleConfirmation",
+      "prescription": {
+        "id": "bjj-moderate",
+        "kind": "bjj",
+        "title": "Moderate BJJ",
+        "category": "moderate",
+        "weeklyFrequency": {
+          "min": 1,
+          "max": 2
+        },
+        "durationMinutes": null,
+        "sourceRef": "roadmap"
+      },
+      "plan_snapshot": {
+        "template": {
+          "id": "bjj-moderate",
+          "kind": "bjj",
+          "title": "Moderate BJJ",
+          "category": "moderate",
+          "weeklyFrequency": {
+            "min": 1,
+            "max": 2
+          },
+          "durationMinutes": null,
+          "sourceRef": "roadmap"
+        },
+        "category": "moderate",
+        "nutrition_profile": "trainingAB"
+      },
+      "category": "moderate"
+    }
+  },
+  {
+    "command_id": "create-capacity-2026-11-15-weight-sun",
+    "entity_type": "activities",
+    "entity_id": "capacity-2026-11-15-weight-sun",
+    "expected_revision": 0,
+    "operation": "upsert",
+    "payload": {
+      "title": "Weekly weigh-in",
+      "kind": "weight",
+      "scheduled_at": "2026-11-15T09:00:00-06:00",
+      "status": "pending",
+      "plan_revision": "2026-10-14-capacity-schedule",
+      "template_id": "weekly-weight",
+      "phase_id": "capacity",
+      "time_zone": "America/Chicago",
+      "schedule_source": "implementationTimingDefaults",
+      "prescription": {
+        "id": "weekly-weight",
+        "kind": "weight",
+        "title": "Weekly weigh-in",
+        "instructions": "After waking.",
+        "sourceRef": "currentReview"
+      },
+      "plan_snapshot": {
+        "template": {
+          "id": "weekly-weight",
+          "kind": "weight",
+          "title": "Weekly weigh-in",
+          "instructions": "After waking.",
+          "sourceRef": "currentReview"
+        },
+        "category": null,
+        "nutrition_profile": null
+      }
+    }
+  },
+  {
+    "command_id": "create-capacity-2026-11-15-weights-sun",
+    "entity_type": "activities",
+    "entity_id": "capacity-2026-11-15-weights-sun",
+    "expected_revision": 0,
+    "operation": "upsert",
+    "payload": {
+      "title": "Accessory session",
+      "kind": "weights",
+      "scheduled_at": "2026-11-15T11:00:00-06:00",
+      "status": "pending",
+      "plan_revision": "2026-10-14-capacity-schedule",
+      "template_id": "accessory",
+      "phase_id": "capacity",
+      "time_zone": "America/Chicago",
+      "schedule_source": "scheduleConfirmation",
+      "prescription": {
+        "id": "accessory",
+        "kind": "weights",
+        "title": "Accessory session",
+        "weeklyFrequency": {
+          "min": 2,
+          "max": 2
+        },
+        "phaseIds": [
+          "capacity"
+        ],
+        "durationMinutes": null,
+        "sourceRef": "roadmap",
+        "exercises": [
+          {
+            "name": "Hollow-body holds",
+            "sets": null,
+            "holdSeconds": null,
+            "sourceRef": "roadmap"
+          },
+          {
+            "name": "Single-leg hip thrusts",
+            "sets": null,
+            "reps": null,
+            "loadLb": null,
+            "sourceRef": "roadmap"
+          },
+          {
+            "name": "Anti-extension core work",
+            "exercise": null,
+            "sets": null,
+            "reps": null,
+            "sourceRef": "roadmap"
+          }
+        ]
+      },
+      "plan_snapshot": {
+        "template": {
+          "id": "accessory",
+          "kind": "weights",
+          "title": "Accessory session",
+          "weeklyFrequency": {
+            "min": 2,
+            "max": 2
+          },
+          "phaseIds": [
+            "capacity"
+          ],
+          "durationMinutes": null,
+          "sourceRef": "roadmap",
+          "exercises": [
+            {
+              "name": "Hollow-body holds",
+              "sets": null,
+              "holdSeconds": null,
+              "sourceRef": "roadmap"
+            },
+            {
+              "name": "Single-leg hip thrusts",
+              "sets": null,
+              "reps": null,
+              "loadLb": null,
+              "sourceRef": "roadmap"
+            },
+            {
+              "name": "Anti-extension core work",
+              "exercise": null,
+              "sets": null,
+              "reps": null,
+              "sourceRef": "roadmap"
+            }
+          ]
+        },
+        "category": null,
+        "nutrition_profile": null
+      }
+    }
+  }
+]
