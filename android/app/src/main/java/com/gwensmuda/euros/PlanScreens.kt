@@ -158,15 +158,29 @@ object PlanDisplay {
   } else repo.complete(record,status)
   onClose()
  }catch(e:Exception){error=e.message}finally{busy=false}}}
- Row(Modifier.fillMaxWidth(),verticalAlignment=Alignment.CenterVertically){
-  if(logging !in setOf(LoggingMode.STEPS,LoggingMode.WEIGHT,LoggingMode.UNSUPPORTED)) {
-   Button(enabled=!busy,onClick={if(logging==LoggingMode.FOOD)onFood() else finish("done")}){Text(if(kind in setOf("weights","rest") || p.optString("recovery_step_type")=="hydration")"Done" else "Log")}
-   Spacer(Modifier.width(8.dp));OutlinedButton(enabled=!busy,onClick={finish("skipped")}){Text(if(kind=="weights")"Skipped" else "Skip")}
+ Column(Modifier.fillMaxWidth(),horizontalAlignment=Alignment.CenterHorizontally,verticalArrangement=Arrangement.spacedBy(10.dp)) {
+  Box(Modifier.fillMaxWidth().height(48.dp),contentAlignment=Alignment.Center) {
+   ActivityGlyph(kind)
+   IconButton(onClick=onClose,modifier=Modifier.align(Alignment.CenterEnd)){Icon(Icons.Outlined.Close,"Close")}
   }
-  Spacer(Modifier.weight(1f));IconButton(onClick=onClose){Icon(Icons.Outlined.Close,"Close")}
+  Text(p.getString("title"),style=MaterialTheme.typography.headlineMedium,textAlign=androidx.compose.ui.text.style.TextAlign.Center,modifier=Modifier.fillMaxWidth())
+  Row(verticalAlignment=Alignment.CenterVertically,horizontalArrangement=Arrangement.Center){
+   Text(activityTime(record),style=MaterialTheme.typography.bodyMedium,color=MaterialTheme.colorScheme.onSurfaceVariant)
+   TextButton(onClick={move=true}){Text("Move")}
+  }
  }
- Text(p.getString("title"),style=MaterialTheme.typography.headlineMedium)
- Row(verticalAlignment=Alignment.CenterVertically){Text(activityTime(record));TextButton(onClick={move=true}){Text("Move")}}
+ if(logging !in setOf(LoggingMode.STEPS,LoggingMode.WEIGHT,LoggingMode.UNSUPPORTED)) {
+  Box(Modifier.fillMaxWidth(),contentAlignment=Alignment.Center) {
+   Row(Modifier.widthIn(max=360.dp).fillMaxWidth().padding(vertical=4.dp),horizontalArrangement=Arrangement.spacedBy(12.dp)) {
+    Button(enabled=!busy,onClick={if(logging==LoggingMode.FOOD)onFood() else finish("done")},modifier=Modifier.weight(1f).heightIn(min=52.dp),shape=RoundedCornerShape(14.dp)) {
+     Text(if(kind in setOf("weights","rest") || p.optString("recovery_step_type")=="hydration")"Done" else "Log")
+    }
+    OutlinedButton(enabled=!busy,onClick={finish("skipped")},modifier=Modifier.weight(1f).heightIn(min=52.dp),shape=RoundedCornerShape(14.dp)) {
+     Text(if(kind=="weights")"Skipped" else "Skip")
+    }
+   }
+  }
+ }
  if(move) MoveDialog(record,repo){move=false}
  val reminderContext=LocalContext.current
  var reminderEnabled by remember{mutableStateOf(false)}
@@ -177,7 +191,11 @@ object PlanDisplay {
  else if(logging==LoggingMode.WEIGHT) WeightPanel(repo,records,PlanDomain.day(record),record,onClose)
  else {
   val snapshot=p.optJSONObject("plan_snapshot");val template=snapshot?.optJSONObject("template") ?: snapshot
-  PlanDisplay.detail(record)?.let{Text(it)}
+  PlanDisplay.detail(record)?.let { instruction ->
+   Surface(modifier=Modifier.fillMaxWidth(),color=EurosColors.Soft,shape=RoundedCornerShape(18.dp),border=BorderStroke(1.dp,EurosColors.Line)) {
+    Text(instruction,modifier=Modifier.padding(22.dp),style=MaterialTheme.typography.bodyLarge)
+   }
+  }
   template?.optJSONArray("exercises")?.let{e->for(i in 0 until e.length()){
    val ex=e.getJSONObject(i)
    Column(Modifier.fillMaxWidth().padding(vertical=10.dp),verticalArrangement=Arrangement.spacedBy(5.dp)){
