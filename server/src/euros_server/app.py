@@ -16,6 +16,7 @@ from starlette.responses import JSONResponse
 from starlette.routing import Mount, Route
 
 from .domain import DomainError, Store
+from .llm import ModelService
 
 
 def load_token(name):
@@ -51,7 +52,8 @@ class TokenGate:
         await self.app(scope, receive, send)
 
 
-def create_app(store, api_token, mcp_token, public_hosts=()):
+def create_app(store, api_token, mcp_token, public_hosts=(), model_service=None):
+    models = model_service or ModelService.from_environment()
     if len(api_token) < 32 or len(mcp_token) < 32 or api_token == mcp_token:
         raise ValueError("Separate app and MCP tokens of at least 32 characters are required")
     hosts = ["127.0.0.1", "localhost", *public_hosts]
@@ -91,17 +93,51 @@ def create_app(store, api_token, mcp_token, public_hosts=()):
             result = {**exc.body, "status": exc.status}
             return CallToolResult(isError=True, content=[TextContent(type="text", text=json.dumps(result))], structuredContent=result)
 
-    async def command(request):
+    proposal = ToolAnnotations(readOnlyHint=True, destructiveHint=False,
+                               idempotentHint=False, openWorldHint=True)
+
+    async def model_result(call):
+        try:
+            result = await call
+            return CallToolResult(content=[TextContent(type="text", text=json.dumps(result))], structuredContent=result)
+        except DomainError as exc:
+            result = {**exc.body, "status": exc.status}
+            return CallToolResult(isError=True, content=[TextContent(type="text", text=json.dumps(result))], structuredContent=result)
+
+    @mcp.tool(name="interpret_food", annotations=proposal)
+    async def interpret_food_tool(text: str) -> CallToolResult:
+        """Ask the configured model for an editable food draft. Sends text to OpenAI; never saves food."""
+        return await model_result(models.food({"text": text}))
+
+    @mcp.tool(name="review_week", annotations=proposal)
+    async def review_week_tool(week_start: str, records: list[dict]) -> CallToolResult:
+        """Read-only weekly reflection from an explicit snapshot. Sends computed logged facts to OpenAI; never changes a plan."""
+        if len(json.dumps(records).encode()) > 1048576:
+            return await model_result(_oversized_model_request())
+        return await model_result(models.week({"week_start": week_start, "records": records}))
+
+    async def _oversized_model_request():
+        raise DomainError("request_too_large", 413)
+
+    async def read_json(request, limit=262144):
         body = bytearray()
         async for chunk in request.stream():
             body.extend(chunk)
-            if len(body) > 262144:
-                return JSONResponse({"error": "request_too_large"}, 413)
+            if len(body) > limit:
+                raise DomainError("request_too_large", 413)
         try:
-            data = json.loads(body)
+            return json.loads(body)
         except (ValueError, UnicodeDecodeError):
-            return JSONResponse({"error": "invalid_json"}, 400)
-        return JSONResponse(store.command(data))
+            raise DomainError("invalid_json", 400) from None
+
+    async def command(request):
+        return JSONResponse(store.command(await read_json(request)))
+
+    async def interpret_food(request):
+        return JSONResponse(await models.food(await read_json(request, 40000)))
+
+    async def review_week(request):
+        return JSONResponse(await models.week(await read_json(request, 1048576)))
 
     async def changes(request):
         try:
@@ -127,6 +163,8 @@ def create_app(store, api_token, mcp_token, public_hosts=()):
 
     app = Starlette(routes=[Route("/v1/commands", command, methods=["POST"]),
                             Route("/v1/changes", changes), Route("/v1/records", records),
+                            Route("/v1/interpret/food", interpret_food, methods=["POST"]),
+                            Route("/v1/review/week", review_week, methods=["POST"]),
                             Route("/v1/nutrition", nutrition), Mount("/", mcp.streamable_http_app())],
                     lifespan=lifespan, exception_handlers={DomainError: domain_error})
     app.state.mcp = mcp

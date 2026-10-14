@@ -145,4 +145,82 @@ class FoodDomainTest {
    assertFalse(FoodDomain.remainingReferences(meals,listOf(eaten),day).any{it.id=="dinner"})
   }
  }
+ private fun interpretedResponse()=JSONObject("""{"raw_text":"Changed by model","quantity_g":300,"nutrients":{"kcal":321.5,"protein_g":21,"carbs_g":null,"fat_g":0},"interpretation":{"provider":"test","model":"test-model","request_id":"sample"}}""")
+ @Test fun interpretedDraftPreservesUserTextWeightsIdentityAndUnknowns() {
+  val original=draft().copy(kcal="",protein="",carbs="",fat="",grams="275")
+  val result=FoodDomain.applyInterpretation(original,interpretedResponse())
+  assertEquals(original.id,result.id);assertEquals(original.text,result.text);assertEquals("275",result.grams)
+  assertEquals("321.5",result.kcal);assertEquals("",result.carbs);assertEquals("0",result.fat)
+  val restored=FoodDomain.loadDraft(FoodDomain.saveDraft(result));assertEquals(result,restored)
+  val payload=FoodDomain.payload(restored)
+  assertEquals("test-model",payload.getJSONObject("interpretation").getString("model"))
+  assertTrue(payload.getJSONObject("nutrients").isNull("carbs_g"))
+ }
+ @Test fun interpretationIsOnlyNeededForTextOrChangedInterpretedText() {
+  val textOnly=draft().copy(kcal="",protein="",carbs="",fat="")
+  assertTrue(FoodDomain.needsInterpretation(textOnly))
+  assertFalse(FoodDomain.needsInterpretation(textOnly.copy(manualEntry=true)))
+  assertFalse(FoodDomain.needsInterpretation(textOnly.copy(kcal="0")))
+  val result=FoodDomain.applyInterpretation(textOnly,interpretedResponse())
+  assertFalse(FoodDomain.needsInterpretation(result));assertTrue(FoodDomain.needsInterpretation(result.copy(text="Different meal")))
+  assertFalse(FoodDomain.needsInterpretation(result.copy(text="Different meal",manualEntry=true)))
+ }
+ @Test fun malformedInterpretationCannotBecomeReviewableFood() {
+  val response=interpretedResponse();response.getJSONObject("nutrients").put("kcal",-1)
+  assertThrows(IllegalArgumentException::class.java){FoodDomain.applyInterpretation(draft(),response)}
+  response.getJSONObject("nutrients").remove("kcal")
+  assertThrows(IllegalArgumentException::class.java){FoodDomain.applyInterpretation(draft(),response)}
+ }
+ @Test fun manualCorrectionRetainsInterpretationProvenanceWithoutInventingTotals() {
+  val result=FoodDomain.applyInterpretation(draft(),interpretedResponse()).copy(kcal="350",manualEntry=true)
+  val payload=FoodDomain.payload(result)
+  assertEquals("350",payload.getJSONObject("nutrients").getString("kcal"))
+  assertEquals("sample",payload.getJSONObject("interpretation").getString("request_id"))
+  assertTrue(payload.getBoolean("manual_override"))
+ }
+ @Test fun explicitWeightIsSentToInterpretationWithoutChangingSavedUserText() {
+  val source=draft().copy(text="Rice",grams="125.5",kcal="",protein="",carbs="",fat="")
+  assertTrue(FoodDomain.interpretationInput(source).contains("125.5 g"))
+  assertEquals("Rice",FoodDomain.interpretationInput(source.copy(grams="")))
+  val result=FoodDomain.applyInterpretation(source,interpretedResponse())
+  assertEquals("Rice",FoodDomain.payload(result).getString("raw_text"))
+  assertEquals("125.5",result.interpretationGrams)
+  assertTrue(FoodDomain.needsInterpretation(result.copy(grams="250")))
+  assertTrue(FoodDomain.interpretationInput(result.copy(grams="250")).contains("250 g"))
+  assertFalse(FoodDomain.needsInterpretation(FoodDomain.loadDraft(FoodDomain.saveDraft(result))))
+ }
+ @Test fun clarificationAppearsOnlyWhenNoNutrientsCouldBeInterpreted() {
+  val response=interpretedResponse().put("clarification","What food was this?")
+  assertEquals("321.5",FoodDomain.applyInterpretation(draft(),response).kcal)
+  listOf("kcal","protein_g","carbs_g","fat_g").forEach{response.getJSONObject("nutrients").put(it,JSONObject.NULL)}
+  val error=assertThrows(IllegalArgumentException::class.java){FoodDomain.applyInterpretation(draft(),response)}
+  assertEquals("What food was this?",error.message)
+ }
+ @Test fun modelGeneratedQuantityDoesNotOverrideEditedFoodText() {
+  val source=FoodDomain.newDraft(date).copy(text="Rice 100g")
+  val first=FoodDomain.applyInterpretation(source,interpretedResponse().put("quantity_g",100))
+  assertEquals("100",first.grams);assertFalse(first.quantityExplicit)
+  val changed=first.copy(text="Rice 200g")
+  assertTrue(FoodDomain.needsInterpretation(changed));assertEquals("Rice 200g",FoodDomain.interpretationInput(changed))
+  val second=FoodDomain.applyInterpretation(changed,interpretedResponse().put("quantity_g",200))
+  assertEquals("200",second.grams);assertFalse(second.quantityExplicit)
+  val restored=FoodDomain.draftFromRecord(record(value=second))
+  assertFalse(restored.quantityExplicit);assertEquals("Rice 200g",FoodDomain.interpretationInput(restored))
+ }
+ @Test fun explicitDetailsQuantityAndManualModeSurviveRecordAndDraftRestoration() {
+  val source=FoodDomain.newDraft(date).copy(text="Rice",grams="125",quantityExplicit=true)
+  val interpreted=FoodDomain.applyInterpretation(source,interpretedResponse())
+  val corrected=interpreted.copy(kcal="333",manualEntry=true)
+  val restored=FoodDomain.draftFromRecord(record(value=corrected))
+  assertTrue(restored.manualEntry);assertTrue(restored.quantityExplicit)
+  assertEquals("125",restored.grams)
+  assertFalse(FoodDomain.needsInterpretation(restored.copy(text="Rice with sauce")))
+  assertEquals(corrected,FoodDomain.loadDraft(FoodDomain.saveDraft(corrected)))
+ }
+ @Test fun legacyManualDraftWeightsAreExplicitButLegacyModelWeightsAreNotAssumedExplicit() {
+  val manual=JSONObject(FoodDomain.saveDraft(draft()));manual.remove("quantity_explicit")
+  assertTrue(FoodDomain.loadDraft(manual.toString()).quantityExplicit)
+  manual.put("interpretation",JSONObject().put("provider","test").put("model","test"))
+  assertFalse(FoodDomain.loadDraft(manual.toString()).quantityExplicit)
+ }
 }

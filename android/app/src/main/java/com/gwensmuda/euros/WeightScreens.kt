@@ -18,6 +18,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.ensureActive
 import org.json.JSONObject
 import java.time.*
 import java.time.format.DateTimeFormatter
@@ -94,22 +95,54 @@ object WeightDisplay {
  Row(Modifier.fillMaxWidth(),horizontalArrangement=Arrangement.SpaceBetween,verticalAlignment=Alignment.CenterVertically){Text("Sunday weight",style=MaterialTheme.typography.titleMedium);IconButton(onClick={weighing=!weighing}){Icon(if(weighing)Icons.Outlined.Close else Icons.Outlined.Edit,if(weighing)"Close weight entry" else "Log weight")}}
  WeightGraph(WeightDisplay.weeklyRecords(records,week))
  if(weighing)WeightPanel(repo,records.filter{it.type!="weight_entries" || JSONObject(it.payload).optString("local_date")<=week.plusDays(6).toString()},week.plusDays(6),onSaved={weighing=false},showGraph=false)
- val activities=PlanDomain.rootActivities(records).filter{PlanDomain.day(it)>=week && PlanDomain.day(it)<week.plusWeeks(1)}
- val done=activities.filter{PlanDomain.progress(it,records)=="done"}
- val bjj=done.count{PlanDomain.payload(it).optString("kind")=="bjj"};val weights=done.count{PlanDomain.payload(it).optString("kind")=="weights"}
- val foodDays=records.filter{it.type=="food_entries" && !it.deleted}.map{JSONObject(it.payload).optString("local_date")}.filter{it>=week.toString() && it<=week.plusDays(6).toString()}.distinct().size
+ if(!WeeklyReviewCache.canGenerate(week,LocalDate.now(PlanDomain.zone))) {
+  Text("No logs for this week yet",color=Color.Gray)
+  return
+ }
+ val fingerprint=WeeklyReviewCache.fingerprint(week,records,LocalDate.now(PlanDomain.zone))
+ var response by remember(fingerprint){mutableStateOf<JSONObject?>(null)}
+ var loadingCache by remember(fingerprint){mutableStateOf(true)}
+ var generating by remember(fingerprint){mutableStateOf(false)}
+ var error by remember(fingerprint){mutableStateOf<String?>(null)}
+ var attempt by remember(fingerprint){mutableStateOf(0)}
+ LaunchedEffect(fingerprint) {
+  try { response=WeeklyReviewCache.decode(repo.dao.meta(WeeklyReviewCache.key(week)),fingerprint,week) }
+  catch(e:kotlinx.coroutines.CancellationException){throw e}
+  catch(_:Exception){error="Couldn’t load the saved wrap-up."}
+  finally { loadingCache=false }
+ }
+ // Structured effect cancellation prevents a result for an old snapshot replacing a new one.
+ LaunchedEffect(fingerprint,attempt) {
+  if(attempt==0)return@LaunchedEffect
+  generating=true;error=null
+  try {
+   val result=WeeklyReviewCache.validate(repo.reviewWeek(week,records),week)
+   kotlinx.coroutines.currentCoroutineContext().ensureActive()
+   repo.dao.meta(Metadata(WeeklyReviewCache.key(week),WeeklyReviewCache.encode(fingerprint,result)))
+   response=result
+  } catch(e:kotlinx.coroutines.CancellationException){throw e}
+  catch(e:Exception){error=WeeklyReviewCache.errorMessage(e)}
+  finally{generating=false}
+ }
  HorizontalDivider(color=Color(0xFFDCE3EF))
  Text("This week",style=MaterialTheme.typography.titleLarge,fontWeight=FontWeight.SemiBold)
- if(done.isNotEmpty()) {
-  if(bjj>0)Text("$bjj BJJ session${if(bjj==1)"" else "s"} logged.")
-  if(weights>0)Text("$weights weights session${if(weights==1)"" else "s"} completed.")
-  val recovery=done.count{PlanDomain.payload(it).optString("kind") in setOf("recovery","rest")}
-  if(recovery>0)Text("$recovery recovery routine${if(recovery==1)"" else "s"} completed.")
- } else Text("No sessions logged this week.",color=Color.Gray)
- if(foodDays>0)Text("Food logged on $foodDays day${if(foodDays==1)"" else "s"}.")
- val covered=WeightDisplay.coveredDates(week,LocalDate.now(PlanDomain.zone))
- val incomplete=activities.count{PlanDomain.day(it) in covered && !PlanDomain.resolved(it,records)}
- val coveredFoodDays=records.filter{it.type=="food_entries" && !it.deleted}.map{JSONObject(it.payload).optString("local_date")}.distinct().count{it in covered.map(LocalDate::toString)}
- HorizontalDivider(color=Color(0xFFDCE3EF))
- if(covered.isNotEmpty())Text("$incomplete activities without a complete log · $coveredFoodDays of ${covered.size} days with food entries",style=MaterialTheme.typography.bodySmall,color=Color.Gray)
+ if(loadingCache || generating) {
+  Row(horizontalArrangement=Arrangement.spacedBy(12.dp),verticalAlignment=Alignment.CenterVertically) {
+   CircularProgressIndicator(Modifier.size(20.dp),strokeWidth=2.dp)
+   Text(if(generating) "Generating…" else "Loading…",color=Color.Gray)
+  }
+ }
+ response?.let { review ->
+  Text(review.getString("summary"))
+  val adjustments=review.getJSONArray("adjustments")
+  if(adjustments.length()>0) {
+   Text("Adjustments",style=MaterialTheme.typography.titleLarge,fontWeight=FontWeight.SemiBold)
+   for(i in 0 until adjustments.length()) Text(adjustments.getString(i))
+  }
+  val coverage=review.getJSONObject("coverage")
+  HorizontalDivider(color=Color(0xFFDCE3EF))
+  Text("${coverage.getInt("unlogged_activity_count")} activities without a complete log · ${coverage.getInt("food_days")} of ${coverage.getInt("covered_days")} days with food entries",style=MaterialTheme.typography.bodySmall,color=Color.Gray)
+ }
+ error?.let{Text(it,color=MaterialTheme.colorScheme.error)}
+ if(!loadingCache && !generating && response==null) TextButton(onClick={attempt++}){Text(if(error==null) "Generate wrap-up" else "Retry")}
 }

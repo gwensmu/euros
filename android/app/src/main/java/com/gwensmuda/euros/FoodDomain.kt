@@ -27,6 +27,11 @@ data class FoodDraft(
  val dateInput:String=consumedAt.take(10),
  val timeInput:String=consumedAt.substringAfter('T').take(5),
  val timeZone:String="America/Chicago",
+ val interpretation:String?=null,
+ val manualEntry:Boolean=false,
+ val interpretationText:String?=null,
+ val interpretationGrams:String?=null,
+ val quantityExplicit:Boolean=grams.isNotBlank(),
 ) {
  val localDate:String get()=dateInput
 }
@@ -68,10 +73,16 @@ object FoodDomain {
    originalPayload=record.payload,
    baseRevision=record.revision,
    timeZone=json.optString("time_zone",PlanDomain.zone.id),
+   interpretation=json.optJSONObject("interpretation")?.toString(),
+   manualEntry=json.optBoolean("manual_entry",false),
+   interpretationText=nullableString(json,"interpretation_text"),
+   interpretationGrams=if(json.isNull("interpretation_grams")) null else json.getString("interpretation_grams"),
+   quantityExplicit=json.optBoolean("quantity_explicit",json.optJSONObject("interpretation")==null && value(json,"quantity_g").isNotBlank()),
   )
  }
 
  fun saveDraft(draft:FoodDraft):String=JSONObject().put("schema_version",1).put("id",draft.id).put("consumed_at",draft.consumedAt)
+  .put("interpretation",draft.interpretation?.let(::JSONObject) ?: JSONObject.NULL).put("manual_entry",draft.manualEntry).put("quantity_explicit",draft.quantityExplicit).put("interpretation_text",draft.interpretationText ?: JSONObject.NULL).put("interpretation_grams",draft.interpretationGrams ?: JSONObject.NULL)
   .put("text",draft.text).put("grams",draft.grams).put("kcal",draft.kcal).put("protein",draft.protein).put("carbs",draft.carbs).put("fat",draft.fat)
   .put("meal_reference_id",draft.mealReferenceId ?: JSONObject.NULL).put("planned_activity_id",draft.plannedActivityId ?: JSONObject.NULL).put("original_payload",draft.originalPayload ?: JSONObject.NULL).put("base_revision",draft.baseRevision).put("date_input",draft.dateInput).put("time_input",draft.timeInput).put("time_zone",draft.timeZone).toString()
  fun loadDraft(raw:String):FoodDraft {
@@ -94,7 +105,47 @@ object FoodDomain {
    dateInput=json.optString("date_input",consumedAt.take(10)),
    timeInput=json.optString("time_input",consumedAt.substringAfter('T').take(5)),
    timeZone=json.optString("time_zone",PlanDomain.zone.id),
+   interpretation=json.optJSONObject("interpretation")?.toString(),
+   manualEntry=json.optBoolean("manual_entry",false),
+   interpretationText=nullableString(json,"interpretation_text"),
+   interpretationGrams=if(json.isNull("interpretation_grams")) null else json.getString("interpretation_grams"),
+   quantityExplicit=json.optBoolean("quantity_explicit",json.optJSONObject("interpretation")==null && value(json,"grams").isNotBlank()),
   )
+ }
+
+ fun needsInterpretation(draft:FoodDraft):Boolean = !draft.manualEntry && (
+  (draft.interpretation!=null && ((draft.interpretationText!=null && draft.text!=draft.interpretationText) || (draft.interpretationGrams!=null && draft.grams!=draft.interpretationGrams))) ||
+  (draft.interpretation==null && listOf(draft.kcal,draft.protein,draft.carbs,draft.fat).all{it.isBlank()})
+ )
+
+ /** Explicit total weight belongs in inference context; retain the user's original text in the saved entry. */
+ fun interpretationInput(draft:FoodDraft):String = if(!draft.quantityExplicit || draft.grams.isBlank()) draft.text else
+  "${draft.text}\nTotal weight of this food entry: ${draft.grams} g. Use this total weight when calculating the nutrients."
+
+ /** Model output supplies a review draft, never a persisted consumption record. */
+ fun applyInterpretation(draft:FoodDraft,response:JSONObject):FoodDraft {
+  val nutrients=response.getJSONObject("nutrients")
+  val clarification=nullableString(response,"clarification")
+  if(clarification!=null && listOf("kcal","protein_g","carbs_g","fat_g").all{nutrients.isNull(it)})
+   throw IllegalArgumentException(clarification)
+  val provenance=response.getJSONObject("interpretation")
+  require(provenance.optString("provider").isNotBlank() && provenance.optString("model").isNotBlank()) {"Food response is incomplete"}
+  fun amount(json:JSONObject,key:String):String {
+   require(json.has(key)){"Food response is incomplete"}
+   if(json.isNull(key))return ""
+   val number=numeric(json,key) ?: throw IllegalArgumentException("Invalid food amount")
+   return displayDecimal(number)
+  }
+  val result=draft.copy(
+   grams=if(draft.quantityExplicit && draft.grams.isNotBlank()) draft.grams else amount(response,"quantity_g"),
+   kcal=amount(nutrients,"kcal"),protein=amount(nutrients,"protein_g"),
+   carbs=amount(nutrients,"carbs_g"),fat=amount(nutrients,"fat_g"),
+   interpretation=provenance.toString(),interpretationText=draft.text,
+   interpretationGrams=if(draft.quantityExplicit && draft.grams.isNotBlank()) draft.grams else amount(response,"quantity_g"),
+  )
+  val errors=validate(result)
+  if(errors.isNotEmpty())throw FoodDraftError(errors)
+  return result
  }
 
  fun timestamp(draft:FoodDraft):String {
@@ -130,6 +181,10 @@ object FoodDomain {
   val nutrients=JSONObject().put("kcal",jsonDecimal(draft.kcal)).put("protein_g",jsonDecimal(draft.protein)).put("carbs_g",jsonDecimal(draft.carbs)).put("fat_g",jsonDecimal(draft.fat))
   result.put("nutrients",nutrients)
   result.put("meal_reference_id",draft.mealReferenceId ?: JSONObject.NULL).put("planned_activity_id",draft.plannedActivityId ?: JSONObject.NULL)
+  draft.interpretation?.let{result.put("interpretation",JSONObject(it))}
+  result.put("interpretation_text",draft.interpretationText ?: JSONObject.NULL)
+  result.put("interpretation_grams",draft.interpretationGrams ?: JSONObject.NULL)
+  result.put("manual_entry",draft.manualEntry).put("quantity_explicit",draft.quantityExplicit)
   result.put("manual_override",true)
   return result
  }

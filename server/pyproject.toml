@@ -5,7 +5,7 @@ build-backend = "setuptools.build_meta"
 name = "euros-server"
 version = "0.1.0"
 requires-python = ">=3.11"
-dependencies = ["mcp>=1.30,<2", "uvicorn>=0.35,<1"]
+dependencies = ["mcp>=1.30,<2", "uvicorn>=0.35,<1", "httpx>=0.28,<1"]
 [project.optional-dependencies]
 dev = ["pytest>=8,<10", "httpx>=0.28,<1"]
 [project.scripts]

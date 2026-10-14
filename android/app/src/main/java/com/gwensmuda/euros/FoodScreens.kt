@@ -23,6 +23,10 @@ import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.ensureActive
+import kotlin.coroutines.coroutineContext
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import org.json.JSONObject
@@ -158,6 +162,8 @@ import java.time.format.DateTimeFormatter
  var problem by remember {mutableStateOf<String?>(null)}
  var reviewed by rememberSaveable(key) {mutableStateOf(false)}
  var busy by remember {mutableStateOf(false)}
+ var interpreting by remember {mutableStateOf(false)}
+ var interpretationJob by remember {mutableStateOf<Job?>(null)}
  var deleteConfirm by remember {mutableStateOf(false)}
  var mealMenu by remember {mutableStateOf(false)}
  var details by rememberSaveable(key) {mutableStateOf(false)}
@@ -173,16 +179,36 @@ import java.time.format.DateTimeFormatter
   scope.launch { draftWrites.withLock { runCatching{repo.saveDraft(key,FoodDomain.saveDraft(next))}.onFailure{problem="Couldn't save this draft"} } }
  }
  fun close() {
-  if(busy) return
+  if(busy && !interpreting) return
+  interpretationJob?.cancel()
+  interpreting=false
   scope.launch {
    busy=true
    runCatching {draftWrites.withLock {draft?.let{repo.saveDraft(key,FoodDomain.saveDraft(it))}}}.onSuccess{onClose()}.onFailure{problem="Couldn't save this draft"}
    busy=false
   }
  }
+ fun add(current:FoodDraft) {
+  errors=FoodDomain.validate(current)
+  if(errors.isNotEmpty()) {if(errors.keys.any{it!="text"})details=true;return}
+  if(!FoodDomain.needsInterpretation(current)) {reviewed=true;return}
+  interpreting=true;busy=true;problem=null
+  interpretationJob=scope.launch {
+   try {
+    val response=repo.interpretFood(FoodDomain.interpretationInput(current))
+    coroutineContext.ensureActive()
+    val interpreted=FoodDomain.applyInterpretation(current,response)
+    draftWrites.withLock{repo.saveDraft(key,FoodDomain.saveDraft(interpreted))}
+    coroutineContext.ensureActive()
+    draft=interpreted;reviewed=true
+   } catch(cancelled:CancellationException) {throw cancelled}
+   catch(error:Exception) {problem=error.message ?: "Couldn't add food"}
+   finally {interpreting=false;busy=false}
+  }
+ }
  BackHandler{close()}
  Column(Modifier.fillMaxWidth(),verticalArrangement=Arrangement.spacedBy(14.dp)) {
-  Row(Modifier.fillMaxWidth(),horizontalArrangement=Arrangement.End) {FoodIconButton("Close",{close()},!busy){Icon(Icons.Outlined.Close,null,Modifier.size(19.dp))}}
+  Row(Modifier.fillMaxWidth(),horizontalArrangement=Arrangement.End) {FoodIconButton("Close",{close()},!busy || interpreting){Icon(Icons.Outlined.Close,null,Modifier.size(19.dp))}}
   val current=draft
   if(current==null) {Text(problem ?: "Opening…");return@Column}
   Text(runCatching{LocalDate.parse(current.localDate).format(DateTimeFormatter.ofPattern("EEEE, MMMM d"))}.getOrDefault(current.dateInput).uppercase(),style=MaterialTheme.typography.labelSmall,letterSpacing=1.5.sp,color=MaterialTheme.colorScheme.onSurfaceVariant)
@@ -197,21 +223,22 @@ import java.time.format.DateTimeFormatter
    Row(Modifier.fillMaxWidth(),verticalAlignment=Alignment.CenterVertically) {
     TextButton(onClick={details=!details},contentPadding=PaddingValues(horizontal=0.dp),enabled=!busy) {Text("Details");Icon(if(details) Icons.Outlined.ExpandLess else Icons.Outlined.ExpandMore,null)}
     Spacer(Modifier.weight(1f))
-    Button(onClick={errors=FoodDomain.validate(current);if(errors.isEmpty()) reviewed=true else if(errors.keys.any{it!="text"}) details=true},enabled=!busy,shape=RoundedCornerShape(8.dp)){Text("Add")}
+    Button(onClick={add(current)},enabled=!busy,shape=RoundedCornerShape(8.dp)){Text(if(interpreting) "Adding…" else "Add")}
    }
    if(details) {
+   TextButton(onClick={update(current.copy(manualEntry=true));problem=null},enabled=!busy && !current.manualEntry){Text("Use manual details")}
    HorizontalDivider(color=MaterialTheme.colorScheme.outlineVariant)
    Row(horizontalArrangement=Arrangement.spacedBy(8.dp)) {
     OutlinedTextField(current.dateInput,{update(current.copy(dateInput=it))},label={Text("Date · YYYY-MM-DD")},singleLine=true,enabled=!busy,modifier=Modifier.weight(1f),isError=errors.containsKey("time"))
     OutlinedTextField(current.timeInput,{update(current.copy(timeInput=it))},label={Text("Time · HH:mm")},singleLine=true,enabled=!busy,modifier=Modifier.weight(1f),isError=errors.containsKey("time"))
    }
    errors["time"]?.let{Text(it,color=MaterialTheme.colorScheme.error)}
-   FoodNumberField("Quantity · g",current.grams,errors["grams"],!busy){update(current.copy(grams=it))}
-   FoodNumberField("Calories · kcal",current.kcal,errors["kcal"],!busy){update(current.copy(kcal=it))}
+   FoodNumberField("Quantity · g",current.grams,errors["grams"],!busy){update(current.copy(grams=it,quantityExplicit=it.isNotBlank()))}
+   FoodNumberField("Calories · kcal",current.kcal,errors["kcal"],!busy){update(current.copy(kcal=it,manualEntry=true))}
    Row(horizontalArrangement=Arrangement.spacedBy(8.dp)) {
-    Box(Modifier.weight(1f)){FoodNumberField("Protein · g",current.protein,errors["protein"],!busy){update(current.copy(protein=it))}}
-    Box(Modifier.weight(1f)){FoodNumberField("Carbs · g",current.carbs,errors["carbs"],!busy){update(current.copy(carbs=it))}}
-    Box(Modifier.weight(1f)){FoodNumberField("Fat · g",current.fat,errors["fat"],!busy){update(current.copy(fat=it))}}
+    Box(Modifier.weight(1f)){FoodNumberField("Protein · g",current.protein,errors["protein"],!busy){update(current.copy(protein=it,manualEntry=true))}}
+    Box(Modifier.weight(1f)){FoodNumberField("Carbs · g",current.carbs,errors["carbs"],!busy){update(current.copy(carbs=it,manualEntry=true))}}
+    Box(Modifier.weight(1f)){FoodNumberField("Fat · g",current.fat,errors["fat"],!busy){update(current.copy(fat=it,manualEntry=true))}}
    }
    Box {
     TextButton(onClick={mealMenu=true},enabled=!busy){Text(meals.find{it.id==current.mealReferenceId}?.title ?: "Meal");Icon(Icons.Outlined.ExpandMore,null)}

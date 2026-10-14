@@ -9,7 +9,13 @@ import java.util.UUID
 
 // One mutex serializes local edits, authored bootstrap, restores and synchronization.
 // Each durable state transition keeps its Room transaction and immutable outbox command.
-class Repository(private val db:EurosDatabase) {
+class Repository(private val db:EurosDatabase, llmClient:LlmClient?=null) {
+ @Volatile private var interpreter:LlmClient?=llmClient
+ suspend fun interpretFood(text:String):JSONObject = requireInterpreter().interpretFood(text)
+ suspend fun reviewWeek(weekStart:java.time.LocalDate,records:List<Record>):JSONObject = requireInterpreter().reviewWeek(weekStart,records)
+ private fun requireInterpreter():LlmClient = interpreter ?: error("Connect to your server in Settings to continue")
+ fun disconnectInterpretation() { interpreter=null }
+
  val dao=db.dao(); private val mutex=Mutex()
  suspend fun bootstrapAuthoredSchedule(context:Context):Int {
   val raw=kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
@@ -260,6 +266,7 @@ class Repository(private val db:EurosDatabase) {
    }
    more=response.getBoolean("has_more")
   }
+  interpreter=BackendLlmClient(api)
  }
  suspend fun acceptServer(pending:Pending)=mutex.withLock {
   db.withTransaction {

@@ -100,12 +100,13 @@ import java.time.LocalTime
   OutlinedTextField(token,{token=it},label={Text("Access token")},singleLine=true,visualTransformation=PasswordVisualTransformation(),modifier=Modifier.fillMaxWidth())
   Button(enabled=!busy && server.isNotBlank() && token.isNotBlank(),onClick={scope.launch{
    busy=true
-   try { withContext(Dispatchers.IO){repo.sync(Api(server,token));repo.dao.meta(Metadata("server",server))};message="Up to date" }
+   try { withContext(Dispatchers.IO){repo.sync(Api(server,token));repo.dao.meta(Metadata("server",server))};message="Connected until Euros restarts" }
    catch(e:kotlinx.coroutines.CancellationException){throw e}
    catch(e:Exception){message=e.message ?: "Couldn't sync"}
    finally{busy=false}
   }}){Text(if(busy)"Syncing…" else "Sync")}
  }
+ TextButton(onClick={repo.disconnectInterpretation();token="";message="Disconnected"}){Text("Disconnect model requests")}
  TextButton(enabled=!busy,onClick={scope.launch{
   busy=true
   try { NanoDraftInterpreter().use{message=when(it.availability().state){"available"->"On-device model available";"downloadable"->"Model download needed";"downloading"->"Model downloading";else->"On-device model unavailable"}} }
