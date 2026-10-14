@@ -95,6 +95,25 @@ class MainActivity:ComponentActivity() {
  val hasOverlay=selected!=null || settings || review || importedId!=null
  BackHandler(hasOverlay,::closeOverlay)
  val focused=hasOverlay || foodEditor
+ var completionSequence by remember{mutableLongStateOf(0L)}
+ var completionReceivedAt by remember{mutableLongStateOf(0L)}
+ var shownCompletion by remember{mutableLongStateOf(0L)}
+ var pleased by remember{mutableStateOf(false)}
+ LaunchedEffect(repo){repo.localCompletions.collect {
+  completionSequence++;completionReceivedAt=android.os.SystemClock.elapsedRealtime()
+ }}
+ val homeVisible=tab==RootTab.Today && !focused
+ LaunchedEffect(homeVisible,completionSequence) {
+  if(homeVisible && completionSequence>shownCompletion) {
+   shownCompletion=completionSequence
+   if(android.os.SystemClock.elapsedRealtime()-completionReceivedAt<60_000L) {
+    pleased=true
+    try{kotlinx.coroutines.delay(3000)}finally{pleased=false}
+   }
+  }
+ }
+ val mascotState=MascotRules.evaluate(records,java.time.Instant.now(),nextItem=PlanDomain.next(records,today))
+ val mascotPose=if(pleased)MascotPose.PLEASED else mascotState.pose
  val pageScroll=rememberScrollState()
  LaunchedEffect(tab,selected,settings,review,importedId,foodEditor){pageScroll.scrollTo(0)}
  Scaffold(containerColor=Color.White,bottomBar={if(!focused) EurosNavigation(tab){tab=it}}) { padding ->
@@ -108,7 +127,7 @@ class MainActivity:ComponentActivity() {
     detail!=null -> ActivityDetail(detail,records,repo,{selected=null},::open,{food(detail.id)})
     selected!=null -> {Text("This activity is no longer available");TextButton(onClick={selected=null}){Text("Close")}}
     else -> {
-     if(!foodEditor) PageTitle(tab,today,LocalDate.parse(week),foodDay,records)
+     if(!foodEditor) PageTitle(tab,today,LocalDate.parse(week),foodDay,mascotPose)
      when(tab) {
       RootTab.Today -> {TodayContent(records,authoredPlan.day(today,records),::open,{foodDate=today.toString();foodActivity=null;openFoodEntry=false;tab=RootTab.Food});MovementCard(repo,today)}
       RootTab.Week -> {

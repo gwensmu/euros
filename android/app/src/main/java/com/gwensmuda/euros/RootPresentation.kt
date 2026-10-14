@@ -49,12 +49,12 @@ fun weekTitle(start:LocalDate):String {
  HorizontalDivider(thickness=2.dp,color=Color(0xFF73A8FF))
 }
 
-@Composable internal fun PageTitle(tab:RootTab,today:LocalDate,week:LocalDate,foodDay:LocalDate,records:List<Record>) {
+@Composable internal fun PageTitle(tab:RootTab,today:LocalDate,week:LocalDate,foodDay:LocalDate,mascotPose:MascotPose=MascotPose.IDLE) {
  Row(Modifier.fillMaxWidth(),verticalAlignment=Alignment.CenterVertically,horizontalArrangement=Arrangement.spacedBy(12.dp)) {
       Column(Modifier.weight(1f),verticalArrangement=Arrangement.spacedBy(6.dp)) {
        if(tab==RootTab.Today) Text(today.format(DateTimeFormatter.ofPattern("EEEE, MMMM d")).uppercase(),style=MaterialTheme.typography.labelSmall,color=EurosColors.Muted,letterSpacing=1.sp)
        Text(when(tab){RootTab.Today->"${ChronoUnit.DAYS.between(today,LocalDate.of(2027,1,13)).coerceAtLeast(0)} days to Euros";RootTab.Week->weekTitle(week);else->foodDay.format(DateTimeFormatter.ofPattern("EEEE, MMM d"))},style=if(tab==RootTab.Today) MaterialTheme.typography.headlineMedium else MaterialTheme.typography.headlineSmall)
       }
-      if(tab==RootTab.Today) Weasel(MascotRules.mood(PlanDomain.onDay(records,today),records))
+      if(tab==RootTab.Today) Weasel(mascotPose)
      }
 }

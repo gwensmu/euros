@@ -10,6 +10,8 @@ import java.util.UUID
 // One mutex serializes local edits, authored bootstrap, restores and synchronization.
 // Each durable state transition keeps its Room transaction and immutable outbox command.
 class Repository(private val db:EurosDatabase, llmClient:LlmClient?=null) {
+ private val completionEvents=kotlinx.coroutines.flow.MutableSharedFlow<Unit>(extraBufferCapacity=1,onBufferOverflow=kotlinx.coroutines.channels.BufferOverflow.DROP_OLDEST)
+ val localCompletions:kotlinx.coroutines.flow.SharedFlow<Unit> = completionEvents
  @Volatile private var interpreter:LlmClient?=llmClient
  suspend fun interpretFood(text:String):JSONObject = requireInterpreter().interpretFood(text)
  suspend fun reviewWeek(weekStart:java.time.LocalDate,records:List<Record>):JSONObject = requireInterpreter().reviewWeek(weekStart,records)
@@ -92,6 +94,7 @@ class Repository(private val db:EurosDatabase, llmClient:LlmClient?=null) {
   dao.enqueue(Pending(UUID.randomUUID().toString(),type,id,expected,if(delete) "{}" else raw,created,operation=if(delete) "delete" else "upsert"))
  }
  suspend fun upsert(type:String,id:String,payload:JSONObject,expectedRevision:Long?=null,expectedPayload:String?=null)=mutex.withLock {
+  var newlyCompleted=false
   db.withTransaction {
    val current=dao.record(type,id)
    // A crash after commit but before draft cleanup must allow that exact saved draft to close.
@@ -99,7 +102,10 @@ class Repository(private val db:EurosDatabase, llmClient:LlmClient?=null) {
    if(expectedRevision!=null) check((current?.revision ?: 0L)==expectedRevision) { "This record changed. Reopen it before saving." }
    if(expectedPayload!=null) check(dao.record(type,id)?.payload==expectedPayload) { "This record changed locally. Reopen it before saving." }
    enqueue(type,id,payload)
+   newlyCompleted=(type=="activities" && payload.optString("status")=="done" && current?.let{JSONObject(it.payload).optString("status")}!="done") ||
+    (type in setOf("food_entries","weight_entries") && current==null)
   }
+  if(newlyCompleted)completionEvents.tryEmit(Unit)
  }
  suspend fun delete(type:String,id:String,expectedRevision:Long?=null,expectedPayload:String?=null)=mutex.withLock {
   db.withTransaction {
@@ -109,14 +115,17 @@ class Repository(private val db:EurosDatabase, llmClient:LlmClient?=null) {
   }
  }
  suspend fun complete(record:Record,status:String)=mutex.withLock {
+  var newlyCompleted=false
   db.withTransaction {
    val current=dao.record(record.type,record.id) ?: error("Activity unavailable")
    if(JSONObject(current.payload).optString("status")==status) return@withTransaction
    val payload=JSONObject(Commands.complete(current,status))
-   if(status=="done") payload.put("completed_at",java.time.OffsetDateTime.now().toString())
-   if(status=="skipped") { payload.remove("recovery_intake");payload.remove("completed_at") }
+   if(status=="done") {payload.put("completed_at",java.time.OffsetDateTime.now().toString());payload.remove("skipped_at")}
+   if(status=="skipped") { payload.remove("recovery_intake");payload.remove("completed_at");payload.put("skipped_at",java.time.OffsetDateTime.now().toString()) }
    enqueue(current.type,current.id,payload)
+   newlyCompleted=status=="done"
   }
+  if(newlyCompleted)completionEvents.tryEmit(Unit)
  }
  suspend fun move(record:Record,scheduledAt:String)=mutex.withLock {
   db.withTransaction {
@@ -152,6 +161,7 @@ class Repository(private val db:EurosDatabase, llmClient:LlmClient?=null) {
   }
  }
  suspend fun saveWeight(id:String,payload:JSONObject,expectedRevision:Long?=null,expectedPayload:String?=null)=mutex.withLock {
+  var newMeasurement=false
   db.withTransaction {
    RecordValidation.validate("weight_entries",payload)
    val requested=dao.record("weight_entries",id)
@@ -171,8 +181,10 @@ class Repository(private val db:EurosDatabase, llmClient:LlmClient?=null) {
      }
     }
    }
+   newMeasurement=dao.record("weight_entries",targetId)==null
    enqueue("weight_entries",targetId,payload)
   }
+  if(newMeasurement)completionEvents.tryEmit(Unit)
  }
  suspend fun restoreRecords(records:org.json.JSONArray):RestoreResult=mutex.withLock {
   require(records.length()<=20000) { "Archive is too large" }
