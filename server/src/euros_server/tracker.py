@@ -61,6 +61,14 @@ def validate(record):
     canonical(record)
 
 
+def sport_identity(payload):
+    # Personal convention: Polar Judo is BJJ; Health Connect exports it as martial arts (44).
+    mapped = payload.get('source_package') == POLAR and payload.get('exercise_type') == 44
+    return {'display_name': 'BJJ' if mapped else (payload.get('source_title') or 'Polar workout'),
+            'sport': 'bjj' if mapped else None,
+            'sport_mapping': 'user: Polar Judo / Health Connect martial arts means BJJ' if mapped else None}
+
+
 def metrics(payload, boundaries=None):
     """Zero-order hold only between adjacent samples <=60s; never bridge missing HR."""
     if boundaries is not None:
@@ -201,7 +209,7 @@ class TrackerStore:
         payload = json.loads(row['payload'])
         return {'workout': {**header, **{k:v for k,v in payload.items() if k != 'heart_rate_samples'},
                             'heart_rate_source_ids': sorted({s['source_id'] for s in payload['heart_rate_samples']}),
-                            'training_benefit': None, 'polar_zone_definitions': None,
+                            **sport_identity(payload), 'training_benefit': None, 'polar_zone_definitions': None,
                             'metrics': metrics(payload,boundaries)}}
 
     def list(self, date_from, date_to):
@@ -217,8 +225,9 @@ class TrackerStore:
             day=instant(payload['start_at'],'start_at').astimezone(ZONE).date()
             if not first<=day<=last: continue
             item=self.header(row)
-            item.update({k:payload.get(k) for k in ('source_package','source_id','source_modified_at','start_at','end_at','activity_id')})
+            item.update({k:payload.get(k) for k in ('source_package','source_id','source_modified_at','start_at','end_at','activity_id','exercise_type','source_title')})
             if not row['deleted']:
+                item.update(sport_identity(payload))
                 measured=metrics(payload)
                 item['metrics']={k:v for k,v in measured.items() if k not in ('curve','intervals','time_bands')}
             result.append(item)

@@ -54,7 +54,7 @@ object PlanDisplay {
  }.joinToString(" · ")
  fun daySummary(records:List<Record>):String=records.joinToString(" · "){PlanDomain.payload(it).optString("title")}.ifBlank{"No activities"}
  fun initialExpanded(week:LocalDate,today:LocalDate):String=(if(today>=week && today<week.plusWeeks(1))today else week).toString()
- fun trackerName(source:String)=when{source.contains("polar",true)->"Polar workout";source.contains("fitbit",true)->"Fitbit workout";else->"Tracker workout"}
+ fun trackerName(source:String,exerciseType:Int?=null)=when{source=="fi.polar.polarflow" && exerciseType==androidx.health.connect.client.records.ExerciseSessionRecord.EXERCISE_TYPE_MARTIAL_ARTS->"BJJ";source.contains("polar",true)->"Polar workout";source.contains("fitbit",true)->"Fitbit workout";else->"Tracker workout"}
 }
 @Composable private fun ActivityGlyph(kind:String) {
  Surface(color=Color(0xFFEDF3FF),shape=RoundedCornerShape(9.dp),modifier=Modifier.size(34.dp)) {
@@ -124,7 +124,7 @@ object PlanDisplay {
    if(open) Column(Modifier.padding(start=12.dp,bottom=10.dp)) {
     activities.forEach{activity->PlanRow(activity,records,onOpen);PlanDomain.children(activity,records).forEach{step->PlanRow(step,records,onOpen)}}
     sessions.forEach{session->Row(Modifier.fillMaxWidth().clickable{onImported(session.sourceKey)}.padding(vertical=14.dp),verticalAlignment=Alignment.CenterVertically){
-     ActivityGlyph("bjj");Spacer(Modifier.width(12.dp));Column(Modifier.weight(1f)){Text(PlanDisplay.trackerName(session.sourcePackage),style=MaterialTheme.typography.titleSmall);Text("${session.start.atZone(PlanDomain.zone).format(DateTimeFormatter.ofPattern("h:mm a"))} · ${Duration.between(session.start,session.end).toMinutes()} min",style=MaterialTheme.typography.bodySmall)};Icon(Icons.Filled.CheckCircle,"Imported workout",tint=Accent)
+     ActivityGlyph("bjj");Spacer(Modifier.width(12.dp));Column(Modifier.weight(1f)){Text(PlanDisplay.trackerName(session.sourcePackage,session.exerciseType),style=MaterialTheme.typography.titleSmall);Text("${session.start.atZone(PlanDomain.zone).format(DateTimeFormatter.ofPattern("h:mm a"))} · ${Duration.between(session.start,session.end).toMinutes()} min",style=MaterialTheme.typography.bodySmall)};Icon(Icons.Filled.CheckCircle,"Imported workout",tint=Accent)
     }}
    }
    HorizontalDivider(color=Color(0xFFDCE3EF))
@@ -229,7 +229,7 @@ object PlanDisplay {
 @Composable fun ImportedWorkoutScreen(sourceKey:String,repo:Repository,onClose:()->Unit) {
  val context=LocalContext.current;var recap by remember(sourceKey){mutableStateOf<SessionRecap?>(null)}
  LaunchedEffect(sourceKey){recap=HealthImport(context,repo.dao).recapForKey(sourceKey)}
- Row(Modifier.fillMaxWidth(),horizontalArrangement=Arrangement.SpaceBetween){Text(PlanDisplay.trackerName(recap?.session?.sourcePackage.orEmpty()),style=MaterialTheme.typography.headlineMedium);IconButton(onClick=onClose){Icon(Icons.Outlined.Close,"Close")}}
+ Row(Modifier.fillMaxWidth(),horizontalArrangement=Arrangement.SpaceBetween){Text(PlanDisplay.trackerName(recap?.session?.sourcePackage.orEmpty(),recap?.session?.exerciseType),style=MaterialTheme.typography.headlineMedium);IconButton(onClick=onClose){Icon(Icons.Outlined.Close,"Close")}}
  recap?.let{r->
   Text(r.session.start.atZone(PlanDomain.zone).format(DateTimeFormatter.ofPattern("EEEE, MMM d · h:mm a")))
   if(r.session.deleted)Text("Workout removed from Health Connect") else {

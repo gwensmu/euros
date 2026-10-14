@@ -20,6 +20,9 @@ class PlanPresentationTest {
   assertEquals("2026-10-12",PlanDisplay.initialExpanded(week,LocalDate.parse("2026-11-01")))
  }
  @Test fun unknownTrackerIsNotMislabelledPolar() {
+  assertEquals("BJJ",PlanDisplay.trackerName("fi.polar.polarflow",44))
+  assertEquals("Polar workout",PlanDisplay.trackerName("fi.polar.polarflow",53))
+  assertEquals("Fitbit workout",PlanDisplay.trackerName("com.fitbit.FitbitMobile",44))
   assertEquals("Fitbit workout",PlanDisplay.trackerName("com.fitbit.FitbitMobile"))
   assertEquals("Polar workout",PlanDisplay.trackerName("fi.polar.polarflow"))
   assertEquals("Tracker workout",PlanDisplay.trackerName("other.app"))

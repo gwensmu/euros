@@ -187,3 +187,21 @@ def test_contract_fixture_and_missing_vendor_labels(service):
     result=tracker.read(command['records'][0]['source_key'])['workout']
     assert result['training_benefit'] is None and result['polar_zone_definitions'] is None
     assert result['heart_rate_source_ids']==['synthetic-hr-1']
+
+
+def test_personal_bjj_identity_in_list_and_detail_preserves_source(service):
+    _, tracker = service
+    w = workout(); w['exercise_type'] = 44
+    upload(tracker, w)
+    for result in (tracker.read('polar:a')['workout'], tracker.list('2026-10-12','2026-10-12')['workouts'][0]):
+        assert result['display_name'] == 'BJJ' and result['sport'] == 'bjj'
+        assert result['sport_mapping'].startswith('user:')
+        assert result['exercise_type'] == 44 and result['source_title'] is None
+    assert tracker.read('polar:a')['workout']['revision'] == 1
+
+
+def test_sport_identity_does_not_infer_other_sports():
+    from euros_server.tracker import sport_identity
+    assert sport_identity(workout())['sport'] is None
+    assert sport_identity({**workout(), 'source_title': 'Running'})['display_name'] == 'Running'
+    assert sport_identity({**workout(), 'source_package': 'other', 'exercise_type': 44})['sport'] is None
