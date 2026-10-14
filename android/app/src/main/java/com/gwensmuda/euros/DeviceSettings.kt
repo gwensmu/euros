@@ -34,7 +34,7 @@ import kotlinx.coroutines.CancellationException
    Text(c.name+": "+when { !c.granted->"Access needed"; c.error!=null->c.error; c.sources.isEmpty()->"No shared records"; else->c.sources.joinToString { s -> "${sourceName(s.sourcePackage)} ${s.recordCount}" } }+(if(c.truncated) " · partial" else ""))
   }
   r.coverage.forEach { c -> Text("${sourceName(c.sourcePackage)} · ${c.sessionCount} sessions · "+if(c.heartRateReadable) "${c.sessionsWithSamples} with heart rate" else "heart rate access needed") }
-  if(r.available) Text("Last ${r.days} days · stays on this phone",style=MaterialTheme.typography.bodySmall)
+  if(r.available) Text("Last ${r.days} days",style=MaterialTheme.typography.bodySmall)
  }
 }
 private fun sourceName(name:String)=when(name){"fi.polar.polarflow"->"Polar Flow";"com.fitbit.FitbitMobile"->"Fitbit";else->if(name.startsWith("com.android.healthconnect.phone.")) "Phone" else name}

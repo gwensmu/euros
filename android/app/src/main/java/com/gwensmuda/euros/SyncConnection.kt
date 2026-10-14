@@ -88,6 +88,7 @@ class SyncConnection(
    mutableState.value=mutableState.value.copy(connected=true,server=candidate.server)
    scheduling.enable();scheduling.request()
    success(candidate)
+   publishWorkouts(apiFactory(candidate))
   }catch(e:CancellationException){
    enrollment?.let{repo.connectInterpretation(apiFactory(it))} ?: repo.disconnectInterpretation()
    throw e
@@ -102,13 +103,26 @@ class SyncConnection(
   initializeLocked()
   val saved=enrollment ?: return@withLock SyncOutcome.RECONNECT
   mutableState.value=mutableState.value.copy(syncing=true,error=null)
-  try{repo.sync(apiFactory(saved));success(saved);SyncOutcome.SUCCESS}
+  try{repo.sync(apiFactory(saved));success(saved);publishWorkouts(apiFactory(saved))}
   catch(e:CancellationException){throw e}
   catch(e:Exception){
    if(e is ApiFailure && e.status in setOf(401,403))repo.disconnectInterpretation()
    mutableState.value=mutableState.value.copy(error=syncFailureMessage(e))
    if(e is ApiFailure && e.status in setOf(401,403))SyncOutcome.RECONNECT else SyncOutcome.RETRY
   }finally{mutableState.value=mutableState.value.copy(syncing=false)}
+ }
+ private suspend fun publishWorkouts(api:SyncApi):SyncOutcome {
+  return try{TrackerPublisher(repo.dao).publish(api);SyncOutcome.SUCCESS}
+  catch(e:CancellationException){throw e}
+  catch(_:TrackerPublicationConflict) {
+   mutableState.value=mutableState.value.copy(error="Logs synced. Workout sync needs conflict review; local workout data is preserved.")
+   // A blocked durable envelope requires explicit reconciliation, never an automatic overwrite.
+   SyncOutcome.SUCCESS
+  }
+  catch(_:Exception) {
+   mutableState.value=mutableState.value.copy(error="Logs synced. Workout sync couldn't finish and will retry.")
+   SyncOutcome.RETRY
+  }
  }
  private suspend fun success(saved:ServerEnrollment) {
   val now=Instant.now().toString();repo.dao.meta(Metadata("last_sync_success",now))

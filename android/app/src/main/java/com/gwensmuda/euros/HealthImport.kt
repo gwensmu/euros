@@ -20,7 +20,7 @@ import java.time.LocalDate
 import java.time.ZoneId
 import kotlin.reflect.KClass
 
-/** Imported values stay local and source-owned. Linking never completes a planned activity. */
+/** Imported values stay source-owned; selected Polar snapshots may be published. Linking never completes a planned activity. */
 data class ImportedSession(val sourceKey:String,val sourcePackage:String,val start:Instant,val end:Instant,val exerciseType:Int,val deleted:Boolean=false)
 data class ImportedWeight(val sourceKey:String,val sourcePackage:String,val recordedAt:Instant,val weightLb:Double)
 data class HeartSample(val time:Instant,val bpm:Long)
@@ -52,10 +52,10 @@ class HealthImport(private val context:Context,private val dao:EurosDao) {
    check(token==null){"Too many $kind records; use a smaller import window"}
    HealthSnapshots.reconcile(current.getJSONObject("records"),kind,start,end,snapshot)
   }
-  read(ExerciseSessionRecord::class,"exercise") { r -> JSONObject().put("start",r.startTime.toString()).put("end",r.endTime.toString()).put("start_offset",r.startZoneOffset?.toString() ?: JSONObject.NULL).put("end_offset",r.endZoneOffset?.toString() ?: JSONObject.NULL).put("exercise_type",r.exerciseType) }
+  read(ExerciseSessionRecord::class,"exercise") { r -> JSONObject().put("start",r.startTime.toString()).put("end",r.endTime.toString()).put("start_offset",r.startZoneOffset?.toString() ?: JSONObject.NULL).put("end_offset",r.endZoneOffset?.toString() ?: JSONObject.NULL).put("exercise_type",r.exerciseType).put("title",r.title ?: JSONObject.NULL) }
   read(HeartRateRecord::class,"heart_rate") { r -> JSONObject().put("start",r.startTime.toString()).put("end",r.endTime.toString()).put("samples",JSONArray().apply{r.samples.forEach{put(JSONObject().put("time",it.time.toString()).put("bpm",it.beatsPerMinute))}}) }
   read(WeightRecord::class,"weight") { r -> JSONObject().put("start",r.time.toString()).put("end",r.time.toString()).put("weight_lb",r.weight.inPounds).put("original_kg",r.weight.inKilograms).put("zone_offset",r.zoneOffset?.toString() ?: JSONObject.NULL) }
-  current.put("refreshed_at",end.toString());dao.meta(Metadata(KEY,HealthSnapshotStorage.encode(current)))
+  current.put("refreshed_at",end.toString());dao.meta(Metadata(KEY,HealthSnapshotStorage.encode(current)));requestPublish()
   val records=current.getJSONObject("records");val live=records.keys().asSequence().map{records.getJSONObject(it)}.filter{!it.optBoolean("deleted")}.toList()
   HealthImportSummary(live.count{it.getString("kind")=="exercise"},live.count{it.getString("kind")=="heart_rate"},messages,live.count{it.getString("kind")=="weight"})
  }
@@ -69,10 +69,12 @@ class HealthImport(private val context:Context,private val dao:EurosDao) {
   val activity=dao.record("activities",activityId);check(activity!=null && !activity.deleted && JSONObject(activity.payload).optString("kind")=="bjj"){"BJJ activity unavailable"}
   val s=state();val record=s.getJSONObject("records").optJSONObject(sourceKey)
   check(record!=null && HealthSources.isTraining(record)){"Imported session unavailable"}
+  val previous=s.getJSONObject("links").optString(activityId).takeIf{it.isNotBlank()}
   HealthSnapshots.link(s.getJSONObject("links"),activityId,sourceKey)
-  dao.meta(Metadata(KEY,HealthSnapshotStorage.encode(s)))
+  markLinkObservation(s,sourceKey);previous?.takeIf{it!=sourceKey}?.let{markLinkObservation(s,it)}
+  dao.meta(Metadata(KEY,HealthSnapshotStorage.encode(s)));requestPublish()
  }
- suspend fun unlink(activityId:String)=mutex.withLock { val s=state();s.getJSONObject("links").remove(activityId);dao.meta(Metadata(KEY,HealthSnapshotStorage.encode(s))) }
+ suspend fun unlink(activityId:String)=mutex.withLock { val s=state();s.getJSONObject("links").optString(activityId).takeIf{it.isNotBlank()}?.let{markLinkObservation(s,it)};s.getJSONObject("links").remove(activityId);dao.meta(Metadata(KEY,HealthSnapshotStorage.encode(s)));requestPublish() }
  suspend fun recap(activityId:String):SessionRecap?=mutex.withLock {
   val s=state();val key=s.getJSONObject("links").optString(activityId).takeIf{it.isNotBlank()} ?: return@withLock null
   buildRecap(s,key)
@@ -113,6 +115,11 @@ class HealthImport(private val context:Context,private val dao:EurosDao) {
   val records=state().getJSONObject("records")
   records.keys().asSequence().mapNotNull{key->val r=records.getJSONObject(key);if(HealthSources.isObservedWeight(r)) ImportedWeight(key,r.getString("source"),Instant.parse(r.getString("start")),r.getDouble("weight_lb")) else null}.sortedByDescending{it.recordedAt}.toList()
  }
+ private fun markLinkObservation(state:JSONObject,key:String) {
+  val times=state.optJSONObject("publication_observed_at") ?: JSONObject().also{state.put("publication_observed_at",it)}
+  times.put(key,Instant.now().toString())
+ }
+ private fun requestPublish(){(context.applicationContext as? EurosApplication)?.connection?.request()}
  suspend fun clearImports()=mutex.withLock { dao.removeMeta(KEY) }
  private fun session(key:String,r:JSONObject)=ImportedSession(key,r.getString("source"),Instant.parse(r.getString("start")),Instant.parse(r.getString("end")),r.getInt("exercise_type"),r.optBoolean("deleted"))
 }

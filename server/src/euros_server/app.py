@@ -17,6 +17,7 @@ from starlette.routing import Mount, Route
 
 from .domain import DomainError, Store
 from .llm import ModelService
+from .tracker import TrackerStore
 
 
 def load_token(name):
@@ -54,6 +55,7 @@ class TokenGate:
 
 def create_app(store, api_token, mcp_token, public_hosts=(), model_service=None):
     models = model_service or ModelService.from_environment()
+    trackers = TrackerStore(store)
     if len(api_token) < 32 or len(mcp_token) < 32 or api_token == mcp_token:
         raise ValueError("Separate app and MCP tokens of at least 32 characters are required")
     hosts = ["127.0.0.1", "localhost", *public_hosts]
@@ -96,6 +98,28 @@ def create_app(store, api_token, mcp_token, public_hosts=(), model_service=None)
         Update individual records with apply_command and their accepted revisions.
         """
         return store.meal_plans(date_from, date_to)
+
+    @mcp.tool(annotations=read)
+    def list_tracker_workouts(date_from: str, date_to: str) -> dict:
+        """Read source-owned Polar workout summaries and tombstones by Chicago start date.
+
+        Compare recorded durations, HR statistics and coverage across sessions. Imported
+        workouts never imply planned completion. Missing HR is unknown, not rest or zero.
+        No cortisol, CNS readiness or recovery diagnosis can be inferred from this data.
+        """
+        return trackers.list(date_from, date_to)
+
+    @mcp.tool(annotations=read)
+    def read_tracker_workout(source_key: str, zone_boundaries_bpm: list[int] | None = None) -> dict:
+        """Read a Polar workout's HR curve, provenance, coverage and fixed time windows.
+
+        The curve preserves bucket extrema with at most 600 points; summary metrics use
+        original samples. Covered HR uses adjacent sample gaps <=60s without extrapolation.
+        Windows are elapsed time, never assumed rounds. Time bands require explicit supplied
+        cutoffs; do not infer max HR or Polar zones from observed peak. Training benefit and
+        Polar zone definitions are unavailable, not generated. No cortisol/CNS/readiness claims.
+        """
+        return trackers.read(source_key, zone_boundaries_bpm)
 
     @mcp.tool(annotations=ToolAnnotations(readOnlyHint=False, destructiveHint=True, idempotentHint=True, openWorldHint=False))
     def apply_command(command: dict) -> CallToolResult:
@@ -153,6 +177,12 @@ def create_app(store, api_token, mcp_token, public_hosts=(), model_service=None)
     async def command(request):
         return JSONResponse(store.command(await read_json(request)))
 
+    async def tracker_import(request):
+        return JSONResponse(trackers.ingest(await read_json(request, 4194304)))
+
+    async def tracker_workouts(request):
+        return JSONResponse(trackers.list(request.query_params.get("date_from"), request.query_params.get("date_to")))
+
     async def interpret_food(request):
         return JSONResponse(await models.food(await read_json(request, 40000)))
 
@@ -183,6 +213,8 @@ def create_app(store, api_token, mcp_token, public_hosts=(), model_service=None)
 
     app = Starlette(routes=[Route("/v1/commands", command, methods=["POST"]),
                             Route("/v1/changes", changes), Route("/v1/records", records),
+                            Route("/v1/tracker/import", tracker_import, methods=["POST"]),
+                            Route("/v1/tracker/workouts", tracker_workouts),
                             Route("/v1/interpret/food", interpret_food, methods=["POST"]),
                             Route("/v1/review/week", review_week, methods=["POST"]),
                             Route("/v1/nutrition", nutrition), Mount("/", mcp.streamable_http_app())],

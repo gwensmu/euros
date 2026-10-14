@@ -144,4 +144,22 @@ class SyncConnectionTest {
   assertFalse(trigger.changed(listOf(second)));assertFalse(trigger.changed(listOf(second.copy(error="Conflict"))))
   assertTrue(trigger.changed(listOf(second)));assertFalse(trigger.changed(emptyList()))
  }
+ @Test fun trackerFailureDoesNotBlockEnrollmentOrCanonicalSyncFreshness()=runBlocking {
+  val db=database()
+  try {
+   val workout=JSONObject("""{"kind":"exercise","source":"fi.polar.polarflow","source_id":"session","modified_at":"2026-10-14T10:00:00Z","start":"2026-10-14T10:00:00Z","end":"2026-10-14T11:00:00Z","exercise_type":1,"deleted":false}""")
+   val health=JSONObject().put("records",JSONObject().put(HealthSnapshots.key(workout),workout)).put("links",JSONObject()).put("refreshed_at","2026-10-14T12:00:00Z")
+   db.dao().meta(Metadata(HealthImport.KEY,HealthSnapshotStorage.encode(health)))
+   val api=object:SyncApi {override fun request(path:String,body:JSONObject?):JSONObject {
+    if(path=="/v1/tracker/import")throw java.io.IOException("offline")
+    return JSONObject("""{"changes":[],"next_cursor":0,"has_more":false}""")
+   }}
+   val store=MemoryStore();val repo=Repository(db);val connection=SyncConnection(repo,store,Schedule(),{api})
+   connection.connect("https://example.com","secret")
+   assertNotNull(store.value);assertTrue(connection.state.value.connected);assertNotNull(connection.state.value.lastSuccess)
+   assertTrue(connection.state.value.error!!.startsWith("Logs synced. Workout sync"))
+   assertEquals(SyncOutcome.RETRY,connection.sync())
+   assertNotNull(repo.dao.meta(TrackerPublisher.PENDING));assertNull(repo.dao.meta(TrackerPublisher.CHECKPOINT))
+  }finally{db.close()}
+ }
 }
