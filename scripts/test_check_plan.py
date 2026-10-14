@@ -25,7 +25,7 @@ class PlanValidationTests(unittest.TestCase):
         self.assertTrue(any('scheduledActivities' in gap for gap in gaps))
         self.assertTrue(any('taper' in gap for gap in gaps))
         self.assertEqual(original, self.plan)
-        self.assertIsNone(self.plan['nutrition']['trainingAB']['proteinG'])
+        self.assertIsNone(self.plan['nutrition']['maintenance']['proteinG'])
         self.assertNotIn('scheduledActivities', self.plan)
 
     def test_impossible_and_noncanonical_event_dates(self):
@@ -57,7 +57,7 @@ class PlanValidationTests(unittest.TestCase):
     def test_bad_quantities(self):
         for value in (-1, float('nan'), float('inf'), -float('inf')):
             with self.subTest(value=value):
-                self.plan['nutrition']['trainingAB']['kcal'] = value
+                self.plan['nutrition']['daily']['kcal'] = value
                 self.assertIn('finite and nonnegative', self.errors())
 
     def test_ranges_and_unknown_or_zero(self):

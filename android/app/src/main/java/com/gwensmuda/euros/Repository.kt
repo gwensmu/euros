@@ -75,13 +75,14 @@ class Repository(private val db:EurosDatabase, llmClient:LlmClient?=null) {
  }
  // Every local edit appends an immutable command; retries never change a command's bytes.
  private suspend fun enqueue(type:String,id:String,payload:JSONObject?,delete:Boolean=false) {
-  require(type in setOf("activities","food_entries","weight_entries") && id.isNotBlank() && id.length<=200)
+  require(type in setOf("activities","food_entries","weight_entries","meal_plans") && id.isNotBlank() && id.length<=200)
   val current=dao.record(type,id)
   val queued=dao.pendingForEntity(type,id)
   check(queued.none{it.error!=null}) { "Resolve the server conflict before editing this record" }
   if(delete && current?.deleted==true) return
   check(current?.deleted!=true) { "This record was deleted" }
   if(delete) check(current!=null) { "Record unavailable" } else RecordValidation.validate(type,payload!!)
+  if(!delete && type=="meal_plans")require(id=="meal-plan-${payload!!.getString("date")}"){"Meal plan ID must match its date"}
   val raw=if(delete) current!!.payload else payload!!.toString()
   if(!delete && current!=null && JSONObject(current.payload).toString()==raw) return
   val expected=queued.lastOrNull()?.let{Math.addExact(it.expectedRevision,1)} ?: (current?.revision ?: 0L)
@@ -178,10 +179,11 @@ class Repository(private val db:EurosDatabase, llmClient:LlmClient?=null) {
    val parsed=(0 until records.length()).map { index ->
     val item=records.getJSONObject(index)
     val type=item.getString("entity_type");val id=item.getString("entity_id")
-    require(type in setOf("activities","food_entries","weight_entries") && id.isNotBlank() && id.length<=200)
+    require(type in setOf("activities","food_entries","weight_entries","meal_plans") && id.isNotBlank() && id.length<=200)
     require(item.getLong("revision")>=0)
     val payload=when(val raw=item.get("payload")) { is String -> JSONObject(raw);is JSONObject -> raw;else -> error("Invalid record payload") }
     RecordValidation.validate(type,payload)
+    if(type=="meal_plans")require(id=="meal-plan-${payload.getString("date")}"){"Meal plan ID must match its date"}
     Record(type,id,0,payload.toString(),item.getBoolean("deleted"))
    }
    require(parsed.map{it.type to it.id}.distinct().size==parsed.size) { "Duplicate archive record IDs" }

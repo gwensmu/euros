@@ -12,7 +12,7 @@ import httpx
 from .domain import DomainError, NUTRIENTS, TYPES, canonical, instant, number, validate_payload
 
 ZONE = ZoneInfo("America/Chicago")
-PROMPT_VERSION = "euros-2026-10-14-v2"
+PROMPT_VERSION = "euros-2026-10-14-v3"
 
 
 def object_schema(properties):
@@ -47,7 +47,9 @@ measurements, techniques, sleep, or trends. Use numeric facts exactly as supplie
 assume a whole day was logged or compare these subtotals against full-day targets. Suggestions
 are optional considerations for the user to discuss outside this app, never changes made.
 The BJJ category competition means competition practice, not a tournament or competition event.
-Moderate/heavy share nutrition. Emphasize recovery after heavy training. No automatic calorie
+Every day shares the same nutrition targets, including rest, flow, moderate, competition,
+and weights days. Never recommend different calorie or macro targets by activity or day.
+Heavy training changes recovery emphasis, not nutrition targets. No automatic calorie
 adjustments, no 2050 rule, no extra exercise or eating less rewards. No follow-up question,
 plan editor, motivational filler, or medical/dose advice. Return summary and up to 3 brief
 adjustments grounded in the actual observations; empty adjustments is valid. Include
@@ -217,7 +219,7 @@ def weekly_facts(body, today):
             raise DomainError("duplicate_review_record")
         seen.add((kind, identifier))
         validate_payload(kind, record["payload"])
-        if not record["deleted"]:
+        if not record["deleted"] and kind != "meal_plans":
             live.append(record)
     facts = {"week_start": week.isoformat(), "logged_activities": [], "recovery_steps": [], "food_days": [], "weights": [], "previous_weekly_weights": []}
     unlogged = 0

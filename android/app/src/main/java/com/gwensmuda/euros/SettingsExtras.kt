@@ -44,14 +44,14 @@ import kotlinx.coroutines.launch
  Text(if(goal.isNull("selectedGoalLb")) "Not set" else "${goal.get("selectedGoalLb")} lb",style=MaterialTheme.typography.headlineLarge)
  }
  val nutrition=plan.getJSONObject("nutrition")
- if(section=="Nutrition targets") listOf("trainingAB" to "Moderate / competition", "flowRest" to "Flow / rest", "maintenance" to "Maintenance").forEach{(key,label)->
+ if(section=="Nutrition targets") listOf("daily" to "Daily").forEach{(key,label)->
   val target=nutrition.getJSONObject(key)
   Text(label,style=MaterialTheme.typography.titleMedium)
   Text("${if(target.isNull("kcal")) "—" else target.get("kcal")} kcal",style=MaterialTheme.typography.headlineMedium)
   Row(Modifier.fillMaxWidth(),horizontalArrangement=Arrangement.SpaceBetween) {
    listOf("proteinG" to "Protein","carbohydrateG" to "Carbs","fatG" to "Fat").forEach { (field,name) ->
     Column(verticalArrangement=Arrangement.spacedBy(4.dp)) {
-     Text(if(target.isNull(field)) "—" else "${target.get(field)} g",style=MaterialTheme.typography.titleLarge)
+     Text(FoodDomain.targetLabel(target,field)?.let{"$it g"} ?: "—",style=MaterialTheme.typography.titleLarge)
      Text(name,style=MaterialTheme.typography.bodySmall,color=MaterialTheme.colorScheme.onSurfaceVariant)
     }
    }

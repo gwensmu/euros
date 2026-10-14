@@ -7,7 +7,7 @@ from datetime import date, datetime, timezone, timedelta
 from decimal import Decimal, InvalidOperation
 from pathlib import Path
 
-TYPES = {"activities", "food_entries", "weight_entries"}
+TYPES = {"activities", "food_entries", "weight_entries", "meal_plans"}
 NUTRIENTS = ("kcal", "protein_g", "carbs_g", "fat_g")
 MAX_SQLITE_INTEGER = (1 << 63) - 1
 
@@ -47,11 +47,72 @@ def instant(value, name):
         raise DomainError("offset_datetime_required", field=name)
 
 
+def plan_quantity(value, field):
+    """Preserve authored unknowns and ranges; never turn a plan into intake."""
+    if value is None:
+        return
+    if isinstance(value, dict):
+        if set(value) != {"min", "max"}:
+            raise DomainError("invalid_plan_quantity", field=field)
+        low, high = number(value["min"], field), number(value["max"], field)
+        if low > high or high > 200000:
+            raise DomainError("invalid_plan_quantity", field=field)
+    elif number(value, field) > 200000:
+        raise DomainError("invalid_plan_quantity", field=field)
+
+
+def validate_meal_plan(payload):
+    try:
+        day = date.fromisoformat(payload["date"])
+        if day.isoformat() != payload["date"]:
+            raise ValueError()
+    except (KeyError, TypeError, ValueError):
+        raise DomainError("invalid_plan_date") from None
+    reference = payload.get("reference_day")
+    if not isinstance(reference, str) or not 1 <= len(reference.strip()) <= 80:
+        raise DomainError("invalid_reference_day")
+    targets = payload.get("nutrition_targets")
+    if not isinstance(targets, dict) or set(targets) != {"kcal", "proteinG", "carbohydrateG", "fatG"}:
+        raise DomainError("invalid_nutrition_targets")
+    for key, value in targets.items():
+        plan_quantity(value, key)
+    meals = payload.get("meals")
+    if not isinstance(meals, list) or not 1 <= len(meals) <= 30:
+        raise DomainError("invalid_plan_meals")
+    identities = set()
+    for meal in meals:
+        if not isinstance(meal, dict):
+            raise DomainError("invalid_plan_meal")
+        for key, maximum in (("id", 100), ("title", 200)):
+            if not isinstance(meal.get(key), str) or not 1 <= len(meal[key].strip()) <= maximum:
+                raise DomainError("invalid_plan_meal", field=key)
+        if meal["id"] in identities:
+            raise DomainError("duplicate_plan_meal")
+        identities.add(meal["id"])
+        foods = meal.get("foods")
+        if not isinstance(foods, list) or len(foods) > 30 or any(not isinstance(food, str) or not 1 <= len(food.strip()) <= 1000 for food in foods):
+            raise DomainError("invalid_plan_foods")
+        for key in ("kcal", "proteinG", "carbohydrateG", "fatG"):
+            plan_quantity(meal.get(key), key)
+        local_time = meal.get("localTime")
+        if local_time is not None:
+            from datetime import time
+            try:
+                if not isinstance(local_time, str) or time.fromisoformat(local_time).strftime("%H:%M") != local_time:
+                    raise ValueError()
+            except ValueError:
+                raise DomainError("invalid_meal_time") from None
+        if meal.get("appliesWhen") not in ("every_day", "bjj_day"):
+            raise DomainError("invalid_meal_applicability")
+
+
 def validate_payload(kind, p):
     if not isinstance(p, dict):
         raise DomainError("object_payload_required")
     canonical(p)
-    if kind == "activities":
+    if kind == "meal_plans":
+        validate_meal_plan(p)
+    elif kind == "activities":
         if not isinstance(p.get("title"), str) or not p["title"].strip():
             raise DomainError("title_required")
         if not isinstance(p.get("kind"), str) or p.get("kind") not in {"bjj", "weights", "food", "recovery", "morning", "weight", "rest"}:
@@ -180,6 +241,8 @@ class Store:
             else:
                 validate_payload(c["entity_type"], c["payload"])
                 payload = c["payload"]
+                if c["entity_type"] == "meal_plans" and c["entity_id"] != "meal-plan-" + payload["date"]:
+                    raise DomainError("meal_plan_identity_mismatch")
                 if c["entity_type"] == "weight_entries":
                     self._validate_weight_identity(db, c["entity_id"], payload)
                 # Resurrection requires a separately designed explicit restore operation.
@@ -228,6 +291,28 @@ class Store:
             rows = db.execute("SELECT * FROM records WHERE deleted=0 AND (? IS NULL OR entity_type=?) ORDER BY entity_type,entity_id",
                               (entity_type, entity_type)).fetchall()
         return {"records": [self.record(r) for r in rows]}
+
+    def meal_plan(self, local_date):
+        try:
+            if date.fromisoformat(local_date).isoformat() != local_date:
+                raise ValueError()
+        except (TypeError, ValueError):
+            raise DomainError("invalid_local_date") from None
+        with self.connect() as db:
+            row = db.execute("SELECT * FROM records WHERE entity_type='meal_plans' AND entity_id=? AND deleted=0",
+                             ("meal-plan-" + local_date,)).fetchone()
+        return {"local_date": local_date, "record": self.record(row)}
+
+    def meal_plans(self, date_from, date_to):
+        try:
+            start, end = date.fromisoformat(date_from), date.fromisoformat(date_to)
+            if start.isoformat() != date_from or end.isoformat() != date_to or not 0 <= (end - start).days <= 30:
+                raise ValueError()
+        except (TypeError, ValueError):
+            raise DomainError("invalid_plan_date_range") from None
+        records = self.records("meal_plans")["records"]
+        return {"date_from": date_from, "date_to": date_to,
+                "records": [record for record in records if date_from <= record["payload"]["date"] <= date_to]}
 
     def nutrition(self, local_date):
         try:

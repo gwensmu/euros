@@ -10,7 +10,7 @@
       "kind": "recovery",
       "scheduled_at": "2026-10-14T08:00:00-05:00",
       "status": "pending",
-      "plan_revision": "2026-10-14-capacity-schedule",
+      "plan_revision": "2026-10-14-shared-daily-nutrition",
       "template_id": "breathing",
       "phase_id": "capacity",
       "time_zone": "America/Chicago",
@@ -31,7 +31,7 @@
           "sourceRef": "recoveryDraft"
         },
         "category": null,
-        "nutrition_profile": null
+        "nutrition_profile": "daily"
       },
       "parent_id": "capacity-2026-10-14-rest-wed"
     }
@@ -47,7 +47,7 @@
       "kind": "rest",
       "scheduled_at": "2026-10-14T08:00:00-05:00",
       "status": "pending",
-      "plan_revision": "2026-10-14-capacity-schedule",
+      "plan_revision": "2026-10-14-shared-daily-nutrition",
       "template_id": "rest",
       "phase_id": "capacity",
       "time_zone": "America/Chicago",
@@ -68,7 +68,7 @@
           "sourceRef": "currentReview"
         },
         "category": null,
-        "nutrition_profile": null
+        "nutrition_profile": "daily"
       }
     }
   },
@@ -83,7 +83,7 @@
       "kind": "recovery",
       "scheduled_at": "2026-10-14T08:05:00-05:00",
       "status": "pending",
-      "plan_revision": "2026-10-14-capacity-schedule",
+      "plan_revision": "2026-10-14-shared-daily-nutrition",
       "template_id": "hydration",
       "phase_id": "capacity",
       "time_zone": "America/Chicago",
@@ -104,7 +104,7 @@
           "sourceRef": "currentReview"
         },
         "category": null,
-        "nutrition_profile": null
+        "nutrition_profile": "daily"
       },
       "parent_id": "capacity-2026-10-14-rest-wed",
       "recovery_step_type": "hydration"
@@ -121,7 +121,7 @@
       "kind": "recovery",
       "scheduled_at": "2026-10-14T08:10:00-05:00",
       "status": "pending",
-      "plan_revision": "2026-10-14-capacity-schedule",
+      "plan_revision": "2026-10-14-shared-daily-nutrition",
       "template_id": "tissue",
       "phase_id": "capacity",
       "time_zone": "America/Chicago",
@@ -142,7 +142,7 @@
           "sourceRef": "recoveryDraft"
         },
         "category": null,
-        "nutrition_profile": null
+        "nutrition_profile": "daily"
       },
       "parent_id": "capacity-2026-10-14-rest-wed"
     }
@@ -158,7 +158,7 @@
       "kind": "recovery",
       "scheduled_at": "2026-10-14T08:20:00-05:00",
       "status": "pending",
-      "plan_revision": "2026-10-14-capacity-schedule",
+      "plan_revision": "2026-10-14-shared-daily-nutrition",
       "template_id": "legs",
       "phase_id": "capacity",
       "time_zone": "America/Chicago",
@@ -179,7 +179,7 @@
           "sourceRef": "recoveryDraft"
         },
         "category": null,
-        "nutrition_profile": null
+        "nutrition_profile": "daily"
       },
       "parent_id": "capacity-2026-10-14-rest-wed"
     }
@@ -195,7 +195,7 @@
       "kind": "weights",
       "scheduled_at": "2026-10-15T16:00:00-05:00",
       "status": "pending",
-      "plan_revision": "2026-10-14-capacity-schedule",
+      "plan_revision": "2026-10-14-shared-daily-nutrition",
       "template_id": "accessory",
       "phase_id": "capacity",
       "time_zone": "America/Chicago",
@@ -274,7 +274,7 @@
           ]
         },
         "category": null,
-        "nutrition_profile": null
+        "nutrition_profile": "daily"
       }
     }
   },
@@ -289,7 +289,7 @@
       "kind": "bjj",
       "scheduled_at": "2026-10-15T20:30:00-05:00",
       "status": "pending",
-      "plan_revision": "2026-10-14-capacity-schedule",
+      "plan_revision": "2026-10-14-shared-daily-nutrition",
       "template_id": "bjj-flow",
       "phase_id": "capacity",
       "time_zone": "America/Chicago",
@@ -320,7 +320,7 @@
           "sourceRef": "roadmap"
         },
         "category": "flow",
-        "nutrition_profile": "flowRest"
+        "nutrition_profile": "daily"
       },
       "category": "flow"
     }
@@ -336,7 +336,7 @@
       "kind": "bjj",
       "scheduled_at": "2026-10-17T10:00:00-05:00",
       "status": "pending",
-      "plan_revision": "2026-10-14-capacity-schedule",
+      "plan_revision": "2026-10-14-shared-daily-nutrition",
       "template_id": "bjj-moderate",
       "phase_id": "capacity",
       "time_zone": "America/Chicago",
@@ -367,7 +367,7 @@
           "sourceRef": "roadmap"
         },
         "category": "moderate",
-        "nutrition_profile": "trainingAB"
+        "nutrition_profile": "daily"
       },
       "category": "moderate"
     }
@@ -383,7 +383,7 @@
       "kind": "weight",
       "scheduled_at": "2026-10-18T09:00:00-05:00",
       "status": "pending",
-      "plan_revision": "2026-10-14-capacity-schedule",
+      "plan_revision": "2026-10-14-shared-daily-nutrition",
       "template_id": "weekly-weight",
       "phase_id": "capacity",
       "time_zone": "America/Chicago",
@@ -404,7 +404,7 @@
           "sourceRef": "currentReview"
         },
         "category": null,
-        "nutrition_profile": null
+        "nutrition_profile": "daily"
       }
     }
   },
@@ -419,7 +419,7 @@
       "kind": "weights",
       "scheduled_at": "2026-10-18T11:00:00-05:00",
       "status": "pending",
-      "plan_revision": "2026-10-14-capacity-schedule",
+      "plan_revision": "2026-10-14-shared-daily-nutrition",
       "template_id": "accessory",
       "phase_id": "capacity",
       "time_zone": "America/Chicago",
@@ -498,7 +498,7 @@
           ]
         },
         "category": null,
-        "nutrition_profile": null
+        "nutrition_profile": "daily"
       }
     }
   },
@@ -513,7 +513,7 @@
       "kind": "bjj",
       "scheduled_at": "2026-10-19T11:00:00-05:00",
       "status": "pending",
-      "plan_revision": "2026-10-14-capacity-schedule",
+      "plan_revision": "2026-10-14-shared-daily-nutrition",
       "template_id": "bjj-moderate",
       "phase_id": "capacity",
       "time_zone": "America/Chicago",
@@ -544,7 +544,7 @@
           "sourceRef": "roadmap"
         },
         "category": "moderate",
-        "nutrition_profile": "trainingAB"
+        "nutrition_profile": "daily"
       },
       "category": "moderate"
     }
@@ -560,7 +560,7 @@
       "kind": "bjj",
       "scheduled_at": "2026-10-20T18:00:00-05:00",
       "status": "pending",
-      "plan_revision": "2026-10-14-capacity-schedule",
+      "plan_revision": "2026-10-14-shared-daily-nutrition",
       "template_id": "bjj-competition",
       "phase_id": "capacity",
       "time_zone": "America/Chicago",
@@ -591,7 +591,7 @@
           "sourceRef": "roadmap"
         },
         "category": "competition",
-        "nutrition_profile": "trainingAB"
+        "nutrition_profile": "daily"
       },
       "category": "competition"
     }
@@ -607,7 +607,7 @@
       "kind": "recovery",
       "scheduled_at": "2026-10-20T20:00:00-05:00",
       "status": "pending",
-      "plan_revision": "2026-10-14-capacity-schedule",
+      "plan_revision": "2026-10-14-shared-daily-nutrition",
       "template_id": "breathing",
       "phase_id": "capacity",
       "time_zone": "America/Chicago",
@@ -628,7 +628,7 @@
           "sourceRef": "recoveryDraft"
         },
         "category": null,
-        "nutrition_profile": null
+        "nutrition_profile": "daily"
       },
       "parent_id": "capacity-2026-10-20-recovery-tue"
     }
@@ -644,7 +644,7 @@
       "kind": "recovery",
       "scheduled_at": "2026-10-20T20:00:00-05:00",
       "status": "pending",
-      "plan_revision": "2026-10-14-capacity-schedule",
+      "plan_revision": "2026-10-14-shared-daily-nutrition",
       "template_id": "recovery",
       "phase_id": "capacity",
       "time_zone": "America/Chicago",
@@ -665,7 +665,7 @@
           "sourceRef": "recoveryDraft"
         },
         "category": null,
-        "nutrition_profile": null
+        "nutrition_profile": "daily"
       },
       "linked_session_id": "capacity-2026-10-20-competition-tue"
     }
@@ -681,7 +681,7 @@
       "kind": "recovery",
       "scheduled_at": "2026-10-20T20:05:00-05:00",
       "status": "pending",
-      "plan_revision": "2026-10-14-capacity-schedule",
+      "plan_revision": "2026-10-14-shared-daily-nutrition",
       "template_id": "hydration",
       "phase_id": "capacity",
       "time_zone": "America/Chicago",
@@ -702,7 +702,7 @@
           "sourceRef": "currentReview"
         },
         "category": null,
-        "nutrition_profile": null
+        "nutrition_profile": "daily"
       },
       "parent_id": "capacity-2026-10-20-recovery-tue",
       "recovery_step_type": "hydration"
@@ -719,7 +719,7 @@
       "kind": "recovery",
       "scheduled_at": "2026-10-20T20:10:00-05:00",
       "status": "pending",
-      "plan_revision": "2026-10-14-capacity-schedule",
+      "plan_revision": "2026-10-14-shared-daily-nutrition",
       "template_id": "tissue",
       "phase_id": "capacity",
       "time_zone": "America/Chicago",
@@ -740,7 +740,7 @@
           "sourceRef": "recoveryDraft"
         },
         "category": null,
-        "nutrition_profile": null
+        "nutrition_profile": "daily"
       },
       "parent_id": "capacity-2026-10-20-recovery-tue"
     }
@@ -756,7 +756,7 @@
       "kind": "recovery",
       "scheduled_at": "2026-10-20T20:20:00-05:00",
       "status": "pending",
-      "plan_revision": "2026-10-14-capacity-schedule",
+      "plan_revision": "2026-10-14-shared-daily-nutrition",
       "template_id": "legs",
       "phase_id": "capacity",
       "time_zone": "America/Chicago",
@@ -777,7 +777,7 @@
           "sourceRef": "recoveryDraft"
         },
         "category": null,
-        "nutrition_profile": null
+        "nutrition_profile": "daily"
       },
       "parent_id": "capacity-2026-10-20-recovery-tue"
     }
@@ -793,7 +793,7 @@
       "kind": "recovery",
       "scheduled_at": "2026-10-21T08:00:00-05:00",
       "status": "pending",
-      "plan_revision": "2026-10-14-capacity-schedule",
+      "plan_revision": "2026-10-14-shared-daily-nutrition",
       "template_id": "breathing",
       "phase_id": "capacity",
       "time_zone": "America/Chicago",
@@ -814,7 +814,7 @@
           "sourceRef": "recoveryDraft"
         },
         "category": null,
-        "nutrition_profile": null
+        "nutrition_profile": "daily"
       },
       "parent_id": "capacity-2026-10-21-rest-wed"
     }
@@ -830,7 +830,7 @@
       "kind": "rest",
       "scheduled_at": "2026-10-21T08:00:00-05:00",
       "status": "pending",
-      "plan_revision": "2026-10-14-capacity-schedule",
+      "plan_revision": "2026-10-14-shared-daily-nutrition",
       "template_id": "rest",
       "phase_id": "capacity",
       "time_zone": "America/Chicago",
@@ -851,7 +851,7 @@
           "sourceRef": "currentReview"
         },
         "category": null,
-        "nutrition_profile": null
+        "nutrition_profile": "daily"
       }
     }
   },
@@ -866,7 +866,7 @@
       "kind": "recovery",
       "scheduled_at": "2026-10-21T08:05:00-05:00",
       "status": "pending",
-      "plan_revision": "2026-10-14-capacity-schedule",
+      "plan_revision": "2026-10-14-shared-daily-nutrition",
       "template_id": "hydration",
       "phase_id": "capacity",
       "time_zone": "America/Chicago",
@@ -887,7 +887,7 @@
           "sourceRef": "currentReview"
         },
         "category": null,
-        "nutrition_profile": null
+        "nutrition_profile": "daily"
       },
       "parent_id": "capacity-2026-10-21-rest-wed",
       "recovery_step_type": "hydration"
@@ -904,7 +904,7 @@
       "kind": "recovery",
       "scheduled_at": "2026-10-21T08:10:00-05:00",
       "status": "pending",
-      "plan_revision": "2026-10-14-capacity-schedule",
+      "plan_revision": "2026-10-14-shared-daily-nutrition",
       "template_id": "tissue",
       "phase_id": "capacity",
       "time_zone": "America/Chicago",
@@ -925,7 +925,7 @@
           "sourceRef": "recoveryDraft"
         },
         "category": null,
-        "nutrition_profile": null
+        "nutrition_profile": "daily"
       },
       "parent_id": "capacity-2026-10-21-rest-wed"
     }
@@ -941,7 +941,7 @@
       "kind": "recovery",
       "scheduled_at": "2026-10-21T08:20:00-05:00",
       "status": "pending",
-      "plan_revision": "2026-10-14-capacity-schedule",
+      "plan_revision": "2026-10-14-shared-daily-nutrition",
       "template_id": "legs",
       "phase_id": "capacity",
       "time_zone": "America/Chicago",
@@ -962,7 +962,7 @@
           "sourceRef": "recoveryDraft"
         },
         "category": null,
-        "nutrition_profile": null
+        "nutrition_profile": "daily"
       },
       "parent_id": "capacity-2026-10-21-rest-wed"
     }
@@ -978,7 +978,7 @@
       "kind": "weights",
       "scheduled_at": "2026-10-22T16:00:00-05:00",
       "status": "pending",
-      "plan_revision": "2026-10-14-capacity-schedule",
+      "plan_revision": "2026-10-14-shared-daily-nutrition",
       "template_id": "accessory",
       "phase_id": "capacity",
       "time_zone": "America/Chicago",
@@ -1057,7 +1057,7 @@
           ]
         },
         "category": null,
-        "nutrition_profile": null
+        "nutrition_profile": "daily"
       }
     }
   },
@@ -1072,7 +1072,7 @@
       "kind": "bjj",
       "scheduled_at": "2026-10-22T20:30:00-05:00",
       "status": "pending",
-      "plan_revision": "2026-10-14-capacity-schedule",
+      "plan_revision": "2026-10-14-shared-daily-nutrition",
       "template_id": "bjj-flow",
       "phase_id": "capacity",
       "time_zone": "America/Chicago",
@@ -1103,7 +1103,7 @@
           "sourceRef": "roadmap"
         },
         "category": "flow",
-        "nutrition_profile": "flowRest"
+        "nutrition_profile": "daily"
       },
       "category": "flow"
     }
@@ -1119,7 +1119,7 @@
       "kind": "bjj",
       "scheduled_at": "2026-10-24T10:00:00-05:00",
       "status": "pending",
-      "plan_revision": "2026-10-14-capacity-schedule",
+      "plan_revision": "2026-10-14-shared-daily-nutrition",
       "template_id": "bjj-moderate",
       "phase_id": "capacity",
       "time_zone": "America/Chicago",
@@ -1150,7 +1150,7 @@
           "sourceRef": "roadmap"
         },
         "category": "moderate",
-        "nutrition_profile": "trainingAB"
+        "nutrition_profile": "daily"
       },
       "category": "moderate"
     }
@@ -1166,7 +1166,7 @@
       "kind": "weight",
       "scheduled_at": "2026-10-25T09:00:00-05:00",
       "status": "pending",
-      "plan_revision": "2026-10-14-capacity-schedule",
+      "plan_revision": "2026-10-14-shared-daily-nutrition",
       "template_id": "weekly-weight",
       "phase_id": "capacity",
       "time_zone": "America/Chicago",
@@ -1187,7 +1187,7 @@
           "sourceRef": "currentReview"
         },
         "category": null,
-        "nutrition_profile": null
+        "nutrition_profile": "daily"
       }
     }
   },
@@ -1202,7 +1202,7 @@
       "kind": "weights",
       "scheduled_at": "2026-10-25T11:00:00-05:00",
       "status": "pending",
-      "plan_revision": "2026-10-14-capacity-schedule",
+      "plan_revision": "2026-10-14-shared-daily-nutrition",
       "template_id": "accessory",
       "phase_id": "capacity",
       "time_zone": "America/Chicago",
@@ -1281,7 +1281,7 @@
           ]
         },
         "category": null,
-        "nutrition_profile": null
+        "nutrition_profile": "daily"
       }
     }
   },
@@ -1296,7 +1296,7 @@
       "kind": "bjj",
       "scheduled_at": "2026-10-26T11:00:00-05:00",
       "status": "pending",
-      "plan_revision": "2026-10-14-capacity-schedule",
+      "plan_revision": "2026-10-14-shared-daily-nutrition",
       "template_id": "bjj-moderate",
       "phase_id": "capacity",
       "time_zone": "America/Chicago",
@@ -1327,7 +1327,7 @@
           "sourceRef": "roadmap"
         },
         "category": "moderate",
-        "nutrition_profile": "trainingAB"
+        "nutrition_profile": "daily"
       },
       "category": "moderate"
     }
@@ -1343,7 +1343,7 @@
       "kind": "bjj",
       "scheduled_at": "2026-10-27T18:00:00-05:00",
       "status": "pending",
-      "plan_revision": "2026-10-14-capacity-schedule",
+      "plan_revision": "2026-10-14-shared-daily-nutrition",
       "template_id": "bjj-competition",
       "phase_id": "capacity",
       "time_zone": "America/Chicago",
@@ -1374,7 +1374,7 @@
           "sourceRef": "roadmap"
         },
         "category": "competition",
-        "nutrition_profile": "trainingAB"
+        "nutrition_profile": "daily"
       },
       "category": "competition"
     }
@@ -1390,7 +1390,7 @@
       "kind": "recovery",
       "scheduled_at": "2026-10-27T20:00:00-05:00",
       "status": "pending",
-      "plan_revision": "2026-10-14-capacity-schedule",
+      "plan_revision": "2026-10-14-shared-daily-nutrition",
       "template_id": "breathing",
       "phase_id": "capacity",
       "time_zone": "America/Chicago",
@@ -1411,7 +1411,7 @@
           "sourceRef": "recoveryDraft"
         },
         "category": null,
-        "nutrition_profile": null
+        "nutrition_profile": "daily"
       },
       "parent_id": "capacity-2026-10-27-recovery-tue"
     }
@@ -1427,7 +1427,7 @@
       "kind": "recovery",
       "scheduled_at": "2026-10-27T20:00:00-05:00",
       "status": "pending",
-      "plan_revision": "2026-10-14-capacity-schedule",
+      "plan_revision": "2026-10-14-shared-daily-nutrition",
       "template_id": "recovery",
       "phase_id": "capacity",
       "time_zone": "America/Chicago",
@@ -1448,7 +1448,7 @@
           "sourceRef": "recoveryDraft"
         },
         "category": null,
-        "nutrition_profile": null
+        "nutrition_profile": "daily"
       },
       "linked_session_id": "capacity-2026-10-27-competition-tue"
     }
@@ -1464,7 +1464,7 @@
       "kind": "recovery",
       "scheduled_at": "2026-10-27T20:05:00-05:00",
       "status": "pending",
-      "plan_revision": "2026-10-14-capacity-schedule",
+      "plan_revision": "2026-10-14-shared-daily-nutrition",
       "template_id": "hydration",
       "phase_id": "capacity",
       "time_zone": "America/Chicago",
@@ -1485,7 +1485,7 @@
           "sourceRef": "currentReview"
         },
         "category": null,
-        "nutrition_profile": null
+        "nutrition_profile": "daily"
       },
       "parent_id": "capacity-2026-10-27-recovery-tue",
       "recovery_step_type": "hydration"
@@ -1502,7 +1502,7 @@
       "kind": "recovery",
       "scheduled_at": "2026-10-27T20:10:00-05:00",
       "status": "pending",
-      "plan_revision": "2026-10-14-capacity-schedule",
+      "plan_revision": "2026-10-14-shared-daily-nutrition",
       "template_id": "tissue",
       "phase_id": "capacity",
       "time_zone": "America/Chicago",
@@ -1523,7 +1523,7 @@
           "sourceRef": "recoveryDraft"
         },
         "category": null,
-        "nutrition_profile": null
+        "nutrition_profile": "daily"
       },
       "parent_id": "capacity-2026-10-27-recovery-tue"
     }
@@ -1539,7 +1539,7 @@
       "kind": "recovery",
       "scheduled_at": "2026-10-27T20:20:00-05:00",
       "status": "pending",
-      "plan_revision": "2026-10-14-capacity-schedule",
+      "plan_revision": "2026-10-14-shared-daily-nutrition",
       "template_id": "legs",
       "phase_id": "capacity",
       "time_zone": "America/Chicago",
@@ -1560,7 +1560,7 @@
           "sourceRef": "recoveryDraft"
         },
         "category": null,
-        "nutrition_profile": null
+        "nutrition_profile": "daily"
       },
       "parent_id": "capacity-2026-10-27-recovery-tue"
     }
@@ -1576,7 +1576,7 @@
       "kind": "recovery",
       "scheduled_at": "2026-10-28T08:00:00-05:00",
       "status": "pending",
-      "plan_revision": "2026-10-14-capacity-schedule",
+      "plan_revision": "2026-10-14-shared-daily-nutrition",
       "template_id": "breathing",
       "phase_id": "capacity",
       "time_zone": "America/Chicago",
@@ -1597,7 +1597,7 @@
           "sourceRef": "recoveryDraft"
         },
         "category": null,
-        "nutrition_profile": null
+        "nutrition_profile": "daily"
       },
       "parent_id": "capacity-2026-10-28-rest-wed"
     }
@@ -1613,7 +1613,7 @@
       "kind": "rest",
       "scheduled_at": "2026-10-28T08:00:00-05:00",
       "status": "pending",
-      "plan_revision": "2026-10-14-capacity-schedule",
+      "plan_revision": "2026-10-14-shared-daily-nutrition",
       "template_id": "rest",
       "phase_id": "capacity",
       "time_zone": "America/Chicago",
@@ -1634,7 +1634,7 @@
           "sourceRef": "currentReview"
         },
         "category": null,
-        "nutrition_profile": null
+        "nutrition_profile": "daily"
       }
     }
   },
@@ -1649,7 +1649,7 @@
       "kind": "recovery",
       "scheduled_at": "2026-10-28T08:05:00-05:00",
       "status": "pending",
-      "plan_revision": "2026-10-14-capacity-schedule",
+      "plan_revision": "2026-10-14-shared-daily-nutrition",
       "template_id": "hydration",
       "phase_id": "capacity",
       "time_zone": "America/Chicago",
@@ -1670,7 +1670,7 @@
           "sourceRef": "currentReview"
         },
         "category": null,
-        "nutrition_profile": null
+        "nutrition_profile": "daily"
       },
       "parent_id": "capacity-2026-10-28-rest-wed",
       "recovery_step_type": "hydration"
@@ -1687,7 +1687,7 @@
       "kind": "recovery",
       "scheduled_at": "2026-10-28T08:10:00-05:00",
       "status": "pending",
-      "plan_revision": "2026-10-14-capacity-schedule",
+      "plan_revision": "2026-10-14-shared-daily-nutrition",
       "template_id": "tissue",
       "phase_id": "capacity",
       "time_zone": "America/Chicago",
@@ -1708,7 +1708,7 @@
           "sourceRef": "recoveryDraft"
         },
         "category": null,
-        "nutrition_profile": null
+        "nutrition_profile": "daily"
       },
       "parent_id": "capacity-2026-10-28-rest-wed"
     }
@@ -1724,7 +1724,7 @@
       "kind": "recovery",
       "scheduled_at": "2026-10-28T08:20:00-05:00",
       "status": "pending",
-      "plan_revision": "2026-10-14-capacity-schedule",
+      "plan_revision": "2026-10-14-shared-daily-nutrition",
       "template_id": "legs",
       "phase_id": "capacity",
       "time_zone": "America/Chicago",
@@ -1745,7 +1745,7 @@
           "sourceRef": "recoveryDraft"
         },
         "category": null,
-        "nutrition_profile": null
+        "nutrition_profile": "daily"
       },
       "parent_id": "capacity-2026-10-28-rest-wed"
     }
@@ -1761,7 +1761,7 @@
       "kind": "weights",
       "scheduled_at": "2026-10-29T16:00:00-05:00",
       "status": "pending",
-      "plan_revision": "2026-10-14-capacity-schedule",
+      "plan_revision": "2026-10-14-shared-daily-nutrition",
       "template_id": "accessory",
       "phase_id": "capacity",
       "time_zone": "America/Chicago",
@@ -1840,7 +1840,7 @@
           ]
         },
         "category": null,
-        "nutrition_profile": null
+        "nutrition_profile": "daily"
       }
     }
   },
@@ -1855,7 +1855,7 @@
       "kind": "bjj",
       "scheduled_at": "2026-10-29T20:30:00-05:00",
       "status": "pending",
-      "plan_revision": "2026-10-14-capacity-schedule",
+      "plan_revision": "2026-10-14-shared-daily-nutrition",
       "template_id": "bjj-flow",
       "phase_id": "capacity",
       "time_zone": "America/Chicago",
@@ -1886,7 +1886,7 @@
           "sourceRef": "roadmap"
         },
         "category": "flow",
-        "nutrition_profile": "flowRest"
+        "nutrition_profile": "daily"
       },
       "category": "flow"
     }
@@ -1902,7 +1902,7 @@
       "kind": "bjj",
       "scheduled_at": "2026-10-31T10:00:00-05:00",
       "status": "pending",
-      "plan_revision": "2026-10-14-capacity-schedule",
+      "plan_revision": "2026-10-14-shared-daily-nutrition",
       "template_id": "bjj-moderate",
       "phase_id": "capacity",
       "time_zone": "America/Chicago",
@@ -1933,7 +1933,7 @@
           "sourceRef": "roadmap"
         },
         "category": "moderate",
-        "nutrition_profile": "trainingAB"
+        "nutrition_profile": "daily"
       },
       "category": "moderate"
     }
@@ -1949,7 +1949,7 @@
       "kind": "weight",
       "scheduled_at": "2026-11-01T09:00:00-06:00",
       "status": "pending",
-      "plan_revision": "2026-10-14-capacity-schedule",
+      "plan_revision": "2026-10-14-shared-daily-nutrition",
       "template_id": "weekly-weight",
       "phase_id": "capacity",
       "time_zone": "America/Chicago",
@@ -1970,7 +1970,7 @@
           "sourceRef": "currentReview"
         },
         "category": null,
-        "nutrition_profile": null
+        "nutrition_profile": "daily"
       }
     }
   },
@@ -1985,7 +1985,7 @@
       "kind": "weights",
       "scheduled_at": "2026-11-01T11:00:00-06:00",
       "status": "pending",
-      "plan_revision": "2026-10-14-capacity-schedule",
+      "plan_revision": "2026-10-14-shared-daily-nutrition",
       "template_id": "accessory",
       "phase_id": "capacity",
       "time_zone": "America/Chicago",
@@ -2064,7 +2064,7 @@
           ]
         },
         "category": null,
-        "nutrition_profile": null
+        "nutrition_profile": "daily"
       }
     }
   },
@@ -2079,7 +2079,7 @@
       "kind": "bjj",
       "scheduled_at": "2026-11-02T11:00:00-06:00",
       "status": "pending",
-      "plan_revision": "2026-10-14-capacity-schedule",
+      "plan_revision": "2026-10-14-shared-daily-nutrition",
       "template_id": "bjj-moderate",
       "phase_id": "capacity",
       "time_zone": "America/Chicago",
@@ -2110,7 +2110,7 @@
           "sourceRef": "roadmap"
         },
         "category": "moderate",
-        "nutrition_profile": "trainingAB"
+        "nutrition_profile": "daily"
       },
       "category": "moderate"
     }
@@ -2126,7 +2126,7 @@
       "kind": "bjj",
       "scheduled_at": "2026-11-03T18:00:00-06:00",
       "status": "pending",
-      "plan_revision": "2026-10-14-capacity-schedule",
+      "plan_revision": "2026-10-14-shared-daily-nutrition",
       "template_id": "bjj-competition",
       "phase_id": "capacity",
       "time_zone": "America/Chicago",
@@ -2157,7 +2157,7 @@
           "sourceRef": "roadmap"
         },
         "category": "competition",
-        "nutrition_profile": "trainingAB"
+        "nutrition_profile": "daily"
       },
       "category": "competition"
     }
@@ -2173,7 +2173,7 @@
       "kind": "recovery",
       "scheduled_at": "2026-11-03T20:00:00-06:00",
       "status": "pending",
-      "plan_revision": "2026-10-14-capacity-schedule",
+      "plan_revision": "2026-10-14-shared-daily-nutrition",
       "template_id": "breathing",
       "phase_id": "capacity",
       "time_zone": "America/Chicago",
@@ -2194,7 +2194,7 @@
           "sourceRef": "recoveryDraft"
         },
         "category": null,
-        "nutrition_profile": null
+        "nutrition_profile": "daily"
       },
       "parent_id": "capacity-2026-11-03-recovery-tue"
     }
@@ -2210,7 +2210,7 @@
       "kind": "recovery",
       "scheduled_at": "2026-11-03T20:00:00-06:00",
       "status": "pending",
-      "plan_revision": "2026-10-14-capacity-schedule",
+      "plan_revision": "2026-10-14-shared-daily-nutrition",
       "template_id": "recovery",
       "phase_id": "capacity",
       "time_zone": "America/Chicago",
@@ -2231,7 +2231,7 @@
           "sourceRef": "recoveryDraft"
         },
         "category": null,
-        "nutrition_profile": null
+        "nutrition_profile": "daily"
       },
       "linked_session_id": "capacity-2026-11-03-competition-tue"
     }
@@ -2247,7 +2247,7 @@
       "kind": "recovery",
       "scheduled_at": "2026-11-03T20:05:00-06:00",
       "status": "pending",
-      "plan_revision": "2026-10-14-capacity-schedule",
+      "plan_revision": "2026-10-14-shared-daily-nutrition",
       "template_id": "hydration",
       "phase_id": "capacity",
       "time_zone": "America/Chicago",
@@ -2268,7 +2268,7 @@
           "sourceRef": "currentReview"
         },
         "category": null,
-        "nutrition_profile": null
+        "nutrition_profile": "daily"
       },
       "parent_id": "capacity-2026-11-03-recovery-tue",
       "recovery_step_type": "hydration"
@@ -2285,7 +2285,7 @@
       "kind": "recovery",
       "scheduled_at": "2026-11-03T20:10:00-06:00",
       "status": "pending",
-      "plan_revision": "2026-10-14-capacity-schedule",
+      "plan_revision": "2026-10-14-shared-daily-nutrition",
       "template_id": "tissue",
       "phase_id": "capacity",
       "time_zone": "America/Chicago",
@@ -2306,7 +2306,7 @@
           "sourceRef": "recoveryDraft"
         },
         "category": null,
-        "nutrition_profile": null
+        "nutrition_profile": "daily"
       },
       "parent_id": "capacity-2026-11-03-recovery-tue"
     }
@@ -2322,7 +2322,7 @@
       "kind": "recovery",
       "scheduled_at": "2026-11-03T20:20:00-06:00",
       "status": "pending",
-      "plan_revision": "2026-10-14-capacity-schedule",
+      "plan_revision": "2026-10-14-shared-daily-nutrition",
       "template_id": "legs",
       "phase_id": "capacity",
       "time_zone": "America/Chicago",
@@ -2343,7 +2343,7 @@
           "sourceRef": "recoveryDraft"
         },
         "category": null,
-        "nutrition_profile": null
+        "nutrition_profile": "daily"
       },
       "parent_id": "capacity-2026-11-03-recovery-tue"
     }
@@ -2359,7 +2359,7 @@
       "kind": "recovery",
       "scheduled_at": "2026-11-04T08:00:00-06:00",
       "status": "pending",
-      "plan_revision": "2026-10-14-capacity-schedule",
+      "plan_revision": "2026-10-14-shared-daily-nutrition",
       "template_id": "breathing",
       "phase_id": "capacity",
       "time_zone": "America/Chicago",
@@ -2380,7 +2380,7 @@
           "sourceRef": "recoveryDraft"
         },
         "category": null,
-        "nutrition_profile": null
+        "nutrition_profile": "daily"
       },
       "parent_id": "capacity-2026-11-04-rest-wed"
     }
@@ -2396,7 +2396,7 @@
       "kind": "rest",
       "scheduled_at": "2026-11-04T08:00:00-06:00",
       "status": "pending",
-      "plan_revision": "2026-10-14-capacity-schedule",
+      "plan_revision": "2026-10-14-shared-daily-nutrition",
       "template_id": "rest",
       "phase_id": "capacity",
       "time_zone": "America/Chicago",
@@ -2417,7 +2417,7 @@
           "sourceRef": "currentReview"
         },
         "category": null,
-        "nutrition_profile": null
+        "nutrition_profile": "daily"
       }
     }
   },
@@ -2432,7 +2432,7 @@
       "kind": "recovery",
       "scheduled_at": "2026-11-04T08:05:00-06:00",
       "status": "pending",
-      "plan_revision": "2026-10-14-capacity-schedule",
+      "plan_revision": "2026-10-14-shared-daily-nutrition",
       "template_id": "hydration",
       "phase_id": "capacity",
       "time_zone": "America/Chicago",
@@ -2453,7 +2453,7 @@
           "sourceRef": "currentReview"
         },
         "category": null,
-        "nutrition_profile": null
+        "nutrition_profile": "daily"
       },
       "parent_id": "capacity-2026-11-04-rest-wed",
       "recovery_step_type": "hydration"
@@ -2470,7 +2470,7 @@
       "kind": "recovery",
       "scheduled_at": "2026-11-04T08:10:00-06:00",
       "status": "pending",
-      "plan_revision": "2026-10-14-capacity-schedule",
+      "plan_revision": "2026-10-14-shared-daily-nutrition",
       "template_id": "tissue",
       "phase_id": "capacity",
       "time_zone": "America/Chicago",
@@ -2491,7 +2491,7 @@
           "sourceRef": "recoveryDraft"
         },
         "category": null,
-        "nutrition_profile": null
+        "nutrition_profile": "daily"
       },
       "parent_id": "capacity-2026-11-04-rest-wed"
     }
@@ -2507,7 +2507,7 @@
       "kind": "recovery",
       "scheduled_at": "2026-11-04T08:20:00-06:00",
       "status": "pending",
-      "plan_revision": "2026-10-14-capacity-schedule",
+      "plan_revision": "2026-10-14-shared-daily-nutrition",
       "template_id": "legs",
       "phase_id": "capacity",
       "time_zone": "America/Chicago",
@@ -2528,7 +2528,7 @@
           "sourceRef": "recoveryDraft"
         },
         "category": null,
-        "nutrition_profile": null
+        "nutrition_profile": "daily"
       },
       "parent_id": "capacity-2026-11-04-rest-wed"
     }
@@ -2544,7 +2544,7 @@
       "kind": "weights",
       "scheduled_at": "2026-11-05T16:00:00-06:00",
       "status": "pending",
-      "plan_revision": "2026-10-14-capacity-schedule",
+      "plan_revision": "2026-10-14-shared-daily-nutrition",
       "template_id": "accessory",
       "phase_id": "capacity",
       "time_zone": "America/Chicago",
@@ -2623,7 +2623,7 @@
           ]
         },
         "category": null,
-        "nutrition_profile": null
+        "nutrition_profile": "daily"
       }
     }
   },
@@ -2638,7 +2638,7 @@
       "kind": "bjj",
       "scheduled_at": "2026-11-05T20:30:00-06:00",
       "status": "pending",
-      "plan_revision": "2026-10-14-capacity-schedule",
+      "plan_revision": "2026-10-14-shared-daily-nutrition",
       "template_id": "bjj-flow",
       "phase_id": "capacity",
       "time_zone": "America/Chicago",
@@ -2669,7 +2669,7 @@
           "sourceRef": "roadmap"
         },
         "category": "flow",
-        "nutrition_profile": "flowRest"
+        "nutrition_profile": "daily"
       },
       "category": "flow"
     }
@@ -2685,7 +2685,7 @@
       "kind": "bjj",
       "scheduled_at": "2026-11-07T10:00:00-06:00",
       "status": "pending",
-      "plan_revision": "2026-10-14-capacity-schedule",
+      "plan_revision": "2026-10-14-shared-daily-nutrition",
       "template_id": "bjj-moderate",
       "phase_id": "capacity",
       "time_zone": "America/Chicago",
@@ -2716,7 +2716,7 @@
           "sourceRef": "roadmap"
         },
         "category": "moderate",
-        "nutrition_profile": "trainingAB"
+        "nutrition_profile": "daily"
       },
       "category": "moderate"
     }
@@ -2732,7 +2732,7 @@
       "kind": "weight",
       "scheduled_at": "2026-11-08T09:00:00-06:00",
       "status": "pending",
-      "plan_revision": "2026-10-14-capacity-schedule",
+      "plan_revision": "2026-10-14-shared-daily-nutrition",
       "template_id": "weekly-weight",
       "phase_id": "capacity",
       "time_zone": "America/Chicago",
@@ -2753,7 +2753,7 @@
           "sourceRef": "currentReview"
         },
         "category": null,
-        "nutrition_profile": null
+        "nutrition_profile": "daily"
       }
     }
   },
@@ -2768,7 +2768,7 @@
       "kind": "weights",
       "scheduled_at": "2026-11-08T11:00:00-06:00",
       "status": "pending",
-      "plan_revision": "2026-10-14-capacity-schedule",
+      "plan_revision": "2026-10-14-shared-daily-nutrition",
       "template_id": "accessory",
       "phase_id": "capacity",
       "time_zone": "America/Chicago",
@@ -2847,7 +2847,7 @@
           ]
         },
         "category": null,
-        "nutrition_profile": null
+        "nutrition_profile": "daily"
       }
     }
   },
@@ -2862,7 +2862,7 @@
       "kind": "bjj",
       "scheduled_at": "2026-11-09T11:00:00-06:00",
       "status": "pending",
-      "plan_revision": "2026-10-14-capacity-schedule",
+      "plan_revision": "2026-10-14-shared-daily-nutrition",
       "template_id": "bjj-moderate",
       "phase_id": "capacity",
       "time_zone": "America/Chicago",
@@ -2893,7 +2893,7 @@
           "sourceRef": "roadmap"
         },
         "category": "moderate",
-        "nutrition_profile": "trainingAB"
+        "nutrition_profile": "daily"
       },
       "category": "moderate"
     }
@@ -2909,7 +2909,7 @@
       "kind": "bjj",
       "scheduled_at": "2026-11-10T18:00:00-06:00",
       "status": "pending",
-      "plan_revision": "2026-10-14-capacity-schedule",
+      "plan_revision": "2026-10-14-shared-daily-nutrition",
       "template_id": "bjj-competition",
       "phase_id": "capacity",
       "time_zone": "America/Chicago",
@@ -2940,7 +2940,7 @@
           "sourceRef": "roadmap"
         },
         "category": "competition",
-        "nutrition_profile": "trainingAB"
+        "nutrition_profile": "daily"
       },
       "category": "competition"
     }
@@ -2956,7 +2956,7 @@
       "kind": "recovery",
       "scheduled_at": "2026-11-10T20:00:00-06:00",
       "status": "pending",
-      "plan_revision": "2026-10-14-capacity-schedule",
+      "plan_revision": "2026-10-14-shared-daily-nutrition",
       "template_id": "breathing",
       "phase_id": "capacity",
       "time_zone": "America/Chicago",
@@ -2977,7 +2977,7 @@
           "sourceRef": "recoveryDraft"
         },
         "category": null,
-        "nutrition_profile": null
+        "nutrition_profile": "daily"
       },
       "parent_id": "capacity-2026-11-10-recovery-tue"
     }
@@ -2993,7 +2993,7 @@
       "kind": "recovery",
       "scheduled_at": "2026-11-10T20:00:00-06:00",
       "status": "pending",
-      "plan_revision": "2026-10-14-capacity-schedule",
+      "plan_revision": "2026-10-14-shared-daily-nutrition",
       "template_id": "recovery",
       "phase_id": "capacity",
       "time_zone": "America/Chicago",
@@ -3014,7 +3014,7 @@
           "sourceRef": "recoveryDraft"
         },
         "category": null,
-        "nutrition_profile": null
+        "nutrition_profile": "daily"
       },
       "linked_session_id": "capacity-2026-11-10-competition-tue"
     }
@@ -3030,7 +3030,7 @@
       "kind": "recovery",
       "scheduled_at": "2026-11-10T20:05:00-06:00",
       "status": "pending",
-      "plan_revision": "2026-10-14-capacity-schedule",
+      "plan_revision": "2026-10-14-shared-daily-nutrition",
       "template_id": "hydration",
       "phase_id": "capacity",
       "time_zone": "America/Chicago",
@@ -3051,7 +3051,7 @@
           "sourceRef": "currentReview"
         },
         "category": null,
-        "nutrition_profile": null
+        "nutrition_profile": "daily"
       },
       "parent_id": "capacity-2026-11-10-recovery-tue",
       "recovery_step_type": "hydration"
@@ -3068,7 +3068,7 @@
       "kind": "recovery",
       "scheduled_at": "2026-11-10T20:10:00-06:00",
       "status": "pending",
-      "plan_revision": "2026-10-14-capacity-schedule",
+      "plan_revision": "2026-10-14-shared-daily-nutrition",
       "template_id": "tissue",
       "phase_id": "capacity",
       "time_zone": "America/Chicago",
@@ -3089,7 +3089,7 @@
           "sourceRef": "recoveryDraft"
         },
         "category": null,
-        "nutrition_profile": null
+        "nutrition_profile": "daily"
       },
       "parent_id": "capacity-2026-11-10-recovery-tue"
     }
@@ -3105,7 +3105,7 @@
       "kind": "recovery",
       "scheduled_at": "2026-11-10T20:20:00-06:00",
       "status": "pending",
-      "plan_revision": "2026-10-14-capacity-schedule",
+      "plan_revision": "2026-10-14-shared-daily-nutrition",
       "template_id": "legs",
       "phase_id": "capacity",
       "time_zone": "America/Chicago",
@@ -3126,7 +3126,7 @@
           "sourceRef": "recoveryDraft"
         },
         "category": null,
-        "nutrition_profile": null
+        "nutrition_profile": "daily"
       },
       "parent_id": "capacity-2026-11-10-recovery-tue"
     }
@@ -3142,7 +3142,7 @@
       "kind": "recovery",
       "scheduled_at": "2026-11-11T08:00:00-06:00",
       "status": "pending",
-      "plan_revision": "2026-10-14-capacity-schedule",
+      "plan_revision": "2026-10-14-shared-daily-nutrition",
       "template_id": "breathing",
       "phase_id": "capacity",
       "time_zone": "America/Chicago",
@@ -3163,7 +3163,7 @@
           "sourceRef": "recoveryDraft"
         },
         "category": null,
-        "nutrition_profile": null
+        "nutrition_profile": "daily"
       },
       "parent_id": "capacity-2026-11-11-rest-wed"
     }
@@ -3179,7 +3179,7 @@
       "kind": "rest",
       "scheduled_at": "2026-11-11T08:00:00-06:00",
       "status": "pending",
-      "plan_revision": "2026-10-14-capacity-schedule",
+      "plan_revision": "2026-10-14-shared-daily-nutrition",
       "template_id": "rest",
       "phase_id": "capacity",
       "time_zone": "America/Chicago",
@@ -3200,7 +3200,7 @@
           "sourceRef": "currentReview"
         },
         "category": null,
-        "nutrition_profile": null
+        "nutrition_profile": "daily"
       }
     }
   },
@@ -3215,7 +3215,7 @@
       "kind": "recovery",
       "scheduled_at": "2026-11-11T08:05:00-06:00",
       "status": "pending",
-      "plan_revision": "2026-10-14-capacity-schedule",
+      "plan_revision": "2026-10-14-shared-daily-nutrition",
       "template_id": "hydration",
       "phase_id": "capacity",
       "time_zone": "America/Chicago",
@@ -3236,7 +3236,7 @@
           "sourceRef": "currentReview"
         },
         "category": null,
-        "nutrition_profile": null
+        "nutrition_profile": "daily"
       },
       "parent_id": "capacity-2026-11-11-rest-wed",
       "recovery_step_type": "hydration"
@@ -3253,7 +3253,7 @@
       "kind": "recovery",
       "scheduled_at": "2026-11-11T08:10:00-06:00",
       "status": "pending",
-      "plan_revision": "2026-10-14-capacity-schedule",
+      "plan_revision": "2026-10-14-shared-daily-nutrition",
       "template_id": "tissue",
       "phase_id": "capacity",
       "time_zone": "America/Chicago",
@@ -3274,7 +3274,7 @@
           "sourceRef": "recoveryDraft"
         },
         "category": null,
-        "nutrition_profile": null
+        "nutrition_profile": "daily"
       },
       "parent_id": "capacity-2026-11-11-rest-wed"
     }
@@ -3290,7 +3290,7 @@
       "kind": "recovery",
       "scheduled_at": "2026-11-11T08:20:00-06:00",
       "status": "pending",
-      "plan_revision": "2026-10-14-capacity-schedule",
+      "plan_revision": "2026-10-14-shared-daily-nutrition",
       "template_id": "legs",
       "phase_id": "capacity",
       "time_zone": "America/Chicago",
@@ -3311,7 +3311,7 @@
           "sourceRef": "recoveryDraft"
         },
         "category": null,
-        "nutrition_profile": null
+        "nutrition_profile": "daily"
       },
       "parent_id": "capacity-2026-11-11-rest-wed"
     }
@@ -3327,7 +3327,7 @@
       "kind": "weights",
       "scheduled_at": "2026-11-12T16:00:00-06:00",
       "status": "pending",
-      "plan_revision": "2026-10-14-capacity-schedule",
+      "plan_revision": "2026-10-14-shared-daily-nutrition",
       "template_id": "accessory",
       "phase_id": "capacity",
       "time_zone": "America/Chicago",
@@ -3406,7 +3406,7 @@
           ]
         },
         "category": null,
-        "nutrition_profile": null
+        "nutrition_profile": "daily"
       }
     }
   },
@@ -3421,7 +3421,7 @@
       "kind": "bjj",
       "scheduled_at": "2026-11-12T20:30:00-06:00",
       "status": "pending",
-      "plan_revision": "2026-10-14-capacity-schedule",
+      "plan_revision": "2026-10-14-shared-daily-nutrition",
       "template_id": "bjj-flow",
       "phase_id": "capacity",
       "time_zone": "America/Chicago",
@@ -3452,7 +3452,7 @@
           "sourceRef": "roadmap"
         },
         "category": "flow",
-        "nutrition_profile": "flowRest"
+        "nutrition_profile": "daily"
       },
       "category": "flow"
     }
@@ -3468,7 +3468,7 @@
       "kind": "bjj",
       "scheduled_at": "2026-11-14T10:00:00-06:00",
       "status": "pending",
-      "plan_revision": "2026-10-14-capacity-schedule",
+      "plan_revision": "2026-10-14-shared-daily-nutrition",
       "template_id": "bjj-moderate",
       "phase_id": "capacity",
       "time_zone": "America/Chicago",
@@ -3499,7 +3499,7 @@
           "sourceRef": "roadmap"
         },
         "category": "moderate",
-        "nutrition_profile": "trainingAB"
+        "nutrition_profile": "daily"
       },
       "category": "moderate"
     }
@@ -3515,7 +3515,7 @@
       "kind": "weight",
       "scheduled_at": "2026-11-15T09:00:00-06:00",
       "status": "pending",
-      "plan_revision": "2026-10-14-capacity-schedule",
+      "plan_revision": "2026-10-14-shared-daily-nutrition",
       "template_id": "weekly-weight",
       "phase_id": "capacity",
       "time_zone": "America/Chicago",
@@ -3536,7 +3536,7 @@
           "sourceRef": "currentReview"
         },
         "category": null,
-        "nutrition_profile": null
+        "nutrition_profile": "daily"
       }
     }
   },
@@ -3551,7 +3551,7 @@
       "kind": "weights",
       "scheduled_at": "2026-11-15T11:00:00-06:00",
       "status": "pending",
-      "plan_revision": "2026-10-14-capacity-schedule",
+      "plan_revision": "2026-10-14-shared-daily-nutrition",
       "template_id": "accessory",
       "phase_id": "capacity",
       "time_zone": "America/Chicago",
@@ -3630,7 +3630,7 @@
           ]
         },
         "category": null,
-        "nutrition_profile": null
+        "nutrition_profile": "daily"
       }
     }
   }

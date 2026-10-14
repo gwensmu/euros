@@ -104,7 +104,7 @@ class MainActivity:ComponentActivity() {
       RootTab.Food -> {
        if(!foodEditor)Row(Modifier.fillMaxWidth(),horizontalArrangement=Arrangement.SpaceBetween){IconButton(onClick={foodDate=foodDay.minusDays(1).toString()}){Icon(Icons.Outlined.ChevronLeft,"Previous day")};TextButton(onClick={foodDate=today.toString()}){Text("Today")};IconButton(onClick={foodDate=foodDay.plusDays(1).toString()}){Icon(Icons.Outlined.ChevronRight,"Next day")}}
        val dayPlan=authoredPlan.day(foodDay,records)
-       FoodScreen(repo,records,foodDay,dayPlan.nutrition,dayPlan.meals,mealChoices=FoodDomain.mealReferences(authoredPlan.json()),openEntry=openFoodEntry,plannedActivityId=foodActivity,onEntryOpened={openFoodEntry=false},onEditorVisibility={foodEditor=it})
+       FoodScreen(repo,records,foodDay,dayPlan.nutrition,dayPlan.meals,mealChoices=FoodDomain.mealReferences(authoredPlan.json(),foodDay,records),mealChoicesForDate={date->FoodDomain.mealReferences(authoredPlan.json(),date,records)},openEntry=openFoodEntry,plannedActivityId=foodActivity,onEntryOpened={openFoodEntry=false},onEditorVisibility={foodEditor=it})
       }
      }
     }

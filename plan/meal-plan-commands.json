@@ -1,0 +1,569 @@
+[
+  {
+    "command_id": "create-meal-plan-2026-10-19",
+    "entity_type": "meal_plans",
+    "entity_id": "meal-plan-2026-10-19",
+    "expected_revision": 0,
+    "operation": "upsert",
+    "payload": {
+      "date": "2026-10-19",
+      "reference_day": "A",
+      "meals": [
+        {
+          "id": "breakfast",
+          "title": "Breakfast",
+          "foods": [
+            "2 eggs",
+            "50g dry oats",
+            "120g banana",
+            "100g plain nonfat Greek yogurt"
+          ],
+          "proteinG": 32,
+          "carbohydrateG": 66,
+          "fatG": 14,
+          "localTime": "08:00",
+          "appliesWhen": "every_day"
+        },
+        {
+          "id": "lunch",
+          "title": "Lunch",
+          "foods": [
+            "100g cooked chicken breast",
+            "180g cooked rice",
+            "150g cooked broccoli",
+            "10g olive oil"
+          ],
+          "proteinG": 38,
+          "carbohydrateG": 62,
+          "fatG": 15,
+          "localTime": "12:30",
+          "appliesWhen": "every_day"
+        },
+        {
+          "id": "dinner",
+          "title": "Dinner",
+          "foods": [
+            "130g cooked salmon",
+            "300g baked potato",
+            "150g cooked green beans",
+            "5g olive oil"
+          ],
+          "proteinG": 39,
+          "carbohydrateG": 70,
+          "fatG": 22,
+          "localTime": "19:30",
+          "appliesWhen": "every_day"
+        },
+        {
+          "id": "recovery-snack",
+          "title": "Recovery snack",
+          "foods": [
+            "200g plain nonfat Greek yogurt",
+            "150g strawberries",
+            "10g honey"
+          ],
+          "proteinG": 21,
+          "carbohydrateG": 27,
+          "fatG": 1,
+          "localTime": "21:30",
+          "appliesWhen": "every_day"
+        }
+      ],
+      "nutrition_targets": {
+        "kcal": 1900,
+        "proteinG": 130,
+        "carbohydrateG": 225,
+        "fatG": {
+          "min": 50,
+          "max": 53
+        }
+      }
+    }
+  },
+  {
+    "command_id": "create-meal-plan-2026-10-20",
+    "entity_type": "meal_plans",
+    "entity_id": "meal-plan-2026-10-20",
+    "expected_revision": 0,
+    "operation": "upsert",
+    "payload": {
+      "date": "2026-10-20",
+      "reference_day": "B",
+      "meals": [
+        {
+          "id": "breakfast",
+          "title": "Breakfast",
+          "foods": [
+            "250g plain nonfat Greek yogurt",
+            "50g dry oats",
+            "150g strawberries",
+            "15g peanut butter"
+          ],
+          "proteinG": 37,
+          "carbohydrateG": 57,
+          "fatG": 12,
+          "localTime": "08:00",
+          "appliesWhen": "every_day"
+        },
+        {
+          "id": "lunch",
+          "title": "Lunch",
+          "foods": [
+            "120g cooked skinless chicken thighs",
+            "150g cooked rice",
+            "150g cooked broccoli"
+          ],
+          "proteinG": 39,
+          "carbohydrateG": 53,
+          "fatG": 14,
+          "localTime": "12:30",
+          "appliesWhen": "every_day"
+        },
+        {
+          "id": "dinner",
+          "title": "Dinner",
+          "foods": [
+            "100g cooked chicken breast",
+            "300g baked potato",
+            "150g cooked green beans",
+            "15g olive oil"
+          ],
+          "proteinG": 41,
+          "carbohydrateG": 75,
+          "fatG": 20,
+          "localTime": "19:30",
+          "appliesWhen": "every_day"
+        },
+        {
+          "id": "recovery-snack",
+          "title": "Recovery snack",
+          "foods": [
+            "100g plain nonfat Greek yogurt",
+            "120g banana",
+            "10g almonds",
+            "10g honey"
+          ],
+          "proteinG": 14,
+          "carbohydrateG": 41,
+          "fatG": 6,
+          "localTime": "21:30",
+          "appliesWhen": "every_day"
+        }
+      ],
+      "nutrition_targets": {
+        "kcal": 1900,
+        "proteinG": 130,
+        "carbohydrateG": 225,
+        "fatG": {
+          "min": 50,
+          "max": 53
+        }
+      }
+    }
+  },
+  {
+    "command_id": "create-meal-plan-2026-10-21",
+    "entity_type": "meal_plans",
+    "entity_id": "meal-plan-2026-10-21",
+    "expected_revision": 0,
+    "operation": "upsert",
+    "payload": {
+      "date": "2026-10-21",
+      "reference_day": "A",
+      "meals": [
+        {
+          "id": "breakfast",
+          "title": "Breakfast",
+          "foods": [
+            "2 eggs",
+            "50g dry oats",
+            "120g banana",
+            "100g plain nonfat Greek yogurt"
+          ],
+          "proteinG": 32,
+          "carbohydrateG": 66,
+          "fatG": 14,
+          "localTime": "08:00",
+          "appliesWhen": "every_day"
+        },
+        {
+          "id": "lunch",
+          "title": "Lunch",
+          "foods": [
+            "100g cooked chicken breast",
+            "180g cooked rice",
+            "150g cooked broccoli",
+            "10g olive oil"
+          ],
+          "proteinG": 38,
+          "carbohydrateG": 62,
+          "fatG": 15,
+          "localTime": "12:30",
+          "appliesWhen": "every_day"
+        },
+        {
+          "id": "dinner",
+          "title": "Dinner",
+          "foods": [
+            "130g cooked salmon",
+            "300g baked potato",
+            "150g cooked green beans",
+            "5g olive oil"
+          ],
+          "proteinG": 39,
+          "carbohydrateG": 70,
+          "fatG": 22,
+          "localTime": "19:30",
+          "appliesWhen": "every_day"
+        },
+        {
+          "id": "recovery-snack",
+          "title": "Recovery snack",
+          "foods": [
+            "200g plain nonfat Greek yogurt",
+            "150g strawberries",
+            "10g honey"
+          ],
+          "proteinG": 21,
+          "carbohydrateG": 27,
+          "fatG": 1,
+          "localTime": "21:30",
+          "appliesWhen": "every_day"
+        }
+      ],
+      "nutrition_targets": {
+        "kcal": 1900,
+        "proteinG": 130,
+        "carbohydrateG": 225,
+        "fatG": {
+          "min": 50,
+          "max": 53
+        }
+      }
+    }
+  },
+  {
+    "command_id": "create-meal-plan-2026-10-22",
+    "entity_type": "meal_plans",
+    "entity_id": "meal-plan-2026-10-22",
+    "expected_revision": 0,
+    "operation": "upsert",
+    "payload": {
+      "date": "2026-10-22",
+      "reference_day": "B",
+      "meals": [
+        {
+          "id": "breakfast",
+          "title": "Breakfast",
+          "foods": [
+            "250g plain nonfat Greek yogurt",
+            "50g dry oats",
+            "150g strawberries",
+            "15g peanut butter"
+          ],
+          "proteinG": 37,
+          "carbohydrateG": 57,
+          "fatG": 12,
+          "localTime": "08:00",
+          "appliesWhen": "every_day"
+        },
+        {
+          "id": "lunch",
+          "title": "Lunch",
+          "foods": [
+            "120g cooked skinless chicken thighs",
+            "150g cooked rice",
+            "150g cooked broccoli"
+          ],
+          "proteinG": 39,
+          "carbohydrateG": 53,
+          "fatG": 14,
+          "localTime": "12:30",
+          "appliesWhen": "every_day"
+        },
+        {
+          "id": "dinner",
+          "title": "Dinner",
+          "foods": [
+            "100g cooked chicken breast",
+            "300g baked potato",
+            "150g cooked green beans",
+            "15g olive oil"
+          ],
+          "proteinG": 41,
+          "carbohydrateG": 75,
+          "fatG": 20,
+          "localTime": "19:30",
+          "appliesWhen": "every_day"
+        },
+        {
+          "id": "recovery-snack",
+          "title": "Recovery snack",
+          "foods": [
+            "100g plain nonfat Greek yogurt",
+            "120g banana",
+            "10g almonds",
+            "10g honey"
+          ],
+          "proteinG": 14,
+          "carbohydrateG": 41,
+          "fatG": 6,
+          "localTime": "22:00",
+          "appliesWhen": "every_day"
+        }
+      ],
+      "nutrition_targets": {
+        "kcal": 1900,
+        "proteinG": 130,
+        "carbohydrateG": 225,
+        "fatG": {
+          "min": 50,
+          "max": 53
+        }
+      }
+    }
+  },
+  {
+    "command_id": "create-meal-plan-2026-10-23",
+    "entity_type": "meal_plans",
+    "entity_id": "meal-plan-2026-10-23",
+    "expected_revision": 0,
+    "operation": "upsert",
+    "payload": {
+      "date": "2026-10-23",
+      "reference_day": "A",
+      "meals": [
+        {
+          "id": "breakfast",
+          "title": "Breakfast",
+          "foods": [
+            "2 eggs",
+            "50g dry oats",
+            "120g banana",
+            "100g plain nonfat Greek yogurt"
+          ],
+          "proteinG": 32,
+          "carbohydrateG": 66,
+          "fatG": 14,
+          "localTime": "08:00",
+          "appliesWhen": "every_day"
+        },
+        {
+          "id": "lunch",
+          "title": "Lunch",
+          "foods": [
+            "100g cooked chicken breast",
+            "180g cooked rice",
+            "150g cooked broccoli",
+            "10g olive oil"
+          ],
+          "proteinG": 38,
+          "carbohydrateG": 62,
+          "fatG": 15,
+          "localTime": "12:30",
+          "appliesWhen": "every_day"
+        },
+        {
+          "id": "dinner",
+          "title": "Dinner",
+          "foods": [
+            "130g cooked salmon",
+            "300g baked potato",
+            "150g cooked green beans",
+            "5g olive oil"
+          ],
+          "proteinG": 39,
+          "carbohydrateG": 70,
+          "fatG": 22,
+          "localTime": "19:30",
+          "appliesWhen": "every_day"
+        },
+        {
+          "id": "recovery-snack",
+          "title": "Recovery snack",
+          "foods": [
+            "200g plain nonfat Greek yogurt",
+            "150g strawberries",
+            "10g honey"
+          ],
+          "proteinG": 21,
+          "carbohydrateG": 27,
+          "fatG": 1,
+          "localTime": "21:30",
+          "appliesWhen": "every_day"
+        }
+      ],
+      "nutrition_targets": {
+        "kcal": 1900,
+        "proteinG": 130,
+        "carbohydrateG": 225,
+        "fatG": {
+          "min": 50,
+          "max": 53
+        }
+      }
+    }
+  },
+  {
+    "command_id": "create-meal-plan-2026-10-24",
+    "entity_type": "meal_plans",
+    "entity_id": "meal-plan-2026-10-24",
+    "expected_revision": 0,
+    "operation": "upsert",
+    "payload": {
+      "date": "2026-10-24",
+      "reference_day": "B",
+      "meals": [
+        {
+          "id": "breakfast",
+          "title": "Breakfast",
+          "foods": [
+            "250g plain nonfat Greek yogurt",
+            "50g dry oats",
+            "150g strawberries",
+            "15g peanut butter"
+          ],
+          "proteinG": 37,
+          "carbohydrateG": 57,
+          "fatG": 12,
+          "localTime": "08:00",
+          "appliesWhen": "every_day"
+        },
+        {
+          "id": "lunch",
+          "title": "Lunch",
+          "foods": [
+            "120g cooked skinless chicken thighs",
+            "150g cooked rice",
+            "150g cooked broccoli"
+          ],
+          "proteinG": 39,
+          "carbohydrateG": 53,
+          "fatG": 14,
+          "localTime": "12:30",
+          "appliesWhen": "every_day"
+        },
+        {
+          "id": "dinner",
+          "title": "Dinner",
+          "foods": [
+            "100g cooked chicken breast",
+            "300g baked potato",
+            "150g cooked green beans",
+            "15g olive oil"
+          ],
+          "proteinG": 41,
+          "carbohydrateG": 75,
+          "fatG": 20,
+          "localTime": "19:30",
+          "appliesWhen": "every_day"
+        },
+        {
+          "id": "recovery-snack",
+          "title": "Recovery snack",
+          "foods": [
+            "100g plain nonfat Greek yogurt",
+            "120g banana",
+            "10g almonds",
+            "10g honey"
+          ],
+          "proteinG": 14,
+          "carbohydrateG": 41,
+          "fatG": 6,
+          "localTime": "21:30",
+          "appliesWhen": "every_day"
+        }
+      ],
+      "nutrition_targets": {
+        "kcal": 1900,
+        "proteinG": 130,
+        "carbohydrateG": 225,
+        "fatG": {
+          "min": 50,
+          "max": 53
+        }
+      }
+    }
+  },
+  {
+    "command_id": "create-meal-plan-2026-10-25",
+    "entity_type": "meal_plans",
+    "entity_id": "meal-plan-2026-10-25",
+    "expected_revision": 0,
+    "operation": "upsert",
+    "payload": {
+      "date": "2026-10-25",
+      "reference_day": "A",
+      "meals": [
+        {
+          "id": "breakfast",
+          "title": "Breakfast",
+          "foods": [
+            "2 eggs",
+            "50g dry oats",
+            "120g banana",
+            "100g plain nonfat Greek yogurt"
+          ],
+          "proteinG": 32,
+          "carbohydrateG": 66,
+          "fatG": 14,
+          "localTime": "08:00",
+          "appliesWhen": "every_day"
+        },
+        {
+          "id": "lunch",
+          "title": "Lunch",
+          "foods": [
+            "100g cooked chicken breast",
+            "180g cooked rice",
+            "150g cooked broccoli",
+            "10g olive oil"
+          ],
+          "proteinG": 38,
+          "carbohydrateG": 62,
+          "fatG": 15,
+          "localTime": "12:30",
+          "appliesWhen": "every_day"
+        },
+        {
+          "id": "dinner",
+          "title": "Dinner",
+          "foods": [
+            "130g cooked salmon",
+            "300g baked potato",
+            "150g cooked green beans",
+            "5g olive oil"
+          ],
+          "proteinG": 39,
+          "carbohydrateG": 70,
+          "fatG": 22,
+          "localTime": "19:30",
+          "appliesWhen": "every_day"
+        },
+        {
+          "id": "recovery-snack",
+          "title": "Recovery snack",
+          "foods": [
+            "200g plain nonfat Greek yogurt",
+            "150g strawberries",
+            "10g honey"
+          ],
+          "proteinG": 21,
+          "carbohydrateG": 27,
+          "fatG": 1,
+          "localTime": "21:30",
+          "appliesWhen": "every_day"
+        }
+      ],
+      "nutrition_targets": {
+        "kcal": 1900,
+        "proteinG": 130,
+        "carbohydrateG": 225,
+        "fatG": {
+          "min": 50,
+          "max": 53
+        }
+      }
+    }
+  }
+]

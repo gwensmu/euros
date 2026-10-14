@@ -159,7 +159,7 @@ def generate(plan):
                        'phase_id':phase_id, 'time_zone':schedule['timeZone'],
                        'schedule_source':slot['sourceRef'], 'prescription':template,
                        'plan_snapshot': {'template': template, 'category':template.get('category'),
-                                         'nutrition_profile': ('trainingAB' if template.get('category') in ('competition','moderate') else 'flowRest' if template.get('category') == 'flow' else None)}}
+                                         'nutrition_profile': 'daily'}}
             for author_field,record_field in (('parentSlotId','parent_id'),('linkedSessionSlotId','linked_session_id')):
                 if slot.get(author_field):
                     payload[record_field] = f"{phase_id}-{current.isoformat()}-{slot[author_field]}"

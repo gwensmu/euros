@@ -89,6 +89,8 @@ def test_week_sol_high_coverage_separate():
     def respond(request):
         body=json.loads(request.content)
         assert body["model"]=="gpt-6.1-sol" and body["reasoning"]=={"effort":"high"}
+        assert "Every day shares the same nutrition targets" in body["instructions"]
+        assert "Never recommend different calorie or macro targets by activity or day" in body["instructions"]
         assert "coverage" not in json.loads(body["input"][0]["content"])
         return httpx.Response(200,json=envelope({"summary":"One practice logged.","adjustments":[],"evidence_record_ids":["activities:a"]}))
     result=asyncio.run(service(respond).week({"week_start":"2026-10-12","records":[activity(status="done")]}))

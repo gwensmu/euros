@@ -223,4 +223,19 @@ class FoodDomainTest {
   manual.put("interpretation",JSONObject().put("provider","test").put("model","test"))
   assertFalse(FoodDomain.loadDraft(manual.toString()).quantityExplicit)
  }
+ @Test fun targetRangeDisplaysBothEndpointsAndProgressUsesUpperBound() {
+  val target=JSONObject("""{"fatG":{"min":50,"max":53},"proteinG":130,"carbohydrateG":null}""")
+  assertEquals("50–53",FoodDomain.targetLabel(target,"fatG"))
+  assertEquals(BigDecimal("53"),FoodDomain.targetNumber(target,"fatG"))
+  assertEquals(0.5f,FoodDomain.targetProgress(BigDecimal("26.5"),FoodDomain.targetNumber(target,"fatG")),0.00001f)
+  assertEquals(1f,FoodDomain.targetProgress(BigDecimal("60"),FoodDomain.targetNumber(target,"fatG")),0f)
+  assertEquals(0f,FoodDomain.targetProgress(null,BigDecimal("53")),0f)
+  assertNull(FoodDomain.targetNumber(target,"carbohydrateG"))
+  assertEquals(BigDecimal("130"),FoodDomain.targetNumber(target,"proteinG"))
+ }
+ @Test fun mealFoodsRenderReadableStringsOnlyAndPreservePortions() {
+  val plan=JSONObject("""{"mealTargets":[{"id":"dinner","title":"Dinner","foods":[" Chicken 120 g ","rice 200 g","",null,{"not":"display text"}],"fatG":null}]}""")
+  val meal=FoodDomain.mealReferences(plan).single()
+  assertEquals(listOf("Chicken 120 g","rice 200 g"),meal.foods);assertNull(meal.fat)
+ }
 }

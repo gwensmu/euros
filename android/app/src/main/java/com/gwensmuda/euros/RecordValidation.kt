@@ -32,6 +32,34 @@ object RecordValidation {
      if(substance) require(intake.getString("kind")==p.getString("recovery_step_type"))
     }
    }
+   "meal_plans" -> {
+    val date=p.getString("date")
+    require(java.time.LocalDate.parse(date).toString()==date)
+    require(p.optString("reference_day").isNotBlank() && p.getString("reference_day").length<=80)
+    fun target(value:Any?) {
+     if(value==null || value==JSONObject.NULL)return
+     if(value is JSONObject) {
+      require(value.keys().asSequence().toSet()==setOf("min","max"))
+      val min=quantity(value.get("min"));val max=quantity(value.get("max"));require(min<=max && max<=java.math.BigDecimal("200000"))
+     } else require(quantity(value)<=java.math.BigDecimal("200000"))
+    }
+    val meals=p.getJSONArray("meals")
+    require(meals.length() in 1..30)
+    val ids=mutableSetOf<String>()
+    for(i in 0 until meals.length()) {
+     val meal=meals.getJSONObject(i)
+     require(meal.getString("id").isNotBlank() && meal.getString("id").length<=100 && ids.add(meal.getString("id")))
+     require(meal.getString("title").isNotBlank() && meal.getString("title").length<=200)
+     require(meal.getString("appliesWhen") in setOf("every_day","bjj_day"))
+     if(!meal.isNull("localTime")){val time=meal.getString("localTime");require(time.matches(Regex("[0-9]{2}:[0-9]{2}")));java.time.LocalTime.parse(time)}
+     listOf("proteinG","carbohydrateG","fatG").forEach{require(meal.has(it));target(meal.get(it))}
+     val foods=meal.getJSONArray("foods");require(foods.length()<=30)
+     for(f in 0 until foods.length())require(foods.get(f) is String && foods.getString(f).isNotBlank() && foods.getString(f).length<=1000)
+    }
+    val targets=p.getJSONObject("nutrition_targets")
+    require(targets.keys().asSequence().toSet()==setOf("kcal","proteinG","carbohydrateG","fatG"))
+    listOf("kcal","proteinG","carbohydrateG","fatG").forEach{require(targets.has(it));target(targets.get(it))}
+   }
    "food_entries","weight_entries" -> {
     val actual=java.time.OffsetDateTime.parse(p.getString(if(type=="food_entries") "consumed_at" else "measured_at"))
     val local=p.getString("local_date")

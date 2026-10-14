@@ -8,7 +8,7 @@ import java.time.LocalDate
 
 class DayPlanTest {
  private val date=LocalDate.parse("2026-10-14")
- private fun plan()=JSONObject("""{"schedule":{"phaseId":"active","dayNutritionProfiles":{"WEDNESDAY":"rest"}},"phases":[{"id":"active","start":"2026-10-14","end":"2026-10-20"}],"mealTargets":[{"id":"arbitrary-one","title":"Everyday","appliesWhen":"every_day"},{"id":"unrelated-id","title":"Training","appliesWhen":"bjj_day"},{"id":"unknown-rule","title":"Unknown","appliesWhen":"future_rule"}],"nutrition":{"rest":{"kcal":1800,"proteinG":null,"fatG":null}}}""")
+ private fun plan()=JSONObject("""{"schedule":{"phaseId":"active","dayNutritionProfiles":{"WEDNESDAY":"rest"}},"phases":[{"id":"active","start":"2026-10-14","end":"2026-10-20"}],"mealTargets":[{"id":"arbitrary-one","title":"Everyday","appliesWhen":"every_day"},{"id":"unrelated-id","title":"Training","appliesWhen":"bjj_day"},{"id":"unknown-rule","title":"Unknown","appliesWhen":"future_rule"}],"nutrition":{"daily":{"kcal":1900,"proteinG":null,"fatG":null}}}""")
  private fun record(id:String="a",kind:String="bjj",status:String="pending",parent:String="",day:LocalDate=date,deleted:Boolean=false,step:String="")=Record("activities",id,1,JSONObject().put("title",id).put("kind",kind).put("status",status).put("scheduled_at","${day}T08:00:00-05:00").put("parent_id",parent).put("recovery_step_type",step).toString(),deleted)
  private fun ids(day:DayPlan)=day.meals.map{it.id}
  @Test fun eligibilityUsesRulesRatherThanMealNamesOrIds() {
@@ -31,7 +31,7 @@ class DayPlanTest {
   assertTrue(DayPlanComposer.inPhase(config,date));assertTrue(DayPlanComposer.inPhase(config,date.plusDays(6)))
   for(day in listOf(date.minusDays(1),date.plusDays(7))) {
    val result=DayPlanComposer.compose(config,listOf(record(day=day)),day)
-   assertTrue(result.meals.isEmpty());assertNull(result.nutrition)
+   assertTrue(result.meals.isEmpty());assertEquals(1900,result.nutrition!!.getInt("kcal"))
    assertEquals(1,result.activities.size) // Existing historical records remain visible.
   }
   config.getJSONObject("schedule").put("phaseId","other")
@@ -52,14 +52,18 @@ class DayPlanTest {
   assertEquals(LoggingMode.STEPS,DayPlanComposer.item(record(kind="future"),listOf(record("child",parent="a"))).logging)
   assertEquals(LoggingMode.UNSUPPORTED,DayPlanComposer.item(record(kind="future"),listOf(record("child",parent="a",deleted=true))).logging)
  }
- @Test fun nutritionPreservesUnknownValuesAndDoesNotFallbackToOtherProfiles() {
-  val config=plan();val result=DayPlanComposer.compose(config,emptyList(),date)
-  assertEquals(1800,result.nutrition!!.getInt("kcal"));assertTrue(result.nutrition.isNull("proteinG"));assertTrue(result.nutrition.isNull("fatG"))
-  for(value in listOf(JSONObject.NULL,"","missing")) {
-   config.getJSONObject("schedule").getJSONObject("dayNutritionProfiles").put("WEDNESDAY",value)
-   assertNull(DayPlanComposer.compose(config,emptyList(),date).nutrition)
+ @Test fun dailyNutritionIgnoresSessionsWeekdaysAndLegacyProfiles() {
+  val config=plan()
+  for(offset in -1L..8L) {
+   val day=date.plusDays(offset)
+   for(records in listOf(emptyList(),listOf(record(kind="rest",day=day)),listOf(record(kind="bjj",day=day)),listOf(record(day=day.plusDays(1))),listOf(record(deleted=true,day=day)))) {
+    val target=DayPlanComposer.compose(config,records,day).nutrition!!
+    assertEquals(1900,target.getInt("kcal"));assertTrue(target.isNull("proteinG"));assertTrue(target.isNull("fatG"))
+   }
   }
-  assertNull(DayPlanComposer.compose(plan(),emptyList(),date.plusDays(1)).nutrition)
+  config.getJSONObject("nutrition").remove("daily")
+  config.getJSONObject("nutrition").put("trainingAB",JSONObject().put("kcal",2000))
+  assertNull(DayPlanComposer.compose(config,listOf(record()),date).nutrition)
  }
  @Test fun childCompletionDeterminesNextEvenWhenParentWasAlreadyDone() {
   val parent=record(kind="rest",status="done")
@@ -87,6 +91,6 @@ class DayPlanTest {
   assertEquals(4,rest.steps.size);assertEquals(rest,result.next)
   assertTrue(result.meals.any{it.id=="dinner"});assertFalse(result.meals.any{it.appliesWhen=="bjj_day"})
   val dinner=result.meals.single{it.id=="dinner"};assertNull(dinner.protein);assertNull(dinner.carbs);assertNull(dinner.fat)
-  assertEquals(1800,result.nutrition!!.getInt("kcal"))
+  assertEquals(1900,result.nutrition!!.getInt("kcal"))
  }
 }

@@ -45,14 +45,12 @@ object DayPlanComposer {
  fun compose(plan:JSONObject,records:List<Record>,date:LocalDate):DayPlan {
   val activities=PlanDomain.onDay(records,date).map{item(it,records)}
   val applies=inPhase(plan,date)
+  val savedMeals=FoodDomain.savedMealPlan(records,date)
   val hasBjj=activities.any{it.kind==PlanItemKind.BJJ}
-  val meals=if(applies) FoodDomain.mealReferences(plan).filter { meal ->
+  val meals=if(applies || savedMeals!=null) FoodDomain.mealReferences(plan,date,records).filter { meal ->
    when(meal.appliesWhen) {"every_day"->true;"bjj_day"->hasBjj;else->false}
   } else emptyList()
-  val profile=plan.optJSONObject("schedule")?.optJSONObject("dayNutritionProfiles")?.let { map ->
-   if(map.isNull(date.dayOfWeek.name)) null else map.optString(date.dayOfWeek.name).takeIf{it.isNotBlank()}
-  }
-  val nutrition=if(applies && profile!=null) plan.optJSONObject("nutrition")?.optJSONObject(profile) else null
+  val nutrition=savedMeals?.optJSONObject("nutrition_targets") ?: plan.optJSONObject("nutrition")?.optJSONObject("daily")
   return DayPlan(date,activities,meals,nutrition)
  }
 }

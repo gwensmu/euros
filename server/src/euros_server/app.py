@@ -66,7 +66,7 @@ def create_app(store, api_token, mcp_token, public_hosts=(), model_service=None)
 
     @mcp.tool(annotations=read)
     def read_records(entity_type: str | None = None) -> dict:
-        """Read saved activities, food_entries or weight_entries; no inferred completions."""
+        """Read saved activities, food_entries, weight_entries or meal_plans; no inferred completions."""
         return store.records(entity_type)
 
     @mcp.tool(annotations=read)
@@ -79,12 +79,32 @@ def create_app(store, api_token, mcp_token, public_hosts=(), model_service=None)
         """Known daily nutrient subtotal and missing-value counts; not an intake target."""
         return store.nutrition(local_date)
 
+    @mcp.tool(annotations=read)
+    def read_meal_plan(local_date: str) -> dict:
+        """Read the saved dated meal plan and targets, or null when none is saved.
+
+        To edit, pass its full payload and current revision to apply_command with
+        entity_type meal_plans and entity_id meal-plan-YYYY-MM-DD. Never log consumption.
+        """
+        return store.meal_plan(local_date)
+
+    @mcp.tool(annotations=read)
+    def read_meal_plans(date_from: str, date_to: str) -> dict:
+        """Read saved meal plans in an inclusive date range (at most 31 days).
+
+        Missing/deleted dates are omitted, not filled from a repeating template.
+        Update individual records with apply_command and their accepted revisions.
+        """
+        return store.meal_plans(date_from, date_to)
+
     @mcp.tool(annotations=ToolAnnotations(readOnlyHint=False, destructiveHint=True, idempotentHint=True, openWorldHint=False))
     def apply_command(command: dict) -> CallToolResult:
         """Explicitly save/correct/delete a record using the same revision-checked app command.
 
         Requires command_id, entity_type, entity_id, expected_revision, operation (upsert/delete), payload.
-        Interpretation is not supported by this foundation; never invent nutrient values.
+        meal_plans are dated planned meals, not consumed food; edits never add food_entries.
+        Use interpret_food for an editable model proposal, then explicitly save food_entries
+        only when the user wants to log consumption. Preserve prior payload fields on correction.
         """
         try:
             result = store.command(command)

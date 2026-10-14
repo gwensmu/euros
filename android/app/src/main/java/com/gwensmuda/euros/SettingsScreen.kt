@@ -51,8 +51,8 @@ import java.time.LocalTime
    SettingsRow("Notifications",reminderSummary){section="Notifications"}
    val goal=plan.getJSONObject("goal")
    SettingsRow("Weight goal",if(goal.isNull("selectedGoalLb"))"Not set" else "${goal.get("selectedGoalLb")} lb"){section="Weight goal"}
-   val target=plan.getJSONObject("nutrition").getJSONObject("trainingAB")
-   SettingsRow("Nutrition targets",if(target.isNull("kcal"))"Not set" else "Training · ${target.get("kcal")} kcal"){section="Nutrition targets"}
+   val target=plan.getJSONObject("nutrition").getJSONObject("daily")
+   SettingsRow("Nutrition targets",if(target.isNull("kcal"))"Not set" else "Daily · ${target.get("kcal")} kcal"){section="Nutrition targets"}
    SettingsRow("Data","Export and restore"){section="Data"}
   }
   TextButton(onClick={diagnostics=!diagnostics}){Text(if(diagnostics)"Hide diagnostics" else "Diagnostics")}

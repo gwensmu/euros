@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "revision": "2026-10-14-capacity-schedule",
+  "revision": "2026-10-14-shared-daily-nutrition",
   "status": "capacity-schedule-authored",
   "event": {
     "id": "euros-2027",
@@ -33,28 +33,6 @@
     "transition": "user_confirmed"
   },
   "nutrition": {
-    "trainingAB": {
-      "kcal": 2000,
-      "proteinG": null,
-      "carbohydrateG": 240,
-      "fatG": null,
-      "overrideSourceRef": "currentReview"
-    },
-    "flowRest": {
-      "kcal": 1800,
-      "proteinG": 130,
-      "carbohydrateG": 200,
-      "fatG": null
-    },
-    "blueprint": {
-      "kcal": 1900,
-      "proteinG": 130,
-      "carbohydrateG": 225,
-      "fatG": {
-        "min": 50,
-        "max": 53
-      }
-    },
     "maintenance": {
       "kcal": null,
       "proteinG": null,
@@ -62,7 +40,16 @@
       "fatG": null
     },
     "automaticCalorieAdjustment": false,
-    "sourceRef": "nutrition"
+    "sourceRef": "nutrition",
+    "daily": {
+      "kcal": 1900,
+      "proteinG": 130,
+      "carbohydrateG": 225,
+      "fatG": {
+        "min": 50,
+        "max": 53
+      }
+    }
   },
   "phases": [
     {
@@ -363,16 +350,6 @@
     "restDays": [
       "WEDNESDAY"
     ],
-    "dayNutritionProfiles": {
-      "MONDAY": "trainingAB",
-      "TUESDAY": "trainingAB",
-      "WEDNESDAY": "flowRest",
-      "THURSDAY": null,
-      "FRIDAY": null,
-      "SATURDAY": "trainingAB",
-      "SUNDAY": null
-    },
-    "mixedWeightsNutritionPolicy": null,
     "scheduledCommandsFile": "schedule-commands.json"
   },
   "unresolved": [
@@ -380,8 +357,6 @@
     "taper start",
     "baseline and goal weight",
     "maintenance targets",
-    "training protein and fat",
-    "rest fat",
     "active recovery timing and doses",
     "notification times",
     "Health Connect source coverage"
@@ -554,7 +529,7 @@
       "id": "hydration",
       "kind": "recovery",
       "title": "Hydration",
-      "instructions": "12–20 oz of water",
+      "instructions": "12\u201320 oz of water",
       "sourceRef": "currentReview"
     },
     {

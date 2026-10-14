@@ -57,6 +57,7 @@ import java.time.format.DateTimeFormatter
  onEntryOpened:()->Unit={},
  onEditorVisibility:(Boolean)->Unit={},
  mealChoices:List<FoodMealReference> = mealReferences,
+ mealChoicesForDate:((LocalDate)->List<FoodMealReference>)?=null,
 ) {
  var editingId by rememberSaveable { mutableStateOf<String?>(null) }
  var creating by rememberSaveable { mutableStateOf(false) }
@@ -75,7 +76,7 @@ import java.time.format.DateTimeFormatter
     Row(Modifier.fillMaxWidth(),horizontalArrangement=Arrangement.End){IconButton(onClick={creating=false;editingId=null}){Icon(Icons.Outlined.Close,"Close")}}
     Text("This entry was removed")
    }
-  } else FoodEntryEditor(repo,date,existing,mealChoices,if(creating) entryActivityId else null) {creating=false;editingId=null}
+  } else FoodEntryEditor(repo,date,existing,mealChoices,if(creating) entryActivityId else null,mealChoicesForDate) {creating=false;editingId=null}
   return
  }
  Column(verticalArrangement=Arrangement.spacedBy(18.dp)) {
@@ -90,6 +91,7 @@ import java.time.format.DateTimeFormatter
     }
     Column(Modifier.weight(1f),verticalArrangement=Arrangement.spacedBy(4.dp)) {
      Text(meal.title,style=MaterialTheme.typography.titleMedium)
+     meal.foods.forEach{food->Text(food,style=MaterialTheme.typography.bodySmall,color=MaterialTheme.colorScheme.onSurfaceVariant)}
      val amounts=listOfNotNull(meal.protein?.let{"${it}g protein"},meal.carbs?.let{"${it}g carbs"},meal.fat?.let{"${it}g fat"}).joinToString(" · ")
      meal.time?.let{Text(it,style=MaterialTheme.typography.bodySmall,color=MaterialTheme.colorScheme.onSurfaceVariant)}
      if(amounts.isNotBlank()) Text(amounts,color=MaterialTheme.colorScheme.onSurfaceVariant,style=MaterialTheme.typography.bodySmall)
@@ -131,31 +133,32 @@ import java.time.format.DateTimeFormatter
    }
    NutrientProgress(totals.kcal,FoodDomain.targetNumber(targets,"kcal"),"Calories")
    if(largeText) Column(verticalArrangement=Arrangement.spacedBy(12.dp)) {
-    MacroWidget("Protein",totals.protein,FoodDomain.targetNumber(targets,"proteinG"),Modifier.fillMaxWidth())
-    MacroWidget("Carbs",totals.carbs,FoodDomain.targetNumber(targets,"carbohydrateG"),Modifier.fillMaxWidth())
-    MacroWidget("Fat",totals.fat,FoodDomain.targetNumber(targets,"fatG"),Modifier.fillMaxWidth())
+    MacroWidget("Protein",totals.protein,FoodDomain.targetNumber(targets,"proteinG"),FoodDomain.targetLabel(targets,"proteinG"),Modifier.fillMaxWidth())
+    MacroWidget("Carbs",totals.carbs,FoodDomain.targetNumber(targets,"carbohydrateG"),FoodDomain.targetLabel(targets,"carbohydrateG"),Modifier.fillMaxWidth())
+    MacroWidget("Fat",totals.fat,FoodDomain.targetNumber(targets,"fatG"),FoodDomain.targetLabel(targets,"fatG"),Modifier.fillMaxWidth())
    } else Row(Modifier.fillMaxWidth(),horizontalArrangement=Arrangement.spacedBy(12.dp)) {
-    MacroWidget("Protein",totals.protein,FoodDomain.targetNumber(targets,"proteinG"),Modifier.weight(1f))
-    MacroWidget("Carbs",totals.carbs,FoodDomain.targetNumber(targets,"carbohydrateG"),Modifier.weight(1f))
-    MacroWidget("Fat",totals.fat,FoodDomain.targetNumber(targets,"fatG"),Modifier.weight(1f))
+    MacroWidget("Protein",totals.protein,FoodDomain.targetNumber(targets,"proteinG"),FoodDomain.targetLabel(targets,"proteinG"),Modifier.weight(1f))
+    MacroWidget("Carbs",totals.carbs,FoodDomain.targetNumber(targets,"carbohydrateG"),FoodDomain.targetLabel(targets,"carbohydrateG"),Modifier.weight(1f))
+    MacroWidget("Fat",totals.fat,FoodDomain.targetNumber(targets,"fatG"),FoodDomain.targetLabel(targets,"fatG"),Modifier.weight(1f))
    }
    if(totals.entries>0 && listOf(totals.kcal,totals.protein,totals.carbs,totals.fat).any{it.partial}) Text("Some totals are incomplete",style=MaterialTheme.typography.bodySmall,color=MaterialTheme.colorScheme.onSurfaceVariant)
   }
  }
 }
-@Composable private fun MacroWidget(label:String,total:NutrientTotal,target:BigDecimal?,modifier:Modifier) {
+@Composable private fun MacroWidget(label:String,total:NutrientTotal,target:BigDecimal?,targetLabel:String?,modifier:Modifier) {
  Column(modifier,verticalArrangement=Arrangement.spacedBy(5.dp)) {
   Text("${total.display()}g",style=MaterialTheme.typography.titleMedium)
+  Text("/ ${targetLabel ?: "—"}g",style=MaterialTheme.typography.bodySmall,color=MaterialTheme.colorScheme.onSurfaceVariant)
   Text(label,style=MaterialTheme.typography.bodySmall)
-  NutrientProgress(total,target,label)
+  NutrientProgress(total,target,label,targetLabel)
  }
 }
-@Composable private fun NutrientProgress(total:NutrientTotal,target:BigDecimal?,label:String) {
- val fraction=if(target!=null && target>BigDecimal.ZERO && total.known!=null) (total.known.toDouble()/target.toDouble()).toFloat().coerceIn(0f,1f) else 0f
- LinearProgressIndicator(progress={fraction},modifier=Modifier.fillMaxWidth().height(4.dp).semantics{contentDescription="$label ${total.display()}${target?.let{" of ${FoodDomain.displayDecimal(it)}"} ?: ", target unset"}${if(total.partial) ", incomplete" else ""}"},color=MaterialTheme.colorScheme.primary,trackColor=Color(0xFFDDE7F9))
+@Composable private fun NutrientProgress(total:NutrientTotal,target:BigDecimal?,label:String,targetLabel:String?=target?.let{FoodDomain.displayDecimal(it)}) {
+ val fraction=FoodDomain.targetProgress(total.known,target)
+ LinearProgressIndicator(progress={fraction},modifier=Modifier.fillMaxWidth().height(4.dp).semantics{contentDescription="$label ${total.display()}${targetLabel?.let{" of $it"} ?: ", target unset"}${if(total.partial) ", incomplete" else ""}"},color=MaterialTheme.colorScheme.primary,trackColor=Color(0xFFDDE7F9))
 }
 
-@Composable private fun FoodEntryEditor(repo:Repository,date:LocalDate,existing:Record?,meals:List<FoodMealReference>,plannedActivityId:String?,onClose:()->Unit) {
+@Composable private fun FoodEntryEditor(repo:Repository,date:LocalDate,existing:Record?,meals:List<FoodMealReference>,plannedActivityId:String?,mealChoicesForDate:((LocalDate)->List<FoodMealReference>)?,onClose:()->Unit) {
  val key="food:${existing?.id ?: "new:$date:${plannedActivityId ?: "free"}"}"
  var draft by remember(key) { mutableStateOf<FoodDraft?>(null) }
  var errors by remember {mutableStateOf<Map<String,String>>(emptyMap())}
@@ -175,8 +178,10 @@ import java.time.format.DateTimeFormatter
   }.onFailure{problem="Couldn't open this draft"}
  }
  fun update(next:FoodDraft) {
-  draft=next;reviewed=false;errors=emptyMap()
-  scope.launch { draftWrites.withLock { runCatching{repo.saveDraft(key,FoodDomain.saveDraft(next))}.onFailure{problem="Couldn't save this draft"} } }
+  val choices=if(next.dateInput!=draft?.dateInput) runCatching{mealChoicesForDate?.invoke(LocalDate.parse(next.dateInput))}.getOrNull() else null
+  val updated=if(choices!=null && next.mealReferenceId!=null && choices.none{it.id==next.mealReferenceId}) next.copy(mealReferenceId=null) else next
+  draft=updated;reviewed=false;errors=emptyMap()
+  scope.launch { draftWrites.withLock { runCatching{repo.saveDraft(key,FoodDomain.saveDraft(updated))}.onFailure{problem="Couldn't save this draft"} } }
  }
  fun close() {
   if(busy && !interpreting) return
@@ -213,6 +218,7 @@ import java.time.format.DateTimeFormatter
   if(current==null) {Text(problem ?: "Opening…");return@Column}
   Text(runCatching{LocalDate.parse(current.localDate).format(DateTimeFormatter.ofPattern("EEEE, MMMM d"))}.getOrDefault(current.dateInput).uppercase(),style=MaterialTheme.typography.labelSmall,letterSpacing=1.5.sp,color=MaterialTheme.colorScheme.onSurfaceVariant)
   Text("Log food",style=MaterialTheme.typography.headlineLarge)
+  val currentMeals=runCatching{mealChoicesForDate?.invoke(LocalDate.parse(current.dateInput))}.getOrNull() ?: meals
   val changed=existing!=null && (existing.revision!=current.baseRevision || existing.payload!=current.originalPayload)
   if(changed) {
    Text("This entry changed",color=MaterialTheme.colorScheme.error)
@@ -241,10 +247,10 @@ import java.time.format.DateTimeFormatter
     Box(Modifier.weight(1f)){FoodNumberField("Fat · g",current.fat,errors["fat"],!busy){update(current.copy(fat=it,manualEntry=true))}}
    }
    Box {
-    TextButton(onClick={mealMenu=true},enabled=!busy){Text(meals.find{it.id==current.mealReferenceId}?.title ?: "Meal");Icon(Icons.Outlined.ExpandMore,null)}
+    TextButton(onClick={mealMenu=true},enabled=!busy){Text(currentMeals.find{it.id==current.mealReferenceId}?.title ?: "Meal");Icon(Icons.Outlined.ExpandMore,null)}
     DropdownMenu(expanded=mealMenu,onDismissRequest={mealMenu=false}) {
      DropdownMenuItem(text={Text("No planned meal")},onClick={update(current.copy(mealReferenceId=null));mealMenu=false})
-     meals.forEach{meal->DropdownMenuItem(text={Text(meal.title)},onClick={update(current.copy(mealReferenceId=meal.id));mealMenu=false})}
+     currentMeals.forEach{meal->DropdownMenuItem(text={Text(meal.title)},onClick={update(current.copy(mealReferenceId=meal.id));mealMenu=false})}
     }
    }
    }

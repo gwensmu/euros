@@ -35,7 +35,7 @@ data class FoodDraft(
 ) {
  val localDate:String get()=dateInput
 }
-data class FoodMealReference(val id:String,val title:String,val protein:String?,val carbs:String?,val fat:String?,val time:String?,val appliesWhen:String="every_day")
+data class FoodMealReference(val id:String,val title:String,val protein:String?,val carbs:String?,val fat:String?,val time:String?,val appliesWhen:String="every_day",val foods:List<String> = emptyList())
 data class NutrientTotal(val known:BigDecimal?,val missingCount:Int,val entryCount:Int) {
  val partial:Boolean get()=missingCount>0
  fun display():String=known?.setScale(0,RoundingMode.HALF_UP)?.toPlainString() ?: "—"
@@ -204,10 +204,23 @@ object FoodDomain {
   val fulfilled=entries(records,date).mapNotNull{nullableString(JSONObject(it.payload),"meal_reference_id")}.toSet()
   return references.filter{it.id !in fulfilled}
  }
- fun mealReferences(plan:JSONObject):List<FoodMealReference> {
-  val references=plan.optJSONArray("mealTargets") ?: JSONArray()
+ fun savedMealPlan(records:List<Record>,date:LocalDate):JSONObject? {
+  val latest=records.filter{it.type=="meal_plans" && it.id=="meal-plan-$date"}
+   .maxWithOrNull(compareBy<Record>{it.revision}.thenBy{it.deleted}) ?: return null
+  if(latest.deleted)return null
+  return JSONObject(latest.payload).takeIf{it.optString("date")==date.toString()}
+ }
+ fun mealReferences(plan:JSONObject,date:LocalDate?=null,records:List<Record> = emptyList()):List<FoodMealReference> {
+  val dated=date?.let{savedMealPlan(records,it)?.optJSONArray("meals")}
+  val references=dated ?: plan.optJSONArray("mealTargets") ?: JSONArray()
   return (0 until references.length()).map { index -> val item=references.getJSONObject(index)
-   FoodMealReference(item.getString("id"),item.getString("title"),targetLabel(item,"proteinG"),targetLabel(item,"carbohydrateG"),targetLabel(item,"fatG"),nullableString(item,"localTime"),item.optString("appliesWhen","every_day"))
+   val foods=item.optJSONArray("foods")
+   FoodMealReference(
+    id=item.getString("id"),title=item.getString("title"),
+    protein=targetLabel(item,"proteinG"),carbs=targetLabel(item,"carbohydrateG"),fat=targetLabel(item,"fatG"),
+    time=nullableString(item,"localTime"),appliesWhen=if(dated!=null)"every_day" else item.optString("appliesWhen","every_day"),
+    foods=if(foods==null) emptyList() else (0 until foods.length()).mapNotNull{index->(foods.opt(index) as? String)?.trim()?.takeIf{it.isNotBlank()}},
+   )
   }
  }
  fun targetLabel(targets:JSONObject?,key:String):String? {
@@ -218,7 +231,13 @@ object FoodDomain {
   }
   return numeric(targets,key)?.let(::displayDecimal)
  }
- fun targetNumber(targets:JSONObject?,key:String):BigDecimal?=targets?.let{numeric(it,key)}
+ fun targetNumber(targets:JSONObject?,key:String):BigDecimal?=targets?.let{target->
+  target.optJSONObject(key)?.let{range->numeric(range,"max")} ?: numeric(target,key)
+ }
+ /** Range targets fill at the upper endpoint while the full range remains visible. */
+ fun targetProgress(total:BigDecimal?,target:BigDecimal?):Float =
+  if(total==null || target==null || target<=BigDecimal.ZERO)0f
+  else total.divide(target,8,RoundingMode.HALF_UP).toFloat().coerceIn(0f,1f)
  fun displayDecimal(number:BigDecimal):String=number.stripTrailingZeros().toPlainString()
  private fun jsonDecimal(text:String):Any=if(text.isBlank()) JSONObject.NULL else displayDecimal(decimal(text)!!)
  private fun decimal(text:String):BigDecimal? {
