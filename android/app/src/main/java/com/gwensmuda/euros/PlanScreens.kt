@@ -266,7 +266,6 @@ object PlanDisplay {
   }
   Row(Modifier.fillMaxWidth().padding(start=34.dp),horizontalArrangement=Arrangement.SpaceBetween){Text(r.session.start.atZone(PlanDomain.zone).format(clock),style=MaterialTheme.typography.labelSmall,color=Color.Gray);Text(r.session.end.atZone(PlanDomain.zone).format(clock),style=MaterialTheme.typography.labelSmall,color=Color.Gray)}
  }
- Text("Estimated time in zones",style=MaterialTheme.typography.titleMedium,fontWeight=FontWeight.SemiBold)
  val duration=Duration.between(r.session.start,r.session.end).toMillis()/1000.0
  fun minutes(seconds:Double)="%.1f min".format(seconds/60)
  (1..5).forEach { i ->
