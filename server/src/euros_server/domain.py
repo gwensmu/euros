@@ -21,7 +21,7 @@ class DomainError(Exception):
 def canonical(value):
     try:
         return json.dumps(value, sort_keys=True, separators=(",", ":"), allow_nan=False)
-    except (ValueError, TypeError):
+    except (ValueError, TypeError, RecursionError):
         raise DomainError("invalid_json_value")
 
 
@@ -219,7 +219,10 @@ class Store:
             raise DomainError("unsupported_operation")
         if type(c["expected_revision"]) is not int or not 0 <= c["expected_revision"] < MAX_SQLITE_INTEGER:
             raise DomainError("invalid_revision")
-        digest = hashlib.sha256(canonical(c).encode()).hexdigest()
+        encoded = canonical(c).encode()
+        if len(encoded) > 262144:
+            raise DomainError("request_too_large", 413)
+        digest = hashlib.sha256(encoded).hexdigest()
         with (self.connect() if _db is None else nullcontext(_db)) as db:
             if _db is None:
                 db.execute("BEGIN IMMEDIATE")

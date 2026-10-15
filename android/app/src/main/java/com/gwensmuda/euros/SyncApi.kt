@@ -36,6 +36,7 @@ internal fun backendErrorMessage(code:Int,body:String):String {
  return when {
   code==401 || code==403 -> "Connection authorization failed. Reconnect in Settings"
   error=="model_not_configured" -> "The model isn't configured on your server yet"
+  error=="model_daily_limit" -> "Daily model limit reached. Try again tomorrow"
   code==429 || error=="model_busy" -> "Too many requests. Try again shortly"
   error=="model_refused" -> "Couldn't interpret this request. Try different wording"
   code==502 || code==504 -> "The model couldn't finish. Try again"

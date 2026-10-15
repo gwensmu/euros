@@ -18,6 +18,7 @@ from starlette.routing import Mount, Route
 from .domain import DomainError, Store
 from .llm import ModelService
 from .tracker import TrackerStore
+from .security import BodyLimit, LimitedProvider
 
 
 def load_token(name):
@@ -55,6 +56,7 @@ class TokenGate:
 
 def create_app(store, api_token, mcp_token, public_hosts=(), model_service=None):
     models = model_service or ModelService.from_environment()
+    models.provider = LimitedProvider(models.provider, store)
     trackers = TrackerStore(store)
     if len(api_token) < 32 or len(mcp_token) < 32 or api_token == mcp_token:
         raise ValueError("Separate app and MCP tokens of at least 32 characters are required")
@@ -172,7 +174,7 @@ def create_app(store, api_token, mcp_token, public_hosts=(), model_service=None)
                 raise DomainError("request_too_large", 413)
         try:
             return json.loads(body)
-        except (ValueError, UnicodeDecodeError):
+        except (ValueError, UnicodeDecodeError, RecursionError):
             raise DomainError("invalid_json", 400) from None
 
     async def command(request):
@@ -221,7 +223,7 @@ def create_app(store, api_token, mcp_token, public_hosts=(), model_service=None)
                             Route("/v1/nutrition", nutrition), Mount("/", mcp.streamable_http_app())],
                     lifespan=lifespan, exception_handlers={DomainError: domain_error})
     app.state.mcp = mcp
-    return TrustedHostMiddleware(TokenGate(app, api_token, mcp_token, origins), allowed_hosts=hosts)
+    return TrustedHostMiddleware(TokenGate(BodyLimit(app), api_token, mcp_token, origins), allowed_hosts=hosts)
 
 
 def main():
