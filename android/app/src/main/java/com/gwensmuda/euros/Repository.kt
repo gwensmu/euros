@@ -2,6 +2,7 @@ package com.gwensmuda.euros
 
 import android.content.Context
 import androidx.room.withTransaction
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import org.json.JSONObject
@@ -223,6 +224,15 @@ class Repository(private val db:EurosDatabase, llmClient:LlmClient?=null) {
    RestoreResult(additions.size,parsed.size-additions.size)
   }
  }
+ fun observeDismissedMeals(date:java.time.LocalDate)=dao.observeMeta("dismissed_meals:$date").map{MealDismissals.decode(it)}
+ suspend fun setMealDismissed(date:java.time.LocalDate,id:String,dismissed:Boolean)=mutex.withLock {
+  require(id.isNotBlank())
+  val key="dismissed_meals:$date"
+  val ids=MealDismissals.decode(dao.meta(key)).toMutableSet()
+  if(dismissed)ids.add(id) else ids.remove(id)
+  dao.meta(Metadata(key,org.json.JSONArray(ids.sorted()).toString()))
+ }
+ suspend fun restoreDismissedMeals(date:java.time.LocalDate)=mutex.withLock {dao.removeMeta("dismissed_meals:$date")}
  suspend fun saveDraft(key:String,text:String) { require(key.isNotBlank());dao.meta(Metadata("draft:$key",text)) }
  suspend fun loadDraft(key:String):String?=dao.meta("draft:$key")
  suspend fun clearDraft(key:String) { dao.removeMeta("draft:$key") }

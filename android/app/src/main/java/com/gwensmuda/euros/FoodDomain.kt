@@ -200,9 +200,9 @@ object FoodDomain {
   }
   return NutritionTotals(sum("kcal"),sum("protein_g"),sum("carbs_g"),sum("fat_g"),nutrients.size)
  }
- fun remainingReferences(references:List<FoodMealReference>,records:List<Record>,date:LocalDate):List<FoodMealReference> {
+ fun remainingReferences(references:List<FoodMealReference>,records:List<Record>,date:LocalDate,dismissed:Set<String> = emptySet()):List<FoodMealReference> {
   val fulfilled=entries(records,date).mapNotNull{nullableString(JSONObject(it.payload),"meal_reference_id")}.toSet()
-  return references.filter{it.id !in fulfilled}
+  return references.filter{it.id !in fulfilled && it.id !in dismissed}
  }
  fun savedMealPlan(records:List<Record>,date:LocalDate):JSONObject? {
   val latest=records.filter{it.type=="meal_plans" && it.id=="meal-plan-$date"}

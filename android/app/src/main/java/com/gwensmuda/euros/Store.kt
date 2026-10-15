@@ -28,6 +28,7 @@ data class ExportSnapshot(val records:List<Record>,val pending:List<Pending>,val
  @Insert(onConflict=OnConflictStrategy.REPLACE) suspend fun meta(value:Metadata)
  @Query("DELETE FROM metadata WHERE `key`=:key") suspend fun removeMeta(key:String)
  @Query("SELECT value FROM metadata WHERE `key`=:key") suspend fun meta(key:String):String?
+ @Query("SELECT value FROM metadata WHERE `key`=:key") fun observeMeta(key:String):Flow<String?>
  @Query("DELETE FROM outbox WHERE commandId=:id") suspend fun acknowledge(id:String)
  @Query("UPDATE outbox SET error=:error WHERE commandId=:id") suspend fun error(id:String,error:String)
 }

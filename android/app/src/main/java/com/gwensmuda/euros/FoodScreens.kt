@@ -1,6 +1,9 @@
 package com.gwensmuda.euros
 
 import androidx.activity.compose.BackHandler
+import androidx.compose.foundation.background
+import androidx.compose.ui.semantics.CustomAccessibilityAction
+import androidx.compose.ui.semantics.customActions
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.clickable
@@ -81,24 +84,7 @@ import java.time.format.DateTimeFormatter
  }
  Column(verticalArrangement=Arrangement.spacedBy(18.dp)) {
   NutritionWidget(FoodDomain.summary(records,date),targets){creating=true;editingId=null;entryActivityId=null}
-  Text("Keep eating",style=MaterialTheme.typography.titleLarge)
-  val remaining=FoodDomain.remainingReferences(mealReferences,records,date)
-  if(remaining.isEmpty()) Text("No remaining meals planned",color=MaterialTheme.colorScheme.onSurfaceVariant)
-  remaining.forEach { meal ->
-   Row(Modifier.fillMaxWidth(),horizontalArrangement=Arrangement.spacedBy(12.dp),verticalAlignment=Alignment.Top) {
-    Surface(color=MaterialTheme.colorScheme.primaryContainer,shape=RoundedCornerShape(8.dp)) {
-     Icon(Icons.Outlined.Restaurant,null,Modifier.padding(8.dp).size(18.dp),tint=MaterialTheme.colorScheme.onSurface)
-    }
-    Column(Modifier.weight(1f),verticalArrangement=Arrangement.spacedBy(4.dp)) {
-     Text(meal.title,style=MaterialTheme.typography.titleMedium)
-     meal.foods.forEach{food->Text(food,style=MaterialTheme.typography.bodySmall,color=MaterialTheme.colorScheme.onSurfaceVariant)}
-     val amounts=listOfNotNull(meal.protein?.let{"${it}g protein"},meal.carbs?.let{"${it}g carbs"},meal.fat?.let{"${it}g fat"}).joinToString(" · ")
-     meal.time?.let{Text(it,style=MaterialTheme.typography.bodySmall,color=MaterialTheme.colorScheme.onSurfaceVariant)}
-     if(amounts.isNotBlank()) Text(amounts,color=MaterialTheme.colorScheme.onSurfaceVariant,style=MaterialTheme.typography.bodySmall)
-    }
-   }
-   HorizontalDivider(color=Color(0xFFE5EAF1))
-  }
+  key(date) { RemainingMeals(repo,records,date,mealReferences) }
   if(entries.isNotEmpty()) {
    TextButton(onClick={expanded=!expanded},contentPadding=PaddingValues(0.dp)) {
     Text("Entries · ${entries.size}");Spacer(Modifier.width(8.dp));Icon(if(expanded) Icons.Outlined.ExpandLess else Icons.Outlined.ExpandMore,null)
@@ -288,4 +274,46 @@ import java.time.format.DateTimeFormatter
  Surface(onClick=onClick,enabled=enabled,shape=RoundedCornerShape(8.dp),color=MaterialTheme.colorScheme.surface,contentColor=MaterialTheme.colorScheme.primary,border=BorderStroke(1.dp,MaterialTheme.colorScheme.outlineVariant),modifier=Modifier.size(44.dp).semantics{contentDescription=label}) {
   Box(contentAlignment=Alignment.Center){content()}
  }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable private fun RemainingMeals(repo:Repository,records:List<Record>,date:LocalDate,meals:List<FoodMealReference>) {
+ val dismissed by remember(repo,date){repo.observeDismissedMeals(date)}.collectAsState(initial=emptySet())
+ val scope=rememberCoroutineScope();val snackbar=remember{SnackbarHostState()}
+ fun dismiss(meal:FoodMealReference) {scope.launch {
+  try {
+   repo.setMealDismissed(date,meal.id,true)
+   snackbar.currentSnackbarData?.dismiss()
+   if(snackbar.showSnackbar("${meal.title} dismissed",actionLabel="Undo",duration=SnackbarDuration.Short)==SnackbarResult.ActionPerformed)repo.setMealDismissed(date,meal.id,false)
+  } catch(e:CancellationException){throw e} catch(_:Exception){snackbar.showSnackbar("Couldn't update meal")}
+ }}
+ Row(Modifier.fillMaxWidth(),verticalAlignment=Alignment.CenterVertically) {
+  Text("Keep eating",Modifier.weight(1f),style=MaterialTheme.typography.titleLarge)
+  if(meals.any{it.id in dismissed})IconButton(onClick={scope.launch{try{repo.restoreDismissedMeals(date)}catch(e:CancellationException){throw e}catch(_:Exception){snackbar.showSnackbar("Couldn't restore meals")}}}){Icon(Icons.Outlined.Undo,"Restore dismissed meals")}
+ }
+ SnackbarHost(snackbar)
+ val remaining=FoodDomain.remainingReferences(meals,records,date,dismissed)
+ if(remaining.isEmpty())Text("No remaining meals planned",color=MaterialTheme.colorScheme.onSurfaceVariant)
+ remaining.forEach { meal -> key(meal.id) {
+  val swipe=rememberSwipeToDismissBoxState(confirmValueChange={value->if(value!=SwipeToDismissBoxValue.Settled)dismiss(meal);false})
+  SwipeToDismissBox(state=swipe,modifier=Modifier.semantics{customActions=listOf(CustomAccessibilityAction("Dismiss ${meal.title}"){dismiss(meal);true})},backgroundContent={
+   Box(Modifier.fillMaxSize().background(MaterialTheme.colorScheme.primaryContainer).padding(16.dp),contentAlignment=if(swipe.dismissDirection==SwipeToDismissBoxValue.StartToEnd)Alignment.CenterStart else Alignment.CenterEnd){Icon(Icons.Outlined.Check,null,tint=MaterialTheme.colorScheme.primary)}
+  }) {
+   Surface(color=MaterialTheme.colorScheme.surface) {
+   Row(Modifier.fillMaxWidth(),horizontalArrangement=Arrangement.spacedBy(12.dp),verticalAlignment=Alignment.Top) {
+    Surface(color=MaterialTheme.colorScheme.primaryContainer,shape=RoundedCornerShape(8.dp)) {
+     Icon(Icons.Outlined.Restaurant,null,Modifier.padding(8.dp).size(18.dp),tint=MaterialTheme.colorScheme.onSurface)
+    }
+    Column(Modifier.weight(1f),verticalArrangement=Arrangement.spacedBy(4.dp)) {
+     Text(meal.title,style=MaterialTheme.typography.titleMedium)
+     meal.foods.forEach{food->Text(food,style=MaterialTheme.typography.bodySmall,color=MaterialTheme.colorScheme.onSurfaceVariant)}
+     val amounts=listOfNotNull(meal.protein?.let{"${it}g protein"},meal.carbs?.let{"${it}g carbs"},meal.fat?.let{"${it}g fat"}).joinToString(" · ")
+     meal.time?.let{Text(it,style=MaterialTheme.typography.bodySmall,color=MaterialTheme.colorScheme.onSurfaceVariant)}
+     if(amounts.isNotBlank()) Text(amounts,color=MaterialTheme.colorScheme.onSurfaceVariant,style=MaterialTheme.typography.bodySmall)
+    }
+   }
+   }
+  }
+  HorizontalDivider(color=Color(0xFFE5EAF1))
+ }}
 }

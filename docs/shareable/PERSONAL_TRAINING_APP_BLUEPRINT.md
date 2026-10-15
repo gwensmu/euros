@@ -104,6 +104,10 @@ Date controls, a prominent calorie/protein/carbohydrate/fat progress widget, and
 
 Show recorded food entries for that day with useful totals and an edit path. Under **Keep eating**, show the remaining planned meals and their foods/portions. Include dinner. There is no log button beside every planned meal. A meal plan is a suggestion for later intake, not a consumed-food record.
 
+Swipe a planned meal in either direction to dismiss it from **Keep eating** for the selected date. The row disappears after the dismissal is saved; a brief “Breakfast dismissed” message offers **Undo**. An unobtrusive restore icon beside **Keep eating** remains available while any planned meals are dismissed and restores all dismissed meals for that date. Provide the equivalent named dismiss action to screen readers. The gesture must coexist with vertical scrolling. If saving fails, retain the row and show a short retryable error; if restoration fails, retain its prior state. With no meals left, show “No remaining meals planned.”
+
+Dismissal is independent of food logging: it creates no intake, nutrient totals, completion/skip outcome, or plan edit, and never changes mascot mood. Preserve it across app restart and offline use, keyed by date and stable meal ID; tomorrow’s breakfast stays visible. Current dismissal state is device-local presentation state, so it is not shared through the backend/MCP or included in record-only exports. Food correction/deletion does not undo a manual dismissal.
+
 Link an intake entry to a planned meal only when explicitly selected or preserved from the entry flow. Current behavior hides that linked meal from the remaining list; unlinked food does not guess which meal it fulfilled. Corrections/deletion must update the list and totals. Plan changes do not rewrite already consumed food.
 
 No shopping list, pantry UI or meal-plan editor. Agents can read/update saved meal plans outside the app.
@@ -340,6 +344,7 @@ Use a fixed clock, explicit time zone, synthetic provider responses and isolated
 | Scheduling | Every occurrence dated; early/late logging allowed; no inferred skip; moves preserve IDs/history and shift only unfinished recovery steps once. |
 | Time | DST gaps/repeated times, midnight routines, week boundaries and event countdown tested. |
 | Food | Label-based quantities, negation/corrections, unknown nutrients, failed interpretation, restart/close, double-save, edit/delete and meal association behave correctly. |
+| Meal dismissal | Either-direction swipe; accessible dismiss; Undo one meal; restore all for selected date; restart/offline persistence; other dates unaffected; failed save retains row; totals, plans, completion and sync queue unchanged. |
 | Nutrition | Today and Food agree; target ranges retained; activity moves do not change targets; plans never count as intake. |
 | Recovery | Mixed child outcomes derive correct parent status; hydration is action-only; no invented doses. |
 | Tracking | Reimport/correction/deletion idempotent; same-source samples only; incomplete reads preserve history; no duplicate linked workout or calorie credit from walks. |
