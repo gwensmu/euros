@@ -8,6 +8,10 @@ root = Path(__file__).resolve().parents[2]
 out = Path(__file__).resolve().parent
 source = (out/'PERSONAL_TRAINING_APP_BLUEPRINT.md').read_text()
 body = markdown2.markdown(source, extras=['tables','header-ids','fenced-code-blocks'])
+# Keep editable Mermaid in the Markdown; embed a portable vector in the HTML.
+architecture = (out/'system-architecture.svg').read_text()
+body, replacements = re.subn(r'<pre><code>flowchart TB.*?</code></pre>', architecture, body, count=1, flags=re.S)
+assert replacements == 1, 'Missing architecture diagram placeholder'
 atlas = root/'android/app/src/main/res/drawable-nodpi/weasel_poses.png'
 art = 'data:image/png;base64,'+base64.b64encode(atlas.read_bytes()).decode()
 nav='<nav><span>Today</span><span>Week</span><span>Food</span></nav>'

@@ -1,0 +1,31 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1000 890" role="img" aria-labelledby="title desc">
+<title id="title">Personal training app system architecture</title>
+<desc id="desc">The mobile app stores local records and drafts and synchronizes through an authenticated public HTTPS tunnel to the app API on a local computer. The owner's external AI uses its own model and calls the MCP interface through the same tunnel. App API and MCP share domain rules and a canonical database. Backend-only model requests reach a separately configured model provider for food drafts and weekly reflections. Tracker data is imported on the phone. Model output does not automatically save records.</desc>
+<defs><marker id="arrow" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto-start-reverse"><path d="M0 0L8 4L0 8Z" fill="#2465da"/></marker></defs>
+<style>text{font-family:system-ui,-apple-system,sans-serif;fill:#10151e;font-size:16px}.head{font-size:20px;font-weight:650}.small{font-size:14px;fill:#535f70}.label{font-size:13px;fill:#2465da}.box{fill:#fff;stroke:#d9e0e9;stroke-width:1.5}.blue{fill:#edf3ff;stroke:#2465da;stroke-width:1.5}.edge{fill:none;stroke:#2465da;stroke-width:2;marker-start:url(#arrow);marker-end:url(#arrow)}.one{fill:none;stroke:#2465da;stroke-width:2;marker-end:url(#arrow)}</style>
+<rect x="1" y="1" width="998" height="888" rx="14" fill="#fff" stroke="#d9e0e9"/>
+<text x="35" y="40" class="head">One shared backend. Two ways to use it.</text>
+<rect x="35" y="75" width="285" height="145" rx="12" class="blue"/>
+<text x="55" y="108" class="head">Mobile app</text><text x="55" y="136">Today · Week · Food</text><text x="55" y="164" class="small">Local records, drafts and outbox</text><text x="55" y="188" class="small">Encrypted app credential</text>
+<rect x="680" y="75" width="285" height="145" rx="12" class="blue"/>
+<text x="700" y="108" class="head">Owner’s external AI</text><text x="700" y="136">Own LLM + MCP tool client</text><text x="700" y="164" class="small">Plan, analyze, edit meals, shop</text><text x="700" y="188" class="small">Separate agent credential</text>
+<rect x="370" y="120" width="260" height="100" rx="12" class="box"/>
+<text x="500" y="151" text-anchor="middle" class="head">Public HTTPS tunnel</text><text x="500" y="180" text-anchor="middle" class="small">Authenticated access</text><text x="500" y="201" text-anchor="middle" class="small">to the local backend</text>
+<path d="M320 165H370" class="edge"/><path d="M630 165H680" class="edge"/>
+<text x="335" y="110" class="label">App API</text><text x="632" y="110" class="label">MCP</text>
+<rect x="35" y="255" width="285" height="65" rx="10" class="box"/><text x="55" y="281">Tracker / platform health data</text><text x="55" y="304" class="small">Permissioned import on the phone</text><path d="M177 255V220" class="one"/>
+<rect x="95" y="360" width="810" height="325" rx="16" fill="#f5f7fa" stroke="#d9e0e9" stroke-width="1.5"/>
+<text x="120" y="390" class="head">Always-on local computer</text><text x="120" y="414" class="small">Backend service — technology and hosting tools chosen by the builder</text>
+<rect x="140" y="445" width="240" height="65" rx="10" class="box"/><text x="260" y="472" text-anchor="middle" class="head">Mobile app API</text><text x="260" y="496" text-anchor="middle" class="small">Sync, tracker uploads, AI requests</text>
+<rect x="620" y="445" width="240" height="65" rx="10" class="box"/><text x="740" y="472" text-anchor="middle" class="head">MCP server interface</text><text x="740" y="496" text-anchor="middle" class="small">Reads, proposals, explicit edits</text>
+<path d="M445 220V340H110V432H260V445" class="edge"/><path d="M555 220V340H890V432H740V445" class="edge"/>
+<text x="650" y="269" class="small">Same backend,</text><text x="650" y="290" class="small">separate entry points</text>
+<rect x="350" y="540" width="300" height="65" rx="10" class="blue"/><text x="500" y="567" text-anchor="middle" class="head">Shared application rules</text><text x="500" y="591" text-anchor="middle" class="small">Validation · revisions · request limits</text>
+<path d="M260 510V572H350" class="edge"/><path d="M740 510V572H650" class="edge"/>
+<rect x="350" y="630" width="300" height="35" rx="8" class="box"/><text x="500" y="653" text-anchor="middle">Canonical database + usage ledger</text><path d="M500 605V630" class="edge"/>
+<text x="120" y="641" class="small">Provider key stays</text><text x="120" y="662" class="small">on this computer</text>
+<rect x="350" y="760" width="300" height="85" rx="12" class="blue"/><text x="500" y="791" text-anchor="middle" class="head">App’s model provider</text><text x="500" y="819" text-anchor="middle" class="small">Food draft · weekly reflection</text>
+<path d="M650 590H880V802H650" class="edge"/><text x="670" y="721" class="label">Backend sends selected inputs</text><text x="670" y="743" class="label">Models return proposals / text</text>
+<text x="35" y="744" class="small">App and external AI may use</text><text x="35" y="766" class="small">different model providers.</text><text x="35" y="811" class="small">No direct model-to-database writes.</text>
+<text x="35" y="869" class="small">Two-way arrows: requests and responses. Tracker arrow: import. Saving requires an explicit user action or authorized tool command.</text>
+</svg>

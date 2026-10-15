@@ -150,6 +150,44 @@ Reminders are optional scheduled activity notifications with snooze, dismissal a
 
 ## 6. Architecture without a prescribed stack
 
+### System diagram
+
+```mermaid
+flowchart TB
+    subgraph phone["Phone"]
+        mobile["Mobile app: Today / Week / Food"]
+        cache["Local records, drafts and durable outbox"]
+        health["Permissioned tracker / platform health data"]
+        mobile <--> cache
+        health --> mobile
+    end
+    agent["Owner's external AI: own LLM + MCP tool client"]
+    tunnel["Authenticated public HTTPS tunnel"]
+    mobile <-->|"Sync, tracker upload, app AI requests"| tunnel
+    agent <-->|"MCP tool calls and results"| tunnel
+    subgraph host["Always-on local computer"]
+        api["Mobile app API"]
+        mcp["MCP server interface"]
+        rules["Shared validation, revisions and limits"]
+        db[("Canonical records and usage ledger")]
+        secrets["App model-provider credential"]
+        api <--> rules
+        mcp <--> rules
+        rules <--> db
+        secrets -.-> rules
+    end
+    tunnel <--> api
+    tunnel <--> mcp
+    models["App's model provider: food drafts + weekly reflections"]
+    rules <-->|"Selected inputs / structured proposals"| models
+```
+
+**The mobile API and MCP server are two interfaces to the same backend, not two independent databases.** The mobile app reads cached data and queues offline changes; the backend accepts canonical revisions. Tracker data enters through the phone and selected records are uploaded.
+
+**There are two AI roles.** The app calls its configured models through the backend for food drafts and weekly summaries. Separately, the owner chats with their own AI, whose tool client calls MCP to read or explicitly update records. Those AI roles can use different providers. MCP exposes tools; it is not itself an LLM.
+
+**Saving is explicit.** Model responses do not write to the database. Food requires review/save, weekly text remains read-only, and external edits use authorized revision-checked commands. The provider credential remains on the local computer; the phone and external AI use separate app/agent credentials. The public tunnel provides reachability and HTTPS, while backend authentication still controls access.
+
 Logical flow:
 
 Owner ↔ phone UI ↔ durable local records/drafts/outbox ↔ authenticated HTTPS tunnel ↔ local-computer backend ↔ persistent database.
@@ -253,6 +291,16 @@ A new local activity completion or newly saved food/weight entry triggers a brie
 Deliver the selected animal art, pose sheet and matching app icon as editable/reusable project assets with documented generation prompts or source ownership. Do not require the recipient to reuse the original owner's character.
 
 ## 10. Deployment, security and recovery
+
+### Security overview: protecting the model-provider key
+
+The valuable secret is the credential that lets the backend spend money with the model provider. **Keep it on the local backend computer only**: never bundle it in the mobile app, give it to the external AI/MCP client, insert it into a prompt, or include it in logs, exports, source control or shared documents. Provision it through a private secret file or equivalent secret store accessible only to the service. The backend sends it only to the configured provider over HTTPS; callers cannot supply a destination URL that would redirect the key elsewhere.
+
+The phone and external AI instead hold **separate, revocable app/agent credentials**. Those credentials authenticate requests to this app; they do not reveal the provider key. Public access uses HTTPS, phone enrollment is encrypted, redirects must not forward credentials, and server/provider errors must not echo secrets. App-invoked food/review models receive selected task data, not credentials, and have no tools or direct backend-file access. The external AI has only the separately authorized MCP capabilities. Prompts constrain interpretation, but keeping secrets out of model inputs is the actual boundary.
+
+A stolen client credential could still request paid inference through the backend. Shared, persistent rate/daily allowances, bounded concurrency, limited input/output sizes, fixed server-selected models and no automatic retries constrain that abuse. They are request limits, not a guaranteed dollar cap; add provider-side spending controls or alerts where supported. Rotate the affected client credential if it is exposed; rotate the provider key if the server or key itself is exposed.
+
+**Residual risk:** compromise of the backend account/host can expose the provider key and stored records. File permissions, service isolation, host updates, encrypted backups and disk encryption reduce different parts of that risk. Disk encryption protects offline access to a lost/stolen computer; it does not stop an attacker already executing as the running service. These controls mitigate key theft and spending abuse; they do not make either impossible.
 
 Use authenticated HTTPS for public phone and agent access. Backend should bind privately behind the tunnel/proxy. Reject unintended hosts/origins where applicable. Use distinct random credentials, safe secret storage, encrypted phone enrollment and platform backup exclusions. Disable credential logging and arbitrary provider error-body display. Normal successful health responses should not be publicly cached.
 
