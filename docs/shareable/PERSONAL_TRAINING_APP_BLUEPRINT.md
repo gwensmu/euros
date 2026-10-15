@@ -152,6 +152,8 @@ No “what would you change” form, Save Plan, Ask Follow-up, or chat interface
 
 ### Settings and reminders
 
+The proposed richer reminders speak in the mascot's voice: conversational, specific, occasional animal puns or light teasing, without motivational filler. A lightweight model may write the copy from actual plans and explicit logs; deterministic code owns timing, eligibility and actions. Missing logs must never become accusations of skipping. No weight/food shaming or pressure to train through injury. Cache against relevant revisions, validate factual claims, and fall back to accurate conversational templates offline or on failure. This is a reviewed voice direction for a proposed feature, not a claim that generated reminders are already deployed.
+
 Settings groups: synchronization, tracker access/refresh, notification preferences, goal information, nutrition targets, and data export/restore. Keep connection diagnostics secondary to ordinary use. Separate Disconnect, clear local tracker cache, and delete a real record.
 
 Reminders are optional scheduled activity notifications with snooze, dismissal and entry into the correct detail. Baseline snooze choices are 10/30/60 minutes in the app and a convenient 30-minute notification action. Respect quiet hours, platform permissions and approximate scheduling limitations. Reconcile after moves, completion, reboot and clock changes; do not duplicate notifications or treat dismissal as skip. Advanced arrival/post-session relative prompts are future work.
