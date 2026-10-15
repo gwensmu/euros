@@ -19,7 +19,7 @@ class MealPlanTest {
   val logged=Record("food_entries",entry.id,1,FoodDomain.payload(entry).toString())
   val records=listOf(old,newer,logged)
   val composed=DayPlanComposer.compose(fallback(),records,day)
-  assertEquals(4,composed.meals.size);assertEquals(listOf("Yogurt 200 g"),composed.meals.first().foods)
+  assertEquals(4,composed.meals.size);assertEquals(listOf("Yogurt 200 g",FoodDomain.MEAL_WATER),composed.meals.first().foods)
   assertEquals(2000,composed.nutrition!!.getInt("kcal"))
   assertEquals(3,FoodDomain.remainingReferences(composed.meals,records,day).size)
   assertEquals("150",FoodDomain.summary(records,day).kcal.display());assertEquals("Eggs 100 g",FoodDomain.draftFromRecord(logged).text)

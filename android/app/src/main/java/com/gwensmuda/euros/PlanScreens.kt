@@ -32,6 +32,13 @@ import java.util.UUID
 private val Accent=Color(0xFF2563EB)
 fun activityTime(record:Record)=OffsetDateTime.parse(PlanDomain.payload(record).getString("scheduled_at")).atZoneSameInstant(PlanDomain.zone).format(DateTimeFormatter.ofPattern("h:mm a"))
 object PlanDisplay {
+ fun dateHeading(date:LocalDate,today:LocalDate)=when(date) {
+  today->"Today"
+  today.plusDays(1)->"Tomorrow"
+  else->date.format(DateTimeFormatter.ofPattern("EEEE",java.util.Locale.US))
+ }
+ fun nextHomeActivity(records:List<Record>,today:LocalDate)=PlanDomain.rootActivities(records).firstOrNull{PlanDomain.day(it)>=today && !PlanDomain.resolved(it,records)}
+
  fun template(record:Record):JSONObject {
   val p=PlanDomain.payload(record)
   return p.optJSONObject("plan_snapshot")?.optJSONObject("template") ?: p.optJSONObject("prescription") ?: JSONObject()
@@ -95,13 +102,12 @@ object PlanDisplay {
  }
 }
 @Composable fun TodayContent(records:List<Record>,dayPlan:DayPlan,onOpen:(Record)->Unit,onFood:()->Unit,repo:Repository,onMealLog:()->Unit=onFood) {
- val items=dayPlan.activities.map{it.record};val next=dayPlan.next?.record
+ val items=dayPlan.activities.map{it.record};val next=dayPlan.next?.record ?: PlanDisplay.nextHomeActivity(records,dayPlan.date)
  FoodSummaryBar(records,dayPlan.date,dayPlan.nutrition,onFood)
  if(next!=null) {
-  val morning=OffsetDateTime.parse(PlanDomain.payload(next).getString("scheduled_at")).atZoneSameInstant(PlanDomain.zone).hour<12
   Surface(color=Color(0xFFEDF3FF),shape=RoundedCornerShape(8.dp),modifier=Modifier.fillMaxWidth()) {
    Column(Modifier.padding(horizontal=18.dp,vertical=14.dp)) {
-    Text(if(morning) "This morning" else "Next up",style=MaterialTheme.typography.titleMedium,fontWeight=FontWeight.SemiBold)
+    Text(PlanDisplay.dateHeading(PlanDomain.day(next),dayPlan.date),style=MaterialTheme.typography.titleMedium,fontWeight=FontWeight.SemiBold)
     val children=PlanDomain.children(next,records).filter{PlanDomain.status(it)=="pending"}
     if(children.isNotEmpty()) children.forEach{PlanRow(it,records,onOpen)} else {
      PlanRow(next,records,onOpen)
@@ -128,7 +134,7 @@ object PlanDisplay {
  if(later.isNotEmpty()) {
   Text("Later today",style=MaterialTheme.typography.titleMedium,fontWeight=FontWeight.SemiBold)
   Column {later.forEach{PlanRow(it,records,onOpen)}}
- } else if(items.isEmpty()) Text("No activities scheduled",style=MaterialTheme.typography.bodyMedium,color=Color.Gray)
+ } else if(items.isEmpty() && next==null) Text("No activities scheduled",style=MaterialTheme.typography.bodyMedium,color=Color.Gray)
 }
 @Composable fun WeekContent(records:List<Record>,authoredPlan:AuthoredPlan,week:LocalDate,onOpen:(Record)->Unit,onWrapUp:()->Unit,repo:Repository,onImported:(String)->Unit) {
  val app=LocalContext.current.applicationContext as EurosApplication

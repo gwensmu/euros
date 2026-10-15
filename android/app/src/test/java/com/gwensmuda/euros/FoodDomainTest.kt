@@ -236,6 +236,6 @@ class FoodDomainTest {
  @Test fun mealFoodsRenderReadableStringsOnlyAndPreservePortions() {
   val plan=JSONObject("""{"mealTargets":[{"id":"dinner","title":"Dinner","foods":[" Chicken 120 g ","rice 200 g","",null,{"not":"display text"}],"fatG":null}]}""")
   val meal=FoodDomain.mealReferences(plan).single()
-  assertEquals(listOf("Chicken 120 g","rice 200 g"),meal.foods);assertNull(meal.fat)
+  assertEquals(listOf("Chicken 120 g","rice 200 g",FoodDomain.MEAL_WATER),meal.foods);assertNull(meal.fat)
  }
 }

@@ -19,7 +19,7 @@ class ReminderCopyCache(private val context:Context,private val dao:EurosDao) {
   app.applicationScope.launch(Dispatchers.IO) {mutex.withLock {
    // A bounded horizon avoids spending on distant plans that may change.
    val now=Instant.now()
-   for(plan in plans.filter{it.due>now && it.due<=now.plusSeconds(86400)}.take(6)) {
+   for(plan in plans.filter{it.kind!="water" && it.due>now && it.due<=now.plusSeconds(86400)}.take(6)) {
     if(dao.meta(PREFIX+plan.contextKey)!=null)continue
     val retry=dao.meta(RETRY+plan.contextKey)?.toLongOrNull() ?: 0
     if(retry>System.currentTimeMillis())continue

@@ -44,6 +44,9 @@ data class NutritionTotals(val kcal:NutrientTotal,val protein:NutrientTotal,val 
 class FoodDraftError(val fields:Map<String,String>):IllegalArgumentException(fields.values.firstOrNull() ?: "Check the entry")
 
 object FoodDomain {
+ const val MEAL_WATER="12–20 oz of water"
+ fun withMealWater(foods:List<String>)=if(foods.any{Regex("\\bwater\\b",RegexOption.IGNORE_CASE).containsMatchIn(it)})foods else foods+MEAL_WATER
+
  private val decimalPattern=Regex("(?:[0-9]+(?:\\.[0-9]*)?|\\.[0-9]+)")
  fun newDraft(date:LocalDate,clock:Clock=Clock.system(PlanDomain.zone),plannedActivityId:String?=null):FoodDraft {
   val now=java.time.ZonedDateTime.now(clock)
@@ -224,7 +227,7 @@ object FoodDomain {
     id=item.getString("id"),title=item.getString("title"),
     protein=targetLabel(item,"proteinG"),carbs=targetLabel(item,"carbohydrateG"),fat=targetLabel(item,"fatG"),
     time=nullableString(item,"localTime"),appliesWhen=if(dated!=null)"every_day" else item.optString("appliesWhen","every_day"),
-    foods=if(foods==null) emptyList() else (0 until foods.length()).mapNotNull{index->(foods.opt(index) as? String)?.trim()?.takeIf{it.isNotBlank()}},
+    foods=withMealWater(if(foods==null) emptyList() else (0 until foods.length()).mapNotNull{index->(foods.opt(index) as? String)?.trim()?.takeIf{it.isNotBlank()}}),
    )
   }
  }

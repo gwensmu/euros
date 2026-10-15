@@ -84,7 +84,7 @@ Heading: “91 days to [event]” using the real local-date difference, not “T
 
 Below the heading, show a thin calorie/macro summary with consumed/target calories and protein, carbohydrate and fat progress. Tapping it opens Food for that date. Unknown nutrient components must not be silently counted as zero.
 
-Next show **This morning** or **Next up** with concrete instructions for the next unresolved planned item. Morning means actions such as breakfast, hydration or stretching, not a sleep survey. If the item is a routine, show its independently loggable steps. Include enough detail to act without opening every row: food/portion instructions, exercise prescriptions or step durations where known. Use the same quick-log icon for every activity.
+Next show **Today**, **Tomorrow**, or the scheduled weekday with concrete instructions for the next unresolved planned item, looking ahead after today is resolved. Morning means actions such as breakfast, hydration or stretching, not a sleep survey. If the item is a routine, show its independently loggable steps. Include enough detail to act without opening every row: food/portion instructions, exercise prescriptions or step durations where known. Use the same quick-log icon for every activity.
 
 Follow with later unresolved items and their scheduled times. As items resolve, the next card advances. Scheduled rest still has its recovery actions; do not replace them with “no training planned.” A compact imported walking summary can provide daily movement context without awarding exercise calories or marking training complete.
 
@@ -385,3 +385,9 @@ Below the next activity, show a next-meal card with the planned meal name, 12-ho
 ### Reminder copy implementation
 
 Deterministic code builds factual conversational sentences and owns eligibility/timing. A low-cost model selects an optional joke from an approved context-specific catalog; unsupported skip jokes cannot be selected. This is constrained variation, not free-form model-written factual prose. Cache against the complete context and copy version; never make a network/model call during notification delivery. The backend bounds requests and daily spending; device failures back off and use factual template copy.
+
+### Activity date heading and meal water prompts
+
+The home activity card is titled Today, Tomorrow, or the scheduled weekday. Once today's activities are resolved, show the next unresolved future activity; do not call an unlogged earlier activity a missed task. Keep the meal card titled Next meal.
+
+Each planned meal includes the configured water action (the source owner's choice is 12–20 oz of water); this is a reminder, not a measured consumption record. It appears in meal details and the next-meal card without changing nutrient totals. With notifications enabled, remind at each remaining meal's planned time. Combine with a morning/food/Sunday notification at exactly the same time instead of duplicating alerts. Dismissing or explicitly fulfilling the meal cancels its water prompt. Respect quiet hours; don't invent a time for untimed meals. Water notification Open leads to the food overview, not an amount form. No water volume logger, automatic food entry or hydration completion is created. Existing recovery hydration remains its own explicit action.

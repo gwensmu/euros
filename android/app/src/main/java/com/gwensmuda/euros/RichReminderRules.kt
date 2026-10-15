@@ -63,6 +63,18 @@ object RichReminderRules {
   }
   val foodAt=at("19:30")
   if(ReminderRules.afterQuiet(foodAt,settings,zone)==foodAt) result.add(RichReminder("food:$date",foodAt,"Food check-in","What did you eat? Tell me in one go and I'll sort out the numbers."+(if(remaining.isNotEmpty())" Still on the plan: ${remaining.joinToString(", "){it.title}}." else ""),"@food","food"))
+  for(meal in remaining) {
+   val mealTime=meal.time?.let{runCatching{LocalTime.parse(it)}.getOrNull()} ?: continue
+   val due=date.atTime(mealTime).atZone(zone).toInstant()
+   if(ReminderRules.afterQuiet(due,settings,zone)!=due)continue
+   val note="Have ${FoodDomain.MEAL_WATER} with ${meal.title.lowercase(Locale.US)}."
+   val shared=result.indexOfFirst{it.due==due && it.kind in setOf("morning","sunday","food")}
+   if(shared>=0) {
+    val existing=result[shared]
+    // Morning already includes the meal's water line through its planned foods.
+    if(!existing.facts.contains("water",ignoreCase=true))result[shared]=existing.copy(facts=existing.facts+" "+note)
+   } else result.add(RichReminder("water:$date:${meal.id}",due,"Water · ${meal.title}",note,"@food-overview","water"))
+  }
   return result
  }
 }
