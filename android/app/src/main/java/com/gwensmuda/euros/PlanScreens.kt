@@ -56,9 +56,9 @@ object PlanDisplay {
  fun initialExpanded(week:LocalDate,today:LocalDate):String=(if(today>=week && today<week.plusWeeks(1))today else week).toString()
  fun trackerSummary(session:ImportedSession,recap:SessionRecap?):String {
   val name=trackerName(session.sourcePackage,session.exerciseType)
-  val average=recap?.averageBpm ?: return "$name · HR unavailable"
-  val highMinutes=(recap.zones.drop(4).sum()/60).toInt()
-  return "$name · ${kotlin.math.round(average).toInt()} bpm avg · $highMinutes min Z4+"
+  val average=recap?.averageBpm ?: return name
+  val intensity=when { average<130 -> "Light"; average<155 -> "Moderate"; else -> "Intense" }
+  return "$name · $intensity"
  }
  fun trackerName(source:String,exerciseType:Int?=null)=when{source=="fi.polar.polarflow" && exerciseType==androidx.health.connect.client.records.ExerciseSessionRecord.EXERCISE_TYPE_MARTIAL_ARTS->"BJJ";source.contains("polar",true)->"Polar workout";source.contains("fitbit",true)->"Fitbit workout";else->"Tracker workout"}
 }
