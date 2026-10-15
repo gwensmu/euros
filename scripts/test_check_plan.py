@@ -25,7 +25,7 @@ class PlanValidationTests(unittest.TestCase):
         self.assertTrue(any('scheduledActivities' in gap for gap in gaps))
         self.assertTrue(any('taper' in gap for gap in gaps))
         self.assertEqual(original, self.plan)
-        self.assertIsNone(self.plan['nutrition']['maintenance']['proteinG'])
+        self.assertEqual(130, self.plan['nutrition']['maintenance']['proteinG'])
         self.assertNotIn('scheduledActivities', self.plan)
 
     def test_impossible_and_noncanonical_event_dates(self):

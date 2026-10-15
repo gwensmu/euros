@@ -50,7 +50,7 @@ object DayPlanComposer {
   val meals=if(applies || savedMeals!=null) FoodDomain.mealReferences(plan,date,records).filter { meal ->
    when(meal.appliesWhen) {"every_day"->true;"bjj_day"->hasBjj;else->false}
   } else emptyList()
-  val nutrition=savedMeals?.optJSONObject("nutrition_targets") ?: plan.optJSONObject("nutrition")?.optJSONObject("daily")
+  val nutrition=NutritionPolicy.targets(plan,records,date)
   return DayPlan(date,activities,meals,nutrition)
  }
 }

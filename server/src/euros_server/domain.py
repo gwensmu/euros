@@ -6,6 +6,7 @@ from contextlib import contextmanager, nullcontext
 from datetime import date, datetime, timezone, timedelta
 from decimal import Decimal, InvalidOperation
 from pathlib import Path
+from .nutrition_policy import resolve as resolve_nutrition
 
 TYPES = {"activities", "food_entries", "weight_entries", "meal_plans"}
 NUTRIENTS = ("kcal", "protein_g", "carbs_g", "fat_g")
@@ -329,7 +330,9 @@ class Store:
             values = [r["payload"]["nutrients"][k] for r in entries]
             totals[k] = {"known_total": str(sum((Decimal(str(v)) for v in values if v is not None), Decimal(0))),
                          "missing_count": sum(v is None for v in values)}
-        return {"local_date": local_date, "entry_count": len(entries), "nutrients": totals}
+        saved = self.meal_plan(local_date)["record"]
+        policy = resolve_nutrition(self.records("weight_entries")["records"], local_date, saved["payload"]["nutrition_targets"] if saved else None)
+        return {"local_date": local_date, "entry_count": len(entries), "nutrients": totals, **policy}
 
     def import_plan(self, commands):
         """Explicit local authoring import; all scheduled changes accepted atomically."""

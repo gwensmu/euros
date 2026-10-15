@@ -12,7 +12,7 @@ import httpx
 from .domain import DomainError, NUTRIENTS, TYPES, canonical, instant, number, validate_payload
 
 ZONE = ZoneInfo("America/Chicago")
-PROMPT_VERSION = "euros-2026-10-14-v3"
+PROMPT_VERSION = "euros-2026-10-15-v4"
 
 
 def object_schema(properties):
@@ -49,8 +49,9 @@ are optional considerations for the user to discuss outside this app, never chan
 The BJJ category competition means competition practice, not a tournament or competition event.
 Every day shares the same nutrition targets, including rest, flow, moderate, competition,
 and weights days. Never recommend different calorie or macro targets by activity or day.
-Heavy training changes recovery emphasis, not nutrition targets. No automatic calorie
-adjustments, no 2050 rule, no extra exercise or eating less rewards. No follow-up question,
+Heavy training changes recovery emphasis, not nutrition targets. An explicitly configured
+weight-goal maintenance transition may change targets; never invent a target or recommend
+an automatic activity-based adjustment. No extra exercise or eating less rewards. No follow-up question,
 plan editor, motivational filler, or medical/dose advice. Return summary and up to 3 brief
 adjustments grounded in the actual observations; empty adjustments is valid. Include
 evidence_record_ids containing only record_id values actually supporting your prose. Return JSON.

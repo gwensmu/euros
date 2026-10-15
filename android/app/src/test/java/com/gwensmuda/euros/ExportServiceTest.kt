@@ -13,7 +13,7 @@ class ExportServiceTest {
  @Test fun envelopeRejectsUnsupportedUnitsOrVersion() {
   val good=org.json.JSONObject().put("schema_version",1).put("units",ExportService.units()).put("records",org.json.JSONArray())
   assertEquals(0,ExportService.validateEnvelope(good).length())
-  assertTrue(runCatching{ExportService.validateEnvelope(org.json.JSONObject(good.toString()).put("schema_version",2))}.isFailure)
+  assertTrue(runCatching{ExportService.validateEnvelope(org.json.JSONObject(good.toString()).put("schema_version",3))}.isFailure)
   good.getJSONObject("units").put("body_weight","kg")
   assertTrue(runCatching{ExportService.validateEnvelope(good)}.isFailure)
  }

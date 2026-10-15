@@ -28,16 +28,17 @@
     },
     "baselineLb": null,
     "baselineDate": null,
-    "selectedGoalLb": null,
+    "selectedGoalLb": 155,
     "maintenanceRangeLb": null,
-    "transition": "user_confirmed"
+    "transition": "logged_weight_at_or_below",
+    "transitionEnabledFrom": "2026-10-15"
   },
   "nutrition": {
     "maintenance": {
-      "kcal": null,
-      "proteinG": null,
-      "carbohydrateG": null,
-      "fatG": null
+      "kcal": 2050,
+      "proteinG": 130,
+      "carbohydrateG": 250,
+      "fatG": 59
     },
     "automaticCalorieAdjustment": false,
     "sourceRef": "nutrition",

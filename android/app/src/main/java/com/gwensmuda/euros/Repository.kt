@@ -187,9 +187,27 @@ class Repository(private val db:EurosDatabase, llmClient:LlmClient?=null) {
   }
   if(newMeasurement)completionEvents.tryEmit(Unit)
  }
- suspend fun restoreRecords(records:org.json.JSONArray):RestoreResult=mutex.withLock {
-  require(records.length()<=20000) { "Archive is too large" }
+ suspend fun restoreRecords(records:org.json.JSONArray):RestoreResult=mutex.withLock { restoreRecordsLocked(records) }
+ suspend fun restoreArchive(archive:JSONObject):RestoreResult=mutex.withLock {
+  val records=ExportService.validateEnvelope(archive)
+  val local=if(archive.getInt("schema_version")==2)BackupState.parse(archive) else emptyList()
+  val health=if(archive.getInt("schema_version")==2)BackupState.health(archive) else null
   db.withTransaction {
+   val result=restoreRecordsLocked(records)
+   var restored=0;var skipped=0
+   for(item in local)if(dao.meta(item.key)==null){dao.meta(item);restored++}else skipped++
+   if(health!=null) {
+    if(dao.meta(HealthImport.KEY)==null) {
+     for(id in health.getJSONObject("links").keys())require(dao.record("activities",id)?.deleted==false){"Missing linked activity"}
+     dao.meta(Metadata(HealthImport.KEY,HealthSnapshotStorage.encode(health)));restored++
+    }else skipped++
+   }
+   result.copy(localImported=restored,localSkipped=skipped)
+  }
+ }
+ private suspend fun restoreRecordsLocked(records:org.json.JSONArray):RestoreResult {
+  require(records.length()<=20000) { "Archive is too large" }
+  return db.withTransaction {
    val parsed=(0 until records.length()).map { index ->
     val item=records.getJSONObject(index)
     val type=item.getString("entity_type");val id=item.getString("entity_id")

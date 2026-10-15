@@ -1,0 +1,33 @@
+{
+  "goal": {
+    "lossLb": {
+      "min": 5,
+      "max": 8
+    },
+    "baselineLb": null,
+    "baselineDate": null,
+    "selectedGoalLb": 155,
+    "maintenanceRangeLb": null,
+    "transition": "logged_weight_at_or_below",
+    "transitionEnabledFrom": "2026-10-15"
+  },
+  "nutrition": {
+    "maintenance": {
+      "kcal": 2050,
+      "proteinG": 130,
+      "carbohydrateG": 250,
+      "fatG": 59
+    },
+    "automaticCalorieAdjustment": false,
+    "sourceRef": "nutrition",
+    "daily": {
+      "kcal": 1900,
+      "proteinG": 130,
+      "carbohydrateG": 225,
+      "fatG": {
+        "min": 50,
+        "max": 53
+      }
+    }
+  }
+}

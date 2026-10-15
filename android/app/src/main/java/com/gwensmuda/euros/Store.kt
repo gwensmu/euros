@@ -11,7 +11,7 @@ data class Record(val type:String, val id:String, val revision:Long, val payload
 data class Pending(@PrimaryKey val commandId:String, val type:String, val id:String, val expectedRevision:Long, val payload:String, val createdAt:Long=System.currentTimeMillis(), val error:String?=null, @ColumnInfo(defaultValue="'upsert'") val operation:String="upsert")
 @Entity(tableName="metadata")
 data class Metadata(@PrimaryKey val key:String, val value:String)
-data class RestoreResult(val imported:Int,val skipped:Int)
+data class RestoreResult(val imported:Int,val skipped:Int,val localImported:Int=0,val localSkipped:Int=0)
 data class ExportSnapshot(val records:List<Record>,val pending:List<Pending>,val metadata:List<Metadata>)
 @Dao interface EurosDao {
  @Query("SELECT * FROM records") suspend fun recordsIncludingDeleted():List<Record>
