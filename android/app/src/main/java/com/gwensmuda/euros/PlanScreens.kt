@@ -57,7 +57,14 @@ object PlanDisplay {
  fun trackerSummary(session:ImportedSession,recap:SessionRecap?):String {
   val name=trackerName(session.sourcePackage,session.exerciseType)
   val average=recap?.averageBpm ?: return name
-  val intensity=when { average<130 -> "Light"; average<155 -> "Moderate"; else -> "Intense" }
+  val duration=Duration.between(session.start,session.end).toMillis()/1000.0
+  if(duration<=0 || recap.coveredSeconds/duration<0.8)return name
+  val hardSeconds=recap.zones.drop(4).sum()
+  val intensity=when {
+   hardSeconds>=1200 || average>=155 -> "Intense"
+   hardSeconds>=300 || average>=130 -> "Moderate"
+   else -> "Light"
+  }
   return "$name · $intensity"
  }
  fun trackerName(source:String,exerciseType:Int?=null)=when{source=="fi.polar.polarflow" && exerciseType==androidx.health.connect.client.records.ExerciseSessionRecord.EXERCISE_TYPE_MARTIAL_ARTS->"BJJ";source.contains("polar",true)->"Polar workout";source.contains("fitbit",true)->"Fitbit workout";else->"Tracker workout"}
