@@ -204,6 +204,11 @@ object FoodDomain {
   val fulfilled=entries(records,date).mapNotNull{nullableString(JSONObject(it.payload),"meal_reference_id")}.toSet()
   return references.filter{it.id !in fulfilled && it.id !in dismissed}
  }
+ fun nextMeal(references:List<FoodMealReference>,records:List<Record>,date:LocalDate,dismissed:Set<String>,now:java.time.LocalTime):FoodMealReference? {
+  val remaining=remainingReferences(references,records,date,dismissed)
+  fun time(meal:FoodMealReference)=runCatching{java.time.LocalTime.parse(meal.time)}.getOrNull()
+  return remaining.filter{time(it)?.let{at->at>=now}==true}.minByOrNull{time(it)!!} ?: remaining.firstOrNull()
+ }
  fun savedMealPlan(records:List<Record>,date:LocalDate):JSONObject? {
   val latest=records.filter{it.type=="meal_plans" && it.id=="meal-plan-$date"}
    .maxWithOrNull(compareBy<Record>{it.revision}.thenBy{it.deleted}) ?: return null

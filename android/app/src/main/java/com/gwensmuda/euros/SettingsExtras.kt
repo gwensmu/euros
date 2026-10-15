@@ -31,7 +31,7 @@ import kotlinx.coroutines.launch
  if(confirmRemoval)AlertDialog(onDismissRequest={confirmRemoval=false},title={Text("Remove local tracker data?")},text={Text("Manual logs and shared workout copies stay in Euros. Refresh can import tracker data on this phone again.")},confirmButton={TextButton(onClick={scope.launch{health.clearImports();confirmRemoval=false;status="Imported data removed"}}){Text("Remove")}},dismissButton={TextButton(onClick={confirmRemoval=false}){Text("Cancel")}})
  }
  if(section=="Notifications") {
- Row(Modifier.fillMaxWidth(),horizontalArrangement=Arrangement.SpaceBetween,verticalAlignment=Alignment.CenterVertically){Text("Scheduled activities");Switch(settings.enabled,onCheckedChange={enabled->if(enabled && Build.VERSION.SDK_INT>=33 && !reminders.permissionGranted())permission.launch(Manifest.permission.POST_NOTIFICATIONS) else scope.launch{settings=settings.copy(enabled=enabled);reminders.saveSettings(settings);reminders.reconcile(records)}})}
+ Row(Modifier.fillMaxWidth(),horizontalArrangement=Arrangement.SpaceBetween,verticalAlignment=Alignment.CenterVertically){Text("Weasel reminders");Switch(settings.enabled,onCheckedChange={enabled->if(enabled && Build.VERSION.SDK_INT>=33 && !reminders.permissionGranted())permission.launch(Manifest.permission.POST_NOTIFICATIONS) else scope.launch{settings=settings.copy(enabled=enabled);reminders.saveSettings(settings);reminders.reconcile(records)}})}
  SettingsTimeRow("Quiet from",quietStart){quietStart=it}
  SettingsTimeRow("Quiet until",quietEnd){quietEnd=it}
  TextButton(onClick={quietStart="";quietEnd=""}){Text("Clear quiet hours")}

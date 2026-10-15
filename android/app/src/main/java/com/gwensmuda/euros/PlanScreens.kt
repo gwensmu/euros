@@ -94,7 +94,7 @@ object PlanDisplay {
   HorizontalDivider(color=Color(0xFFDCE3EF))
  }
 }
-@Composable fun TodayContent(records:List<Record>,dayPlan:DayPlan,onOpen:(Record)->Unit,onFood:()->Unit) {
+@Composable fun TodayContent(records:List<Record>,dayPlan:DayPlan,onOpen:(Record)->Unit,onFood:()->Unit,repo:Repository,onMealLog:()->Unit=onFood) {
  val items=dayPlan.activities.map{it.record};val next=dayPlan.next?.record
  FoodSummaryBar(records,dayPlan.date,dayPlan.nutrition,onFood)
  if(next!=null) {
@@ -108,6 +108,20 @@ object PlanDisplay {
      PlanDisplay.template(next).optJSONArray("exercises")?.let{e->for(i in 0 until e.length()) {val ex=e.getJSONObject(i);Text(ex.getString("name")+PlanDisplay.exercise(ex).takeIf{it.isNotBlank()}?.let{" · $it"}.orEmpty(),style=MaterialTheme.typography.bodySmall,modifier=Modifier.padding(top=7.dp))}}
     }
    }
+  }
+ }
+ val dismissed by remember(repo,dayPlan.date){repo.observeDismissedMeals(dayPlan.date)}.collectAsState(initial=emptySet())
+ val meal=FoodDomain.nextMeal(dayPlan.meals,records,dayPlan.date,dismissed,LocalTime.now(PlanDomain.zone))
+ if(meal!=null) Surface(color=MaterialTheme.colorScheme.surface,shape=RoundedCornerShape(8.dp),border=BorderStroke(1.dp,EurosColors.Line),modifier=Modifier.fillMaxWidth()) {
+  Column(Modifier.padding(18.dp),verticalArrangement=Arrangement.spacedBy(6.dp)) {
+   Row(verticalAlignment=Alignment.CenterVertically) {
+    Column(Modifier.weight(1f)) {
+     Text("Next meal",style=MaterialTheme.typography.titleMedium,fontWeight=FontWeight.SemiBold)
+     Text(meal.title+meal.time?.let{" · ${TimeDisplay.label(it)}"}.orEmpty(),style=MaterialTheme.typography.bodyMedium)
+    }
+    IconButton(onClick=onMealLog){Icon(Icons.Outlined.Edit,"Log food for ${meal.title}",tint=Accent)}
+   }
+   meal.foods.forEach{Text(it,style=MaterialTheme.typography.bodyMedium)}
   }
  }
  val later=items.filter{it.id!=next?.id && !PlanDomain.resolved(it,records)}

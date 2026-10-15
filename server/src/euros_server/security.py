@@ -15,7 +15,7 @@ class BodyLimit:
         if scope['type'] != 'http':
             return await self.app(scope, receive, send)
         limit = {'/v1/tracker/import': 4194304, '/v1/review/week': 1048576,
-                 '/v1/interpret/food': 40000}.get(scope['path'], 1048576 if scope['path'].startswith('/mcp') else 262144)
+                 '/v1/interpret/food': 40000, '/v1/reminders/copy': 16384}.get(scope['path'], 1048576 if scope['path'].startswith('/mcp') else 262144)
         body = bytearray()
         while True:
             message = await receive()
@@ -45,7 +45,7 @@ class LimitedProvider:
     """
     def __init__(self, provider, store, daily_food=50, daily_review=5, per_minute=6, concurrent=2, clock=time.time):
         self.provider, self.store, self.clock = provider, store, clock
-        self.limits = {'food_draft': daily_food, 'weekly_wrap_up': daily_review}
+        self.limits = {'food_draft': daily_food, 'weekly_wrap_up': daily_review, 'reminder_copy': 12}
         self.per_minute, self.concurrent = per_minute, concurrent
         self.active = 0
         self.lock = threading.Lock()

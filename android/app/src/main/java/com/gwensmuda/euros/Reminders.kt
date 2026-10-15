@@ -53,7 +53,7 @@ object ReminderRules {
   return endDate.atTime(end).atZone(zone).toInstant()
  }
 }
-class ReminderScheduler(private val context:Context,private val dao:EurosDao) {
+class ReminderScheduler(private val context:Context,private val dao:EurosDao,private val clock:java.time.Clock=java.time.Clock.systemUTC()) {
  companion object { const val KEY="reminders_v1";const val CHANNEL="euros_activity";private val mutex=Mutex() }
  private suspend fun state()=dao.meta(KEY)?.let{JSONObject(it)} ?: JSONObject().put("enabled",false).put("scheduled",JSONObject()).put("snoozes",JSONObject())
  private fun decode(s:JSONObject)=ReminderSettings(s.optBoolean("enabled"),s.optString("quiet_start").takeIf{it.isNotBlank()},s.optString("quiet_end").takeIf{it.isNotBlank()})
@@ -63,62 +63,88 @@ class ReminderScheduler(private val context:Context,private val dao:EurosDao) {
   reconcile(dao.observe().first())
  }
  fun permissionGranted()=(Build.VERSION.SDK_INT<33 || context.checkSelfPermission(Manifest.permission.POST_NOTIFICATIONS)==PackageManager.PERMISSION_GRANTED) && context.getSystemService(NotificationManager::class.java).areNotificationsEnabled()
- suspend fun reconcile(records:List<Record>)=mutex.withLock {
-  val s=state();val settings=decode(s);val previous=s.getJSONObject("scheduled");val snoozes=s.getJSONObject("snoozes");val next=JSONObject();val delivered=s.optJSONObject("delivered") ?: JSONObject();val plans=mutableListOf<ReminderPlan>();val now=Instant.now();val zone=ZoneId.systemDefault()
-  for(record in records) {
-   val snooze=snoozes.optJSONObject(record.id)
-   val scheduled=JSONObject(record.payload).optString("scheduled_at")
-   val snoozed=if(snooze?.optString("scheduled_at")==scheduled) Instant.parse(snooze.getString("due")) else null
-   if(snooze!=null && snoozed==null) snoozes.remove(record.id)
-   val plan=if(permissionGranted() && ReminderRules.isPending(record,records)) ReminderRules.due(record,settings,now,zone,snoozed) else null
-   if(plan!=null) { plans.add(plan);next.put(record.id,JSONObject().put("due",plan.due.toString()).put("scheduled_at",plan.scheduledAt)) }
+ private suspend fun candidates(records:List<Record>,now:Instant):List<RichReminder> {
+  val zone=PlanDomain.zone;val date=now.atZone(zone).toLocalDate();val settings=settings()
+  val plan=AuthoredPlan(context).json()
+  val snapshot=dao.meta(HealthImport.KEY)?.let{HealthSnapshotStorage.decode(it)}
+  val links=snapshot?.optJSONObject("links");val imported=snapshot?.optJSONObject("records")
+  val ends=links?.keys()?.asSequence()?.mapNotNull{id->val r=imported?.optJSONObject(links.getString(id));if(r!=null && !r.optBoolean("deleted") && r.optString("kind")=="exercise") id to Instant.parse(r.getString("end")) else null}?.toMap() ?: emptyMap()
+  return (-1L..7L).flatMap{offset->val day=date.plusDays(offset)
+   RichReminderRules.plans(records,settings,day,zone,FoodDomain.mealReferences(plan,day,records),MealDismissals.decode(dao.meta("dismissed_meals:$day")),ends)
   }
-  val active=records.filter{ReminderRules.isPending(it,records)}.associateBy{it.id}
-  delivered.keys().asSequence().toList().forEach{id->val record=active[id]
-   if(!settings.enabled || !permissionGranted() || record==null || delivered.optString(id)!=JSONObject(record.payload).optString("scheduled_at")) {context.getSystemService(NotificationManager::class.java).cancel(id,0);delivered.remove(id)}
+ }
+ suspend fun reconcile(records:List<Record>):Unit=mutex.withLock {
+  val s=state();val previous=s.getJSONObject("scheduled");val snoozes=s.getJSONObject("snoozes");val next=JSONObject();val delivered=s.optJSONObject("delivered") ?: JSONObject();val now=Instant.now(clock)
+  val plans=if(permissionGranted())candidates(records,now) else emptyList()
+  val active=plans.associateBy{it.id}
+  val alarm=context.getSystemService(AlarmManager::class.java);val manager=context.getSystemService(NotificationManager::class.java)
+  delivered.keys().asSequence().toList().forEach{id->if(active[id]?.due?.toString()!=delivered.optString(id)){manager.cancel(id,0);delivered.remove(id)}}
+  val deliveredContext=s.optJSONObject("delivered_context") ?: JSONObject()
+  deliveredContext.keys().asSequence().toList().forEach{id->if(active[id]?.contextKey!=deliveredContext.optString(id)){manager.cancel(id,0);deliveredContext.remove(id)}}
+  snoozes.keys().asSequence().toList().filter{it !in active}.forEach{snoozes.remove(it)}
+  for(p in plans) {
+   val snooze=snoozes.optJSONObject(p.id)
+   val snoozed=if(snooze?.optString("scheduled_at")==p.due.toString())Instant.parse(snooze.getString("due")) else null
+   if(snooze!=null && snoozed==null)snoozes.remove(p.id)
+   val due=snoozed ?: p.due
+   // Preserve a pending alarm briefly when unrelated records change; never replay old reminders.
+   val existing=previous.optJSONObject(p.id)?.optString("scheduled_at")==p.due.toString()
+   if((due>now || (existing && now.epochSecond-due.epochSecond<7200)) && (snoozed!=null || !delivered.has(p.id))) {
+    next.put(p.id,JSONObject().put("due",due.toString()).put("scheduled_at",p.due.toString()))
+   }
   }
-  // Save desired state before platform effects. Reconciliation can safely repeat after a crash.
-  s.put("scheduled",next).put("delivered",delivered);dao.meta(Metadata(KEY,s.toString()))
-  val alarm=context.getSystemService(AlarmManager::class.java)
-  previous.keys().forEach{id->if(!next.has(id)) { alarm.cancel(intent(id));context.getSystemService(NotificationManager::class.java).cancel(id,0) }}
-  plans.forEach{p->alarm.setAndAllowWhileIdle(AlarmManager.RTC_WAKEUP,p.due.toEpochMilli(),intent(p.activityId))}
+  s.put("scheduled",next).put("delivered",delivered).put("delivered_context",deliveredContext);dao.meta(Metadata(KEY,s.toString()))
+  previous.keys().forEach{id->if(!next.has(id)){alarm.cancel(intent(id));if(!delivered.has(id))manager.cancel(id,0)}}
+  next.keys().forEach{id->alarm.setAndAllowWhileIdle(AlarmManager.RTC_WAKEUP,Instant.parse(next.getJSONObject(id).getString("due")).toEpochMilli(),intent(id))}
+  ReminderCopyCache(context,dao).prefetch(plans.filter{it.due>now && it.due<now.plusSeconds(86400)})
  }
  private fun intent(id:String)=PendingIntent.getBroadcast(context,0,Intent(context,ReminderReceiver::class.java).setAction("euros.reminder").setData(Uri.parse("euros://reminder/"+Uri.encode(id))).putExtra("activity_id",id),PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE)
- suspend fun snooze(activityId:String,minutes:Int) {
-  require(minutes in 1..1440)
+ suspend fun snooze(activityId:String,minutes:Int) {require(minutes in 1..1440);snoozeUntil(activityId,Instant.now(clock).plusSeconds(minutes*60L))}
+ suspend fun snoozeUntil(activityId:String,until:Instant) {
+  val now=Instant.now(clock);require(until>now && until<=now.plusSeconds(86400)){"Choose a time in the next 24 hours"}
   mutex.withLock {
-   val r=dao.record("activities",activityId) ?: error("Activity unavailable");check(ReminderRules.isPending(r,dao.observe().first()))
-   val s=state();s.getJSONObject("snoozes").put(activityId,JSONObject().put("due",Instant.now().plusSeconds(minutes*60L).toString()).put("scheduled_at",JSONObject(r.payload).getString("scheduled_at")));dao.meta(Metadata(KEY,s.toString()))
+   val plan=candidates(dao.observe().first(),now).firstOrNull{it.id==activityId} ?: error("Reminder no longer available")
+   require(!plan.destination.startsWith("@") || until.atZone(PlanDomain.zone).toLocalDate()==plan.due.atZone(PlanDomain.zone).toLocalDate()){"Choose a time on the reminder’s date"}
+   require(ReminderRules.afterQuiet(until,settings(),PlanDomain.zone)==until){"Choose a time outside quiet hours"}
+   val s=state();s.getJSONObject("snoozes").put(activityId,JSONObject().put("due",until.toString()).put("scheduled_at",plan.due.toString()));dao.meta(Metadata(KEY,s.toString()))
   }
   context.getSystemService(NotificationManager::class.java).cancel(activityId,0);reconcile(dao.observe().first())
  }
- suspend fun deliver(activityId:String)=mutex.withLock {
-  if(!permissionGranted()) return@withLock
-  val s=state();val settings=decode(s);if(!settings.enabled) return@withLock
-  val wanted=s.getJSONObject("scheduled").optJSONObject(activityId) ?: return@withLock
-  val r=dao.record("activities",activityId) ?: return@withLock;val p=JSONObject(r.payload)
-  if(!ReminderRules.isPending(r,dao.observe().first()) || wanted.getString("scheduled_at")!=p.optString("scheduled_at")) return@withLock
-  val now=Instant.now();val due=Instant.parse(wanted.getString("due"))
-  if(now<due) return@withLock
-  // A delayed OS callback is not permission to notify during quiet hours.
-  if(ReminderRules.afterQuiet(now,settings,ZoneId.systemDefault())!=now) {
-   val next=ReminderRules.afterQuiet(now,settings,ZoneId.systemDefault());wanted.put("due",next.toString());dao.meta(Metadata(KEY,s.toString()));context.getSystemService(AlarmManager::class.java).setAndAllowWhileIdle(AlarmManager.RTC_WAKEUP,next.toEpochMilli(),intent(activityId));return@withLock
+ suspend fun deliver(activityId:String) {
+  mutex.withLock {
+   if(!permissionGranted())return@withLock
+   val s=state();if(!decode(s).enabled)return@withLock
+   val wanted=s.getJSONObject("scheduled").optJSONObject(activityId) ?: return@withLock
+   val now=Instant.now(clock);val due=Instant.parse(wanted.getString("due"))
+   if(now<due)return@withLock
+   val p=candidates(dao.observe().first(),now).firstOrNull{it.id==activityId && it.due.toString()==wanted.getString("scheduled_at")}
+   // Quiet/very late callbacks are dropped, not shifted into a burst. Morning is the overview.
+   s.getJSONObject("scheduled").remove(activityId);s.getJSONObject("snoozes").remove(activityId)
+   if(p==null || now.epochSecond-due.epochSecond>7200 || ReminderRules.afterQuiet(now,decode(s),PlanDomain.zone)!=now){dao.meta(Metadata(KEY,s.toString()));return@withLock}
+   val manager=context.getSystemService(NotificationManager::class.java);manager.createNotificationChannel(NotificationChannel(CHANNEL,"Weasel reminders",NotificationManager.IMPORTANCE_DEFAULT))
+   val open=PendingIntent.getActivity(context,0,Intent(context,MainActivity::class.java).setData(Uri.parse("euros://activity/"+Uri.encode(p.destination))).putExtra("activity_id",p.destination).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP),PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE)
+   val joke=ReminderCopyCache(context,dao).joke(p)
+   val copy=p.facts+(joke?.let{" $it"} ?: "")
+   val builder=Notification.Builder(context,CHANNEL).setSmallIcon(android.R.drawable.ic_menu_edit).setContentTitle(p.title).setContentText(copy).setStyle(Notification.BigTextStyle().bigText(copy)).setContentIntent(open).setAutoCancel(true).addAction(Notification.Action.Builder(null,"Open",open).build())
+   for(minutes in listOf(30)) {
+    val snooze=PendingIntent.getBroadcast(context,0,Intent(context,ReminderReceiver::class.java).setAction("euros.snooze").setData(Uri.parse("euros://snooze/$minutes/"+Uri.encode(activityId))).putExtra("activity_id",activityId).putExtra("minutes",minutes),PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE)
+    builder.addAction(Notification.Action.Builder(null,"Snooze $minutes min",snooze).build())
+   }
+   val choose=PendingIntent.getActivity(context,0,Intent(context,MainActivity::class.java).setData(Uri.parse("euros://snooze-picker/"+Uri.encode(activityId))).putExtra("activity_id","@snooze:$activityId").addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP),PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE)
+   builder.addAction(Notification.Action.Builder(null,"Snooze…",choose).build())
+   manager.notify(activityId,0,builder.build())
+   val delivered=s.optJSONObject("delivered") ?: JSONObject();delivered.put(activityId,p.due.toString());s.put("delivered",delivered);val contexts=s.optJSONObject("delivered_context") ?: JSONObject();contexts.put(activityId,p.contextKey);s.put("delivered_context",contexts);dao.meta(Metadata(KEY,s.toString()))
   }
-  val manager=context.getSystemService(NotificationManager::class.java);manager.createNotificationChannel(NotificationChannel(CHANNEL,"Activity check-ins",NotificationManager.IMPORTANCE_DEFAULT))
-  val open=PendingIntent.getActivity(context,0,Intent(context,MainActivity::class.java).setData(Uri.parse("euros://activity/"+Uri.encode(activityId))).putExtra("activity_id",activityId).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP),PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE)
-  val snooze=PendingIntent.getBroadcast(context,0,Intent(context,ReminderReceiver::class.java).setAction("euros.snooze").setData(Uri.parse("euros://snooze/"+Uri.encode(activityId))).putExtra("activity_id",activityId),PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE)
-  val notification=Notification.Builder(context,CHANNEL).setSmallIcon(android.R.drawable.ic_menu_edit).setContentTitle(p.optString("title")).setContentText("Log this activity").setContentIntent(open).setAutoCancel(true).addAction(Notification.Action.Builder(null,"Log",open).build()).addAction(Notification.Action.Builder(null,"Snooze 30 min",snooze).build()).build()
-  manager.notify(activityId,0,notification)
-  val delivered=s.optJSONObject("delivered") ?: JSONObject();delivered.put(activityId,p.getString("scheduled_at"));s.put("delivered",delivered)
-  s.getJSONObject("scheduled").remove(activityId);s.getJSONObject("snoozes").remove(activityId);dao.meta(Metadata(KEY,s.toString()))
+  reconcile(dao.observe().first())
  }
+
 }
 class ReminderReceiver:BroadcastReceiver() {
  override fun onReceive(context:Context,intent:Intent) {
   val pending=goAsync();CoroutineScope(Dispatchers.IO).launch {
    try { val dao=(context.applicationContext as EurosApplication).repository.dao;val scheduler=ReminderScheduler(context,dao)
     val id=intent.getStringExtra("activity_id")
-    when { intent.action=="euros.snooze" && id!=null -> scheduler.snooze(id,30); intent.action=="euros.reminder" && id!=null -> scheduler.deliver(id);else -> scheduler.reconcile(dao.observe().first()) }
+    when { intent.action=="euros.snooze" && id!=null -> scheduler.snooze(id,intent.getIntExtra("minutes",30)); intent.action=="euros.reminder" && id!=null -> scheduler.deliver(id);else -> scheduler.reconcile(dao.observe().first()) }
    } catch(_:Exception) { /* Retry reconciliation on the next foreground run; never log record content. */ } finally { pending.finish() }
   }
  }

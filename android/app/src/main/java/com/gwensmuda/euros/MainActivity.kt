@@ -29,7 +29,7 @@ class EurosApplication:android.app.Application() {
  val connection by lazy { SyncConnection(repository,SecureEnrollmentStore(this),BackgroundSync(this),reconcile={
   ReminderScheduler(this,repository.dao).reconcile(repository.dao.recordsIncludingDeleted().filter{!it.deleted})
  }) }
- private val applicationScope=kotlinx.coroutines.CoroutineScope(kotlinx.coroutines.SupervisorJob()+Dispatchers.IO)
+ internal val applicationScope=kotlinx.coroutines.CoroutineScope(kotlinx.coroutines.SupervisorJob()+Dispatchers.IO)
  val weekTracker by lazy { WeekTrackerCache(repository.dao.observeMeta(HealthImport.KEY),applicationScope) }
  override fun onCreate(){super.onCreate();weekTracker;applicationScope.launch {
   connection.initialize()
@@ -69,6 +69,8 @@ class MainActivity:ComponentActivity() {
  var openFoodEntry by remember { mutableStateOf(false) }
  var foodActivity by remember { mutableStateOf<String?>(null) }
  var error by remember { mutableStateOf<String?>(null) }
+ var snoozeId by remember{mutableStateOf<String?>(null)}
+ val reminderScope=rememberCoroutineScope()
  val context=LocalContext.current
  val authoredPlan=remember(context){AuthoredPlan(context)}
  val reminders=remember(context){ReminderScheduler(context,repo.dao)}
@@ -82,8 +84,18 @@ class MainActivity:ComponentActivity() {
   catch(e:kotlinx.coroutines.CancellationException){throw e}
   catch(_:Exception){error="Couldn't load the plan. Reopen Euros to retry."}
  }
- LaunchedEffect(records){try{reminders.reconcile(records)}catch(e:kotlinx.coroutines.CancellationException){throw e}catch(_:Exception){error="Couldn't update reminders"}}
- LaunchedEffect(notificationId){if(notificationId!=null){selected=notificationId;settings=false;review=false;onNotificationHandled()}}
+ val localReminderInputs by repo.dao.observeMeta(HealthImport.KEY).collectAsState(initial=null)
+ val dismissedReminderMeals by repo.dao.observeMeta("dismissed_meals:$today").collectAsState(initial=null)
+ LaunchedEffect(records,localReminderInputs,dismissedReminderMeals,today){try{reminders.reconcile(records)}catch(e:kotlinx.coroutines.CancellationException){throw e}catch(_:Exception){error="Couldn't update reminders"}}
+ LaunchedEffect(notificationId){if(notificationId!=null){selected=null;settings=false;review=false;when(notificationId){"@today"->tab=RootTab.Today;"@food"->{tab=RootTab.Food;foodDate=today.toString();openFoodEntry=true};"@review"->{tab=RootTab.Week;week=today.with(java.time.DayOfWeek.MONDAY).toString();review=true};else->if(notificationId.startsWith("@snooze:"))snoozeId=notificationId.removePrefix("@snooze:") else selected=notificationId};onNotificationHandled()}}
+ snoozeId?.let{id->
+  var chosen by remember(id){mutableStateOf(java.time.LocalTime.now(PlanDomain.zone).plusMinutes(30).withSecond(0).withNano(0).toString())}
+  fun snooze(until:java.time.Instant){reminderScope.launch{try{reminders.snoozeUntil(id,until);snoozeId=null}catch(e:Exception){error=e.message}}}
+  AlertDialog(onDismissRequest={snoozeId=null},title={Text("Snooze")},text={Column {
+   Row{listOf(10,30,60).forEach{minutes->TextButton(onClick={snooze(java.time.Instant.now().plusSeconds(minutes*60L))}){Text("${minutes}m")}}}
+   TimePickerField(chosen,{chosen=it})
+  }},confirmButton={TextButton(onClick={val now=java.time.ZonedDateTime.now(PlanDomain.zone);var target=now.toLocalDate().atTime(java.time.LocalTime.parse(chosen)).atZone(PlanDomain.zone);if(!target.isAfter(now))target=target.plusDays(1);snooze(target.toInstant())}){Text("Snooze")}},dismissButton={TextButton(onClick={snoozeId=null}){Text("Cancel")}})
+ }
  val detail=records.find { it.type=="activities" && it.id==selected }
  fun open(record:Record){selected=record.id}
  fun food(activity:String?=null){foodDate=today.toString();foodActivity=activity;selected=null;tab=RootTab.Food;openFoodEntry=true}
@@ -130,7 +142,7 @@ class MainActivity:ComponentActivity() {
     else -> {
      if(!foodEditor) PageTitle(tab,today,LocalDate.parse(week),foodDay,mascotPose)
      when(tab) {
-      RootTab.Today -> {TodayContent(records,authoredPlan.day(today,records),::open,{foodDate=today.toString();foodActivity=null;openFoodEntry=false;tab=RootTab.Food});MovementCard(repo,today)}
+      RootTab.Today -> {TodayContent(records,authoredPlan.day(today,records),::open,{foodDate=today.toString();foodActivity=null;openFoodEntry=false;tab=RootTab.Food},repo,onMealLog={food()});MovementCard(repo,today)}
       RootTab.Week -> {
        Row(Modifier.fillMaxWidth(),horizontalArrangement=Arrangement.SpaceBetween){IconButton(onClick={week=LocalDate.parse(week).minusWeeks(1).toString()}){Icon(Icons.Outlined.ChevronLeft,"Previous week")};TextButton(onClick={week=today.with(java.time.DayOfWeek.MONDAY).toString()}){Text("This week")};IconButton(onClick={week=LocalDate.parse(week).plusWeeks(1).toString()}){Icon(Icons.Outlined.ChevronRight,"Next week")}}
        WeekContent(records,authoredPlan,LocalDate.parse(week),::open,{review=true},repo,{importedId=it})

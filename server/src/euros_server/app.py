@@ -19,6 +19,7 @@ from .domain import DomainError, Store
 from .llm import ModelService
 from .tracker import TrackerStore
 from .security import BodyLimit, LimitedProvider
+from .reminder_copy import ReminderCopyService
 
 
 def load_token(name):
@@ -57,6 +58,7 @@ class TokenGate:
 def create_app(store, api_token, mcp_token, public_hosts=(), model_service=None):
     models = model_service or ModelService.from_environment()
     models.provider = LimitedProvider(models.provider, store)
+    reminder_copy_service = ReminderCopyService(models,store)
     trackers = TrackerStore(store)
     if len(api_token) < 32 or len(mcp_token) < 32 or api_token == mcp_token:
         raise ValueError("Separate app and MCP tokens of at least 32 characters are required")
@@ -189,6 +191,9 @@ def create_app(store, api_token, mcp_token, public_hosts=(), model_service=None)
     async def interpret_food(request):
         return JSONResponse(await models.food(await read_json(request, 40000)))
 
+    async def reminder_copy(request):
+        return JSONResponse(await reminder_copy_service.copy(await read_json(request, 16384)))
+
     async def review_week(request):
         return JSONResponse(await models.week(await read_json(request, 1048576)))
 
@@ -220,6 +225,7 @@ def create_app(store, api_token, mcp_token, public_hosts=(), model_service=None)
                             Route("/v1/tracker/workouts", tracker_workouts),
                             Route("/v1/interpret/food", interpret_food, methods=["POST"]),
                             Route("/v1/review/week", review_week, methods=["POST"]),
+                            Route("/v1/reminders/copy", reminder_copy, methods=["POST"]),
                             Route("/v1/nutrition", nutrition), Mount("/", mcp.streamable_http_app())],
                     lifespan=lifespan, exception_handlers={DomainError: domain_error})
     app.state.mcp = mcp

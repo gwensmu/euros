@@ -106,10 +106,10 @@ class OpenAIProvider:
         body = {"model": model, "instructions": instructions,
                 "input": [{"role": "user", "content": canonical(data)}],
                 "text": {"format": {"type": "json_schema", "name": name, "strict": True, "schema": schema}},
-                "reasoning": {"effort": reasoning}, "max_output_tokens": 4096 if name == "food_draft" else 8192,
+                "reasoning": {"effort": reasoning}, "max_output_tokens": 512 if name == "reminder_copy" else 4096 if name == "food_draft" else 8192,
                 "store": False}
         try:
-            timeout = 60 if name == "food_draft" else 120
+            timeout = 20 if name == "reminder_copy" else 60 if name == "food_draft" else 120
             async with asyncio.timeout(timeout):
                 async with httpx.AsyncClient(timeout=httpx.Timeout(timeout, connect=10), transport=self.transport) as client:
                     response = await client.post("https://api.openai.com/v1/responses", json=body,
