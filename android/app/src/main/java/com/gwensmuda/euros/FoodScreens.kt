@@ -222,7 +222,7 @@ import java.time.format.DateTimeFormatter
    HorizontalDivider(color=MaterialTheme.colorScheme.outlineVariant)
    Row(horizontalArrangement=Arrangement.spacedBy(8.dp)) {
     OutlinedTextField(current.dateInput,{update(current.copy(dateInput=it))},label={Text("Date · YYYY-MM-DD")},singleLine=true,enabled=!busy,modifier=Modifier.weight(1f),isError=errors.containsKey("time"))
-    OutlinedTextField(current.timeInput,{update(current.copy(timeInput=it))},label={Text("Time · HH:mm")},singleLine=true,enabled=!busy,modifier=Modifier.weight(1f),isError=errors.containsKey("time"))
+    TimePickerField(current.timeInput,{update(current.copy(timeInput=it))},enabled=!busy,modifier=Modifier.weight(1f))
    }
    errors["time"]?.let{Text(it,color=MaterialTheme.colorScheme.error)}
    FoodNumberField("Quantity · g",current.grams,errors["grams"],!busy){update(current.copy(grams=it,quantityExplicit=it.isNotBlank()))}

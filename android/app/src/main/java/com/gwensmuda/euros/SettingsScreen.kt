@@ -76,7 +76,7 @@ import java.time.LocalTime
 
 @Composable internal fun SettingsTimeRow(label:String,value:String,onChange:(String)->Unit) {
  val context=LocalContext.current
- SettingsRow(label,value.ifBlank{"Off"}) {
+ SettingsRow(label,TimeDisplay.label(value).ifBlank{"Off"}) {
   val time=runCatching{LocalTime.parse(value)}.getOrDefault(LocalTime.now())
   TimePickerDialog(context,{_,hour,minute->onChange(LocalTime.of(hour,minute).toString())},time.hour,time.minute,false).show()
  }

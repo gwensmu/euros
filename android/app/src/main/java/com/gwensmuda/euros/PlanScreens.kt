@@ -154,7 +154,7 @@ object PlanDisplay {
  var error by remember{mutableStateOf<String?>(null)};var busy by remember{mutableStateOf(false)};val scope=rememberCoroutineScope()
  AlertDialog(onDismissRequest=onClose,title={Text("Move session")},text={Column(verticalArrangement=Arrangement.spacedBy(12.dp)){
   OutlinedTextField(date,{date=it},label={Text("Date · YYYY-MM-DD")},singleLine=true)
-  OutlinedTextField(time,{time=it},label={Text("Time · HH:mm")},singleLine=true)
+  TimePickerField(time,{time=it})
   error?.let{Text(it,color=MaterialTheme.colorScheme.error)}
  }},confirmButton={TextButton(enabled=!busy,onClick={scope.launch{busy=true;try{repo.move(record,PlanDomain.moveTimestamp(date,time));onClose()}catch(e:Exception){error=e.message}finally{busy=false}}}){Text("Move")}},dismissButton={TextButton(onClick=onClose){Text("Cancel")}})
 }

@@ -96,6 +96,8 @@ Collapsed groups summarize the plan and list imported workouts by name and a con
 
 Opening Week or returning from another tab must retain already loaded workout names and intensity labels. Read the locally persisted tracker snapshot without waiting for network sync; derive summaries once per changed snapshot off the UI thread, retain them across navigation, and update them when imports, corrections, deletions or workout links change. Do not reset the list to empty and rebuild every heart-rate recap on each visit. Cold launch may briefly load local data; tab switching should reuse it.
 
+Time controls use 12-hour display with explicit AM/PM, including session Move, food-entry details, and reminder settings. Tapping the time opens a 12-hour picker; cancelling preserves the current value. Confirming selects the time in the current form; moving a session still requires its Move action, and food changes still require saving the entry. Store unambiguous local time and retain the date/time-zone rules, including midnight and noon.
+
 Moving a session retains its identity and outcome history. Move unfinished attached recovery steps by the same intended offset once; preserve completed step timing. Do not invent additional sessions as debt.
 
 Put **Weekly wrap-up** here, not on Today or a separate history screen.
