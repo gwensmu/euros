@@ -117,29 +117,28 @@ object PlanDisplay {
  } else if(items.isEmpty()) Text("No activities scheduled",style=MaterialTheme.typography.bodyMedium,color=Color.Gray)
 }
 @Composable fun WeekContent(records:List<Record>,authoredPlan:AuthoredPlan,week:LocalDate,onOpen:(Record)->Unit,onWrapUp:()->Unit,repo:Repository,onImported:(String)->Unit) {
- val context=LocalContext.current;val health=remember{HealthImport(context,repo.dao)}
- var imported by remember(week){mutableStateOf<List<ImportedSession>>(emptyList())}
- var recaps by remember(week){mutableStateOf<Map<String,SessionRecap>>(emptyMap())}
+ val app=LocalContext.current.applicationContext as EurosApplication
+ val tracker by app.weekTracker.state.collectAsState()
+ val imported=remember(tracker,week){tracker.filter{val date=it.session.start.atZone(PlanDomain.zone).toLocalDate();date>=week && date<week.plusWeeks(1)}}
  var expanded by rememberSaveable(week.toString()){mutableStateOf<String?>(PlanDisplay.initialExpanded(week,LocalDate.now(PlanDomain.zone)))}
- LaunchedEffect(week){val linked=health.linkedActivities().values.toSet();val sessions=health.sessions(week,week.plusDays(6)).filter{it.sourceKey !in linked};recaps=sessions.mapNotNull{session->health.recapForKey(session.sourceKey)?.let{session.sourceKey to it}}.toMap();imported=sessions}
  Column {
   for(offset in 0L..6L) {
    val date=week.plusDays(offset);val open=expanded==date.toString()
    val activities=authoredPlan.day(date,records).activities.map{it.record}
-   val sessions=imported.filter{it.start.atZone(PlanDomain.zone).toLocalDate()==date}
+   val sessions=imported.filter{it.session.start.atZone(PlanDomain.zone).toLocalDate()==date}
    Row(Modifier.fillMaxWidth().semantics{stateDescription=if(open)"Expanded" else "Collapsed"}.clickable{expanded=if(open)null else date.toString()}.padding(vertical=17.dp),verticalAlignment=Alignment.CenterVertically){
     Text(date.dayOfMonth.toString(),Modifier.width(40.dp),style=MaterialTheme.typography.headlineSmall,color=if(date==LocalDate.now(PlanDomain.zone))Accent else MaterialTheme.colorScheme.onSurfaceVariant)
     Column(Modifier.weight(1f),verticalArrangement=Arrangement.spacedBy(4.dp)){
      Text(date.format(DateTimeFormatter.ofPattern("EEEE")),style=MaterialTheme.typography.titleSmall,fontWeight=FontWeight.SemiBold)
      if(activities.isNotEmpty()) Text(PlanDisplay.daySummary(activities),style=MaterialTheme.typography.bodySmall,color=MaterialTheme.colorScheme.onSurfaceVariant)
-     sessions.forEach{session->Text(PlanDisplay.trackerSummary(session,recaps[session.sourceKey]),style=MaterialTheme.typography.bodySmall,color=MaterialTheme.colorScheme.onSurfaceVariant)}
+     sessions.forEach{item->Text(item.label,style=MaterialTheme.typography.bodySmall,color=MaterialTheme.colorScheme.onSurfaceVariant)}
      if(activities.isEmpty() && sessions.isEmpty())Text("No activities",style=MaterialTheme.typography.bodySmall,color=MaterialTheme.colorScheme.onSurfaceVariant)
     }
     Icon(if(open)Icons.Outlined.ExpandLess else Icons.Outlined.ExpandMore,if(open)"Collapse ${date.dayOfWeek}" else "Expand ${date.dayOfWeek}",modifier=Modifier.size(20.dp))
    }
    if(open) Column(Modifier.padding(start=12.dp,bottom=10.dp)) {
     activities.forEach{activity->PlanRow(activity,records,onOpen);PlanDomain.children(activity,records).forEach{step->PlanRow(step,records,onOpen)}}
-    sessions.forEach{session->Row(Modifier.fillMaxWidth().clickable{onImported(session.sourceKey)}.padding(vertical=14.dp),verticalAlignment=Alignment.CenterVertically){
+    sessions.forEach{item->val session=item.session;Row(Modifier.fillMaxWidth().clickable{onImported(session.sourceKey)}.padding(vertical=14.dp),verticalAlignment=Alignment.CenterVertically){
      ActivityGlyph("bjj");Spacer(Modifier.width(12.dp));Column(Modifier.weight(1f)){Text(PlanDisplay.trackerName(session.sourcePackage,session.exerciseType),style=MaterialTheme.typography.titleSmall);Text("${session.start.atZone(PlanDomain.zone).format(DateTimeFormatter.ofPattern("h:mm a"))} · ${Duration.between(session.start,session.end).toMinutes()} min",style=MaterialTheme.typography.bodySmall)};Icon(Icons.Filled.CheckCircle,"Imported workout",tint=Accent)
     }}
    }

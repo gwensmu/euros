@@ -30,7 +30,8 @@ class EurosApplication:android.app.Application() {
   ReminderScheduler(this,repository.dao).reconcile(repository.dao.recordsIncludingDeleted().filter{!it.deleted})
  }) }
  private val applicationScope=kotlinx.coroutines.CoroutineScope(kotlinx.coroutines.SupervisorJob()+Dispatchers.IO)
- override fun onCreate(){super.onCreate();applicationScope.launch {
+ val weekTracker by lazy { WeekTrackerCache(repository.dao.observeMeta(HealthImport.KEY),applicationScope) }
+ override fun onCreate(){super.onCreate();weekTracker;applicationScope.launch {
   connection.initialize()
   val trigger=PendingSyncTrigger()
   repository.dao.observePending().collect { if(trigger.changed(it))connection.request() }

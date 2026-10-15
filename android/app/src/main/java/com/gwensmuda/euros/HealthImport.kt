@@ -80,18 +80,7 @@ class HealthImport(private val context:Context,private val dao:EurosDao) {
   buildRecap(s,key)
  }
  suspend fun recapForKey(sourceKey:String):SessionRecap?=mutex.withLock {buildRecap(state(),sourceKey)}
- private fun buildRecap(s:JSONObject,key:String):SessionRecap? {
-  val records=s.getJSONObject("records");val raw=records.optJSONObject(key) ?: return null
-  if(raw.optString("kind")!="exercise" || raw.optString("source")!=HealthSources.POLAR) return null
-  val session=session(key,raw)
-  val samples=mutableListOf<HeartSample>()
-  if(!session.deleted) records.keys().asSequence().toList().sortedWith(compareBy<String>{records.getJSONObject(it).optString("modified_at")}.thenBy{it}).forEach { id -> val r=records.getJSONObject(id)
-   if(r.optString("kind")=="heart_rate" && r.optString("source")==session.sourcePackage && !r.optBoolean("deleted")) {
-    val values=r.getJSONArray("samples");for(i in 0 until values.length()) { val item=values.getJSONObject(i);val at=Instant.parse(item.getString("time"));if(at>=session.start && at<=session.end) samples.add(HeartSample(at,item.getLong("bpm"))) }
-   }
-  }
-  return HeartRateZones.recap(session,samples)
- }
+ private fun buildRecap(s:JSONObject,key:String)=HealthRecaps.buildRecap(s,key)
  suspend fun sessions(startDate:LocalDate,endDate:LocalDate):List<ImportedSession> = mutex.withLock {
   require(!endDate.isBefore(startDate))
   val records=state().getJSONObject("records")
@@ -119,7 +108,7 @@ class HealthImport(private val context:Context,private val dao:EurosDao) {
  }
  private fun requestPublish(){(context.applicationContext as? EurosApplication)?.connection?.request()}
  suspend fun clearImports()=mutex.withLock { dao.removeMeta(KEY) }
- private fun session(key:String,r:JSONObject)=ImportedSession(key,r.getString("source"),Instant.parse(r.getString("start")),Instant.parse(r.getString("end")),r.getInt("exercise_type"),r.optBoolean("deleted"))
+ private fun session(key:String,r:JSONObject)=HealthRecaps.session(key,r)
 }
 object HealthSnapshots {
  // Caller orders records oldest correction first. A newer same-source sample replaces its timestamp.
@@ -174,4 +163,21 @@ object HealthSnapshotStorage {
    while(n!=-1){require(output.size()+n<=50_000_000){"Imported snapshot exceeds local limit"};output.write(buffer,0,n);n=stream.read(buffer)};output.toByteArray()}
   return JSONObject(String(bytes,Charsets.UTF_8))
  }
+}
+
+/** Pure local projection, also used by the shared Week cache. */
+object HealthRecaps {
+ fun buildRecap(s:JSONObject,key:String):SessionRecap? {
+  val records=s.getJSONObject("records");val raw=records.optJSONObject(key) ?: return null
+  if(raw.optString("kind")!="exercise" || raw.optString("source")!=HealthSources.POLAR) return null
+  val session=session(key,raw)
+  val samples=mutableListOf<HeartSample>()
+  if(!session.deleted) records.keys().asSequence().toList().sortedWith(compareBy<String>{records.getJSONObject(it).optString("modified_at")}.thenBy{it}).forEach { id -> val r=records.getJSONObject(id)
+   if(r.optString("kind")=="heart_rate" && r.optString("source")==session.sourcePackage && !r.optBoolean("deleted")) {
+    val values=r.getJSONArray("samples");for(i in 0 until values.length()) { val item=values.getJSONObject(i);val at=Instant.parse(item.getString("time"));if(at>=session.start && at<=session.end) samples.add(HeartSample(at,item.getLong("bpm"))) }
+   }
+  }
+  return HeartRateZones.recap(session,samples)
+ }
+ fun session(key:String,r:JSONObject)=ImportedSession(key,r.getString("source"),Instant.parse(r.getString("start")),Instant.parse(r.getString("end")),r.getInt("exercise_type"),r.optBoolean("deleted"))
 }
