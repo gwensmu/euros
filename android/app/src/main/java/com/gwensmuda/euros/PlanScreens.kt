@@ -54,6 +54,12 @@ object PlanDisplay {
  }.joinToString(" · ")
  fun daySummary(records:List<Record>):String=records.joinToString(" · "){PlanDomain.payload(it).optString("title")}.ifBlank{"No activities"}
  fun initialExpanded(week:LocalDate,today:LocalDate):String=(if(today>=week && today<week.plusWeeks(1))today else week).toString()
+ fun trackerSummary(session:ImportedSession,recap:SessionRecap?):String {
+  val name=trackerName(session.sourcePackage,session.exerciseType)
+  val average=recap?.averageBpm ?: return "$name · HR unavailable"
+  val highMinutes=(recap.zones.drop(4).sum()/60).toInt()
+  return "$name · ${kotlin.math.round(average).toInt()} bpm avg · $highMinutes min Z4+"
+ }
  fun trackerName(source:String,exerciseType:Int?=null)=when{source=="fi.polar.polarflow" && exerciseType==androidx.health.connect.client.records.ExerciseSessionRecord.EXERCISE_TYPE_MARTIAL_ARTS->"BJJ";source.contains("polar",true)->"Polar workout";source.contains("fitbit",true)->"Fitbit workout";else->"Tracker workout"}
 }
 @Composable private fun ActivityGlyph(kind:String) {
@@ -106,8 +112,9 @@ object PlanDisplay {
 @Composable fun WeekContent(records:List<Record>,authoredPlan:AuthoredPlan,week:LocalDate,onOpen:(Record)->Unit,onWrapUp:()->Unit,repo:Repository,onImported:(String)->Unit) {
  val context=LocalContext.current;val health=remember{HealthImport(context,repo.dao)}
  var imported by remember(week){mutableStateOf<List<ImportedSession>>(emptyList())}
+ var recaps by remember(week){mutableStateOf<Map<String,SessionRecap>>(emptyMap())}
  var expanded by rememberSaveable(week.toString()){mutableStateOf<String?>(PlanDisplay.initialExpanded(week,LocalDate.now(PlanDomain.zone)))}
- LaunchedEffect(week){val linked=health.linkedActivities().values.toSet();imported=health.sessions(week,week.plusDays(6)).filter{it.sourceKey !in linked}}
+ LaunchedEffect(week){val linked=health.linkedActivities().values.toSet();val sessions=health.sessions(week,week.plusDays(6)).filter{it.sourceKey !in linked};recaps=sessions.mapNotNull{session->health.recapForKey(session.sourceKey)?.let{session.sourceKey to it}}.toMap();imported=sessions}
  Column {
   for(offset in 0L..6L) {
    val date=week.plusDays(offset);val open=expanded==date.toString()
@@ -117,7 +124,9 @@ object PlanDisplay {
     Text(date.dayOfMonth.toString(),Modifier.width(40.dp),style=MaterialTheme.typography.headlineSmall,color=if(date==LocalDate.now(PlanDomain.zone))Accent else MaterialTheme.colorScheme.onSurfaceVariant)
     Column(Modifier.weight(1f),verticalArrangement=Arrangement.spacedBy(4.dp)){
      Text(date.format(DateTimeFormatter.ofPattern("EEEE")),style=MaterialTheme.typography.titleSmall,fontWeight=FontWeight.SemiBold)
-     Text(if(activities.isEmpty() && sessions.isNotEmpty())"${sessions.size} tracker workout${if(sessions.size==1)"" else "s"}" else PlanDisplay.daySummary(activities),style=MaterialTheme.typography.bodySmall,color=MaterialTheme.colorScheme.onSurfaceVariant)
+     if(activities.isNotEmpty()) Text(PlanDisplay.daySummary(activities),style=MaterialTheme.typography.bodySmall,color=MaterialTheme.colorScheme.onSurfaceVariant)
+     sessions.forEach{session->Text(PlanDisplay.trackerSummary(session,recaps[session.sourceKey]),style=MaterialTheme.typography.bodySmall,color=MaterialTheme.colorScheme.onSurfaceVariant)}
+     if(activities.isEmpty() && sessions.isEmpty())Text("No activities",style=MaterialTheme.typography.bodySmall,color=MaterialTheme.colorScheme.onSurfaceVariant)
     }
     Icon(if(open)Icons.Outlined.ExpandLess else Icons.Outlined.ExpandMore,if(open)"Collapse ${date.dayOfWeek}" else "Expand ${date.dayOfWeek}",modifier=Modifier.size(20.dp))
    }

@@ -27,6 +27,13 @@ class PlanPresentationTest {
   assertEquals("Polar workout",PlanDisplay.trackerName("fi.polar.polarflow"))
   assertEquals("Tracker workout",PlanDisplay.trackerName("other.app"))
  }
+ @Test fun trackerSummaryUsesMeasuredIntensityAndUnknownHr() {
+  val start=java.time.Instant.parse("2026-10-14T12:00:00Z")
+  val session=ImportedSession("polar",HealthSources.POLAR,start,start.plusSeconds(600),44)
+  assertEquals("BJJ · HR unavailable",PlanDisplay.trackerSummary(session,null))
+  val recap=SessionRecap(session,emptyList(),300.0,128.6,172,listOf(0.0,0.0,60.0,120.0,60.0,30.0,30.0))
+  assertEquals("BJJ · 129 bpm avg · 2 min Z4+",PlanDisplay.trackerSummary(session,recap))
+ }
  private fun weight(id:String,day:String,anchor:String?,value:String="164.2",deleted:Boolean=false)=Record("weight_entries",id,1,JSONObject().put("measured_at","${day}T08:00:00-05:00").put("weight_lb",value).apply{if(anchor!=null)put("weekly_anchor",anchor)}.toString(),deleted)
  @Test fun weeklyGraphUsesOnlyLatestTwoSelectedMeasurementsNotFutureOrExtraReadings() {
   val records=listOf(weight("old","2026-10-04","2026-09-28"),weight("previous","2026-10-11","2026-10-05"),weight("selected","2026-10-18","2026-10-12"),weight("extra","2026-10-17",null),weight("future","2026-10-25","2026-10-19"),weight("deleted","2026-10-18","2026-10-12",deleted=true))
