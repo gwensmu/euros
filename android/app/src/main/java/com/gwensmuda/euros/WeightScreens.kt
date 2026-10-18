@@ -1,5 +1,7 @@
 package com.gwensmuda.euros
 
+import androidx.compose.foundation.text.selection.SelectionContainer
+
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -133,6 +135,7 @@ object WeightDisplay {
   }
  }
  response?.let { review ->
+  SelectionContainer { Column(verticalArrangement=Arrangement.spacedBy(16.dp)) {
   Text(review.getString("summary"))
   val adjustments=review.getJSONArray("adjustments")
   if(adjustments.length()>0) {
@@ -143,6 +146,7 @@ object WeightDisplay {
   HorizontalDivider(color=Color(0xFFDCE3EF))
   Text("${coverage.getInt("unlogged_activity_count")} activities without a complete log · ${coverage.getInt("food_days")} of ${coverage.getInt("covered_days")} days with food entries",style=MaterialTheme.typography.bodySmall,color=Color.Gray)
  }
+ } }
  error?.let{Text(it,color=MaterialTheme.colorScheme.error)}
  if(!loadingCache && !generating) TextButton(onClick={attempt++}){Text(if(error!=null) "Retry" else if(response!=null) "Refresh wrap-up" else "Generate wrap-up")}
 }

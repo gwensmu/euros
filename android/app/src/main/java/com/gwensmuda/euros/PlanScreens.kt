@@ -104,6 +104,7 @@ object PlanDisplay {
 @Composable fun TodayContent(records:List<Record>,dayPlan:DayPlan,onOpen:(Record)->Unit,onFood:()->Unit,repo:Repository,onMealLog:()->Unit=onFood) {
  val items=dayPlan.activities.map{it.record};val next=dayPlan.next?.record ?: PlanDisplay.nextHomeActivity(records,dayPlan.date)
  FoodSummaryBar(records,dayPlan.date,dayPlan.nutrition,onFood)
+ HomeHealthSync(repo)
  if(next!=null) {
   Surface(color=Color(0xFFEDF3FF),shape=RoundedCornerShape(8.dp),modifier=Modifier.fillMaxWidth()) {
    Column(Modifier.padding(horizontal=18.dp,vertical=14.dp)) {
@@ -257,7 +258,7 @@ object PlanDisplay {
   TextButton(onClick={scope.launch{service.unlink(record.id);recap=null}}){Text("Unlink workout")}
  } ?: Text("No linked workout",color=Color.Gray)
  TextButton(onClick={scope.launch{try{candidates=service.candidates(record);choosing=true}catch(e:Exception){error=e.message}}}){Text("Choose workout")}
- if(choosing){if(candidates.isEmpty())Text("No workouts found. Refresh Health Connect in Settings.") else candidates.forEach{candidate->OutlinedButton(onClick={scope.launch{try{service.link(record.id,candidate.sourceKey);recap=service.recap(record.id);choosing=false}catch(e:Exception){error=e.message}}}){Text("${candidate.start.atZone(PlanDomain.zone).format(DateTimeFormatter.ofPattern("EEE h:mm a"))} · ${Duration.between(candidate.start,candidate.end).toMinutes()} min · ${if(candidate.sourcePackage.contains("polar"))"Polar" else if(candidate.sourcePackage=="com.fitbit.FitbitMobile")"Fitbit" else candidate.sourcePackage}")}}}
+ if(choosing){if(candidates.isEmpty())Text("No workouts found. Sync Health Connect from Today.") else candidates.forEach{candidate->OutlinedButton(onClick={scope.launch{try{service.link(record.id,candidate.sourceKey);recap=service.recap(record.id);choosing=false}catch(e:Exception){error=e.message}}}){Text("${candidate.start.atZone(PlanDomain.zone).format(DateTimeFormatter.ofPattern("EEE h:mm a"))} · ${Duration.between(candidate.start,candidate.end).toMinutes()} min · ${if(candidate.sourcePackage.contains("polar"))"Polar" else if(candidate.sourcePackage=="com.fitbit.FitbitMobile")"Fitbit" else candidate.sourcePackage}")}}}
  error?.let{Text(it,color=MaterialTheme.colorScheme.error)}
 }
 

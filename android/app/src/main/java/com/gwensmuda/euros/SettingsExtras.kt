@@ -18,7 +18,7 @@ import kotlinx.coroutines.launch
  val reminders=remember{ReminderScheduler(context,repo.dao)};val health=remember{HealthImport(context,repo.dao)}
  var settings by remember{mutableStateOf(ReminderSettings())};var quietStart by remember{mutableStateOf("")};var quietEnd by remember{mutableStateOf("")}
  var archive by remember{mutableStateOf<org.json.JSONObject?>(null)}
- var status by remember{mutableStateOf<String?>(null)};var busy by remember{mutableStateOf(false)};var includeHealth by remember{mutableStateOf(false)};var confirmRemoval by remember{mutableStateOf(false)}
+ var status by remember{mutableStateOf<String?>(null)};var includeHealth by remember{mutableStateOf(false)};var confirmRemoval by remember{mutableStateOf(false)}
  LaunchedEffect(Unit){settings=reminders.settings();quietStart=settings.quietStart ?: "";quietEnd=settings.quietEnd ?: ""}
  val permission=rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()){granted->scope.launch{settings=settings.copy(enabled=granted);reminders.saveSettings(settings);reminders.reconcile(records);if(!granted)status="Notifications are off"}}
  val export=rememberLauncherForActivityResult(ActivityResultContracts.CreateDocument("application/json")){uri->if(uri!=null)scope.launch{try{ExportService(context,repo.dao).write(uri,includeHealth);status="Export saved"}catch(_:Exception){status="Couldn't save export"}}}
@@ -26,7 +26,6 @@ import kotlinx.coroutines.launch
  archive?.let{data->AlertDialog(onDismissRequest={archive=null},title={Text("Restore backup?")},text={Text("${data.getJSONArray("records").length()} records · ${data.optJSONObject("local_state")?.length() ?: 0} local settings${if(data.has("health_imports") && data.getInt("schema_version")==2) " · tracker snapshot" else ""}. Existing data stays unchanged. New records queue for sync. Reconnect and grant permissions on a new phone; reminders stay off when restored.")},confirmButton={TextButton(onClick={scope.launch{try{val result=repo.restoreArchive(data);status="${result.imported} records and ${result.localImported} local items restored · ${result.skipped + result.localSkipped} kept unchanged";archive=null}catch(e:Exception){status=e.message;archive=null}}}){Text("Restore")}},dismissButton={TextButton(onClick={archive=null}){Text("Cancel")}})}
  if(section=="Health Connect") {
  DeviceSettings()
- TextButton(enabled=!busy,onClick={scope.launch{busy=true;try{val now=java.time.Instant.now();val result=health.refreshFrom(maxOf(HealthSources.requestedStart(),now.minus(java.time.Duration.ofDays(30))),now);status=if(result.messages.isEmpty()) "Tracker records refreshed" else result.messages.joinToString(" · ")}catch(e:Exception){status=e.message ?: "Couldn't refresh trackers"}finally{busy=false}}}){Text(if(busy)"Refreshing…" else "Refresh Health Connect")}
  TextButton(onClick={confirmRemoval=true}){Text("Remove local tracker data")}
  if(confirmRemoval)AlertDialog(onDismissRequest={confirmRemoval=false},title={Text("Remove local tracker data?")},text={Text("Manual logs and shared workout copies stay in Euros. Refresh can import tracker data on this phone again.")},confirmButton={TextButton(onClick={scope.launch{health.clearImports();confirmRemoval=false;status="Imported data removed"}}){Text("Remove")}},dismissButton={TextButton(onClick={confirmRemoval=false}){Text("Cancel")}})
  }
