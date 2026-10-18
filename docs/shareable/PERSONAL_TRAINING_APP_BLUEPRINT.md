@@ -146,7 +146,7 @@ Hydration is an action such as “12–20 oz of water,” personalized to the ow
 
 Weight entry is an explicit observation with unit, time and optional context. Allow manual entry or selection of an eligible imported measured weight. Profile settings on a tracker are not measured body weight. Prevent duplicate imported selections. Support correction/deletion and a selected weekly observation.
 
-Weekly wrap-up: graphical observed weight trend/delta, a concise AI narrative based on logged days, and read-only considerations for the next week. Put missing-day/logging coverage in a footnote, not throughout the summary. Show dates and gaps; do not manufacture trend points.
+Weekly wrap-up: graphical observed weight trend/delta, a coaching synthesis of what the logged week suggests about preparation for the configured goal, and read-only considerations for the next week. Put missing-day/logging coverage in a footnote, not throughout the summary. Show dates and gaps; do not manufacture trend points.
 
 No “what would you change” form, Save Plan, Ask Follow-up, or chat interface. Suggestions never modify the plan or targets. The owner discusses changes with their external AI. Cache generated text for its input snapshot and regenerate when relevant data changes. A week without evidence should say so without calling a model to invent a narrative.
 
@@ -391,3 +391,10 @@ Deterministic code builds factual conversational sentences and owns eligibility/
 The home activity card is titled Today, Tomorrow, or the scheduled weekday. Once today's activities are resolved, show the next unresolved future activity; do not call an unlogged earlier activity a missed task. Keep the meal card titled Next meal.
 
 Each planned meal includes the configured water action (the source owner's choice is 12–20 oz of water); this is a reminder, not a measured consumption record. It appears in meal details and the next-meal card without changing nutrient totals. With notifications enabled, remind at each remaining meal's planned time. Combine with a morning/food/Sunday notification at exactly the same time instead of duplicating alerts. Dismissing or explicitly fulfilling the meal cancels its water prompt. Respect quiet hours; don't invent a time for untimed meals. Water notification Open leads to the food overview, not an amount form. No water volume logger, automatic food entry or hydration completion is created. Existing recovery hydration remains its own explicit action.
+
+
+### Weekly coaching synthesis — October 18
+
+The weekly wrap-up interprets the logged week in relation to the configured competition goal, rather than listing completed activities. Lead with the most useful implication, explain its evidence and tradeoff, and offer up to three concrete considerations with reasons. Connect training mix, spacing and explicit recovery observations when supported; completion does not prove fitness, skill gains, fatigue or readiness. Keep coverage gaps in the footnote and do not compare partial food totals to daily targets. Sparse evidence warrants a shorter synthesis, not invented conclusions. Goal/date and strength preferences are recipient configuration, not universal prescriptions.
+
+Generate creates a read-only result; Refresh wrap-up requests a replacement while preserving the displayed valid result on failure. Retry is available after failure. No plan changes, chat or additional logging form. Cache format changes invalidate older recap-style results. Current inputs include activity categories/completion, recovery steps, recorded food subtotals and weights; raw tracker HR, subjective effort and prior-week training comparisons are not yet included.

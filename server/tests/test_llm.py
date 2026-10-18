@@ -192,3 +192,13 @@ def test_mixed_recovery_never_implies_all_steps_done(states,status,unlogged):
     assert facts["logged_activities"][0]["status"]==status
     assert coverage["unlogged_activity_count"]==unlogged
     assert facts["logged_activities"][0]["steps"]["done"]==states.count("done")
+
+
+def test_coaching_goal_context_is_anchored_to_review_week():
+    facts, _ = weekly_facts({"week_start": "2026-10-12", "records": [activity(status="done")]}, date(2026, 10, 18))
+    context = facts["goal_context"]
+    assert context["planning_date"] == "2027-01-13"
+    assert context["days_to_planning_date"] == 87
+    later, _ = weekly_facts({"week_start": "2026-10-12", "records": [activity(status="done")]}, date(2026, 11, 1))
+    assert later["goal_context"] == context
+    assert set(facts["logged_activities"][0]) == {"record_id", "date", "kind", "status"}

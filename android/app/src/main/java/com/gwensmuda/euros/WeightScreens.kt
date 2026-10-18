@@ -144,5 +144,5 @@ object WeightDisplay {
   Text("${coverage.getInt("unlogged_activity_count")} activities without a complete log · ${coverage.getInt("food_days")} of ${coverage.getInt("covered_days")} days with food entries",style=MaterialTheme.typography.bodySmall,color=Color.Gray)
  }
  error?.let{Text(it,color=MaterialTheme.colorScheme.error)}
- if(!loadingCache && !generating && response==null) TextButton(onClick={attempt++}){Text(if(error==null) "Generate wrap-up" else "Retry")}
+ if(!loadingCache && !generating) TextButton(onClick={attempt++}){Text(if(error!=null) "Retry" else if(response!=null) "Refresh wrap-up" else "Generate wrap-up")}
 }

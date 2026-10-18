@@ -6,7 +6,7 @@ import java.time.LocalDate
 
 /** Cache only exact input snapshots; cached prose never stands in for changed records. */
 object WeeklyReviewCache {
- private const val VERSION=2
+ private const val VERSION=3
  fun canGenerate(week:LocalDate,today:LocalDate)=week<=today
  fun errorMessage(error:Exception):String {
   val safe=setOf("Connect to your server in Settings to continue","Connection authorization failed. Reconnect in Settings","The model isn't configured on your server yet","Too many requests. Try again shortly","The model couldn't finish. Try again","The server is temporarily unavailable. Try again")

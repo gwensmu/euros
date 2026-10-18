@@ -74,6 +74,16 @@ class WeeklyReviewScreenTest {
   waitFor("Two sessions completed.")
   Assert.assertEquals(2,calls);assertReadOnly()
  }
+ @Test fun failedRefreshPreservesValidSummaryAndCache() {
+  generate();waitFor("Two sessions completed.")
+  val saved=runBlocking{repo.dao.meta(WeeklyReviewCache.key(week))}
+  fail=true
+  compose.onNodeWithText("Refresh wrap-up").performScrollTo().performClick()
+  waitFor("Retry")
+  compose.onNodeWithText("Two sessions completed.").assertExists()
+  Assert.assertEquals(saved,runBlocking{repo.dao.meta(WeeklyReviewCache.key(week))})
+  Assert.assertEquals(2,calls);assertReadOnly()
+ }
  @Test fun futureWeekShowsEmptyStateWithoutProviderCall() {
   compose.runOnIdle {week=LocalDate.now(PlanDomain.zone).plusWeeks(2)}
   waitFor("No logs for this week yet")
