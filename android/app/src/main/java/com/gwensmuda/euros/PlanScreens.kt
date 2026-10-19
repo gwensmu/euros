@@ -104,7 +104,6 @@ object PlanDisplay {
 @Composable fun TodayContent(records:List<Record>,dayPlan:DayPlan,onOpen:(Record)->Unit,onFood:()->Unit,repo:Repository,onMealLog:()->Unit=onFood) {
  val items=dayPlan.activities.map{it.record};val next=dayPlan.next?.record ?: PlanDisplay.nextHomeActivity(records,dayPlan.date)
  FoodSummaryBar(records,dayPlan.date,dayPlan.nutrition,onFood)
- HomeHealthSync(repo)
  if(next!=null) {
   Surface(color=Color(0xFFEDF3FF),shape=RoundedCornerShape(8.dp),modifier=Modifier.fillMaxWidth()) {
    Column(Modifier.padding(horizontal=18.dp,vertical=14.dp)) {

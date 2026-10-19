@@ -150,7 +150,7 @@ Weekly wrap-up: graphical observed weight trend/delta, a coaching synthesis of w
 
 No “what would you change” form, Save Plan, Ask Follow-up, or chat interface. Suggestions never modify the plan or targets. The owner discusses changes with their external AI. Cache generated text for its input snapshot and regenerate when relevant data changes. A week without evidence should say so without calling a model to invent a narrative.
 
-Home exposes a direct **Sync Health Connect** action below the nutrition bar. It reads permitted tracker data, shows progress, prevents repeat taps during a read, and reports success or permission/failure guidance inline. Permission/source management and data removal remain in Settings. A refresh does not complete planned activities. Weekly wrap-up prose and its coverage footnote support native text selection and Copy.
+Home exposes an icon-only **Sync Health Connect** action beside the Settings gear, without an outline. It reads permitted tracker data, shows progress, prevents repeat taps during a read, and reports success or permission/failure guidance in a snackbar. Permission/source management and data removal remain in Settings. A refresh does not complete planned activities. Weekly wrap-up prose and its coverage footnote support native text selection and Copy.
 
 ### Settings and reminders
 

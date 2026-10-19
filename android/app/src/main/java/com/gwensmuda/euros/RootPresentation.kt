@@ -41,10 +41,13 @@ fun weekTitle(start:LocalDate):String {
  }
 }
 
-@Composable internal fun EurosHeader(onSettings:()->Unit) {
+@Composable internal fun EurosHeader(actions:@Composable ()->Unit={},onSettings:()->Unit) {
  Row(Modifier.fillMaxWidth().padding(horizontal=22.dp,vertical=8.dp),verticalAlignment=Alignment.CenterVertically,horizontalArrangement=Arrangement.SpaceBetween) {
     Text("EUROS / 27",color=Color.White,letterSpacing=2.sp,style=MaterialTheme.typography.labelMedium,modifier=Modifier.background(EurosColors.Ink).padding(horizontal=10.dp,vertical=6.dp))
-    OutlinedIconButton(onClick=onSettings,shape=MaterialTheme.shapes.small,border=BorderStroke(1.dp,EurosColors.Line)){Icon(Icons.Outlined.Settings,"Settings",Modifier.size(20.dp))}
+    Row(verticalAlignment=Alignment.CenterVertically){
+     actions()
+     IconButton(onClick=onSettings){Icon(Icons.Outlined.Settings,"Settings",Modifier.size(20.dp))}
+    }
    }
  HorizontalDivider(thickness=2.dp,color=Color(0xFF73A8FF))
 }

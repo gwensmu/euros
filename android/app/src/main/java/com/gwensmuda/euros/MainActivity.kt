@@ -129,9 +129,10 @@ class MainActivity:ComponentActivity() {
  val mascotPose=if(pleased)MascotPose.PLEASED else mascotState.pose
  val pageScroll=rememberScrollState()
  LaunchedEffect(tab,selected,settings,review,importedId,foodEditor){pageScroll.scrollTo(0)}
- Scaffold(containerColor=Color.White,bottomBar={if(!focused) EurosNavigation(tab){tab=it}}) { padding ->
+ val snackbar=remember{SnackbarHostState()}
+ Scaffold(snackbarHost={SnackbarHost(snackbar)},containerColor=Color.White,bottomBar={if(!focused) EurosNavigation(tab){tab=it}}) { padding ->
   Column(Modifier.fillMaxSize().padding(padding).imePadding()) {
-   if(!focused) EurosHeader {settings=true}
+   if(!focused) EurosHeader(actions={if(tab==RootTab.Today)HomeHealthSync(repo,snackbar)}) {settings=true}
    Column(Modifier.fillMaxSize().verticalScroll(pageScroll).padding(horizontal=22.dp,vertical=18.dp),verticalArrangement=Arrangement.spacedBy(16.dp)) {
    when {
     settings -> SettingsScreen(repo,pending,records,onClose={settings=false})
