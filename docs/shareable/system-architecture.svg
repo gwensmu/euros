@@ -13,11 +13,11 @@
 <text x="500" y="151" text-anchor="middle" class="head">Public HTTPS tunnel</text><text x="500" y="180" text-anchor="middle" class="small">Authenticated access</text><text x="500" y="201" text-anchor="middle" class="small">to the local backend</text>
 <path d="M320 165H370" class="edge"/><path d="M630 165H680" class="edge"/>
 <text x="335" y="110" class="label">App API</text><text x="632" y="110" class="label">MCP</text>
-<rect x="35" y="255" width="285" height="65" rx="10" class="box"/><text x="55" y="281">Tracker / platform health data</text><text x="55" y="304" class="small">Permissioned import on the phone</text><path d="M177 255V220" class="one"/>
+<rect x="35" y="255" width="285" height="65" rx="10" class="box"/><text x="55" y="281">Tracker / platform health data</text><text x="55" y="304" class="small">Foreground + permissioned background reads</text><path d="M177 255V220" class="one"/>
 <rect x="95" y="360" width="810" height="325" rx="16" fill="#f5f7fa" stroke="#d9e0e9" stroke-width="1.5"/>
 <text x="120" y="390" class="head">Always-on local computer</text><text x="120" y="414" class="small">Backend service — technology and hosting tools chosen by the builder</text>
 <rect x="140" y="445" width="240" height="65" rx="10" class="box"/><text x="260" y="472" text-anchor="middle" class="head">Mobile app API</text><text x="260" y="496" text-anchor="middle" class="small">Sync, tracker uploads, AI requests</text>
-<rect x="620" y="445" width="240" height="65" rx="10" class="box"/><text x="740" y="472" text-anchor="middle" class="head">MCP server interface</text><text x="740" y="496" text-anchor="middle" class="small">Reads, proposals, explicit edits</text>
+<rect x="620" y="445" width="240" height="65" rx="10" class="box"/><text x="740" y="472" text-anchor="middle" class="head">MCP server interface</text><text x="740" y="496" text-anchor="middle" class="small">Templates · previews · explicit edits</text>
 <path d="M445 220V340H110V432H260V445" class="edge"/><path d="M555 220V340H890V432H740V445" class="edge"/>
 <text x="650" y="269" class="small">Same backend,</text><text x="650" y="290" class="small">separate entry points</text>
 <rect x="350" y="540" width="300" height="65" rx="10" class="blue"/><text x="500" y="567" text-anchor="middle" class="head">Shared application rules</text><text x="500" y="591" text-anchor="middle" class="small">Validation · revisions · request limits</text>

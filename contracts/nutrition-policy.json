@@ -8,7 +8,7 @@
     "baselineDate": null,
     "selectedGoalLb": 155,
     "maintenanceRangeLb": null,
-    "transition": "logged_weight_at_or_below",
+    "transition": "seven_consecutive_daily_average_at_or_below",
     "transitionEnabledFrom": "2026-10-15"
   },
   "nutrition": {
@@ -27,6 +27,35 @@
       "fatG": {
         "min": 50,
         "max": 53
+      }
+    },
+    "effectiveFrom": "2026-10-22",
+    "maintenanceAddKcal": 200,
+    "maintenanceAddCarbohydrateG": 50,
+    "tiers": {
+      "recovery": {
+        "kcal": 1850,
+        "proteinG": 135,
+        "carbohydrateG": 165,
+        "fatG": 72
+      },
+      "lifting": {
+        "kcal": 2050,
+        "proteinG": 135,
+        "carbohydrateG": 220,
+        "fatG": 70
+      },
+      "bjj": {
+        "kcal": 2300,
+        "proteinG": 135,
+        "carbohydrateG": 305,
+        "fatG": 60
+      },
+      "double": {
+        "kcal": 2550,
+        "proteinG": 135,
+        "carbohydrateG": 370,
+        "fatG": 59
       }
     }
   }

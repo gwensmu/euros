@@ -15,7 +15,7 @@ object RecordValidation {
   when(type) {
    "activities" -> {
     require(p.optString("title").isNotBlank()) { "Title required" }
-    require(p.optString("kind") in setOf("bjj","weights","food","recovery","morning","weight","rest")) { "Invalid activity" }
+    require(p.optString("kind") in setOf("bjj","weights","food","recovery","morning","weight","rest","prep")) { "Invalid activity" }
     java.time.OffsetDateTime.parse(p.getString("scheduled_at"))
     require(p.optString("status") in setOf("pending","done","skipped"))
     val intake=p.optJSONObject("recovery_intake")

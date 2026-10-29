@@ -23,4 +23,13 @@ class NutritionPolicyTest {
   assertNotNull(NutritionPolicy.maintenanceStart(plan,listOf(weight("2026-10-18","154.9")),today))
   assertNull(NutritionPolicy.maintenanceStart(plan,listOf(weight("2026-10-18","159.4")),today))
  }
+ @Test fun sevenDailyWeightsRequiredAndCorrectionsRecompute() {
+  val now=LocalDate.parse("2026-10-29")
+  val weights=(22..28).map{weight("2026-10-$it","155")}
+  assertNull(NutritionPolicy.maintenanceStart(plan,weights.dropLast(1),now))
+  assertEquals(LocalDate.parse("2026-10-28"),NutritionPolicy.maintenanceStart(plan,weights+weight("2026-10-29","160"),now))
+  assertEquals(2050,NutritionPolicy.targets(plan,weights,now,now)!!.getInt("kcal"))
+  assertNull(NutritionPolicy.maintenanceStart(plan,weights.filterIndexed{i,_->i!=2},now))
+  assertNull(NutritionPolicy.maintenanceStart(plan,List(7){weight("2026-10-22","154")},now))
+ }
 }

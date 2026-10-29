@@ -55,7 +55,29 @@ class HealthImport(private val context:Context,private val dao:EurosDao) {
   read(ExerciseSessionRecord::class,"exercise") { r -> JSONObject().put("start",r.startTime.toString()).put("end",r.endTime.toString()).put("start_offset",r.startZoneOffset?.toString() ?: JSONObject.NULL).put("end_offset",r.endZoneOffset?.toString() ?: JSONObject.NULL).put("exercise_type",r.exerciseType).put("title",r.title ?: JSONObject.NULL) }
   read(HeartRateRecord::class,"heart_rate") { r -> JSONObject().put("start",r.startTime.toString()).put("end",r.endTime.toString()).put("samples",JSONArray().apply{r.samples.forEach{put(JSONObject().put("time",it.time.toString()).put("bpm",it.beatsPerMinute))}}) }
   read(WeightRecord::class,"weight") { r -> JSONObject().put("start",r.time.toString()).put("end",r.time.toString()).put("weight_lb",r.weight.inPounds).put("original_kg",r.weight.inKilograms).put("zone_offset",r.zoneOffset?.toString() ?: JSONObject.NULL) }
-  current.put("refreshed_at",end.toString());dao.meta(Metadata(KEY,HealthSnapshotStorage.encode(current)));requestPublish()
+  current.put("refreshed_at",end.toString());dao.meta(Metadata(KEY,HealthSnapshotStorage.encode(current)))
+  // Explicitly observed scale measurements, never profile weights. Preserve manual overrides/tombstones.
+  val repo=(context.applicationContext as? EurosApplication)?.repository
+  if(repo!=null) {
+   val observed=current.getJSONObject("records")
+   for(key in observed.keys()) {
+    val r=observed.getJSONObject(key)
+    if(r.optString("kind")!="weight")continue
+    val existing=dao.recordsIncludingDeleted().firstOrNull{it.type=="weight_entries" && JSONObject(it.payload).optString("source_key")==key}
+    if(existing?.deleted==true || existing?.let{JSONObject(it.payload).optBoolean("manual_override")}==true)continue
+    if(r.optBoolean("deleted")) {
+     if(existing!=null && JSONObject(existing.payload).optBoolean("auto_imported"))repo.delete(existing.type,existing.id,expectedPayload=existing.payload)
+    } else if(HealthSources.isObservedWeight(r) && !Instant.parse(r.getString("start")).isAfter(end)) {
+     val at=Instant.parse(r.getString("start")).atZone(PlanDomain.zone).toOffsetDateTime()
+     if(at.toLocalDate()<LocalDate.parse("2026-10-22"))continue
+     val payload=PlanDomain.weightPayload(java.math.BigDecimal.valueOf(r.getDouble("weight_lb")).setScale(3,java.math.RoundingMode.HALF_UP).toPlainString(),at,"tracker")
+      .put("source_key",key).put("source_weight_lb",r.get("weight_lb")).put("original_kg",r.get("original_kg")).put("auto_imported",true)
+     if(existing!=null && !JSONObject(existing.payload).optBoolean("auto_imported"))continue
+     if(existing==null || existing.payload!=payload.toString())repo.saveWeight(existing?.id ?: "scale-"+java.util.UUID.nameUUIDFromBytes(key.toByteArray()),payload,expectedPayload=existing?.payload)
+    }
+   }
+  }
+  requestPublish()
   val records=current.getJSONObject("records");val live=records.keys().asSequence().map{records.getJSONObject(it)}.filter{!it.optBoolean("deleted")}.toList()
   HealthImportSummary(live.count{it.getString("kind")=="exercise"},live.count{it.getString("kind")=="heart_rate"},messages,live.count{it.getString("kind")=="weight"})
  }

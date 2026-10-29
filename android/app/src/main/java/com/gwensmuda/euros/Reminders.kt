@@ -111,6 +111,8 @@ class ReminderScheduler(private val context:Context,private val dao:EurosDao,pri
   context.getSystemService(NotificationManager::class.java).cancel(activityId,0);reconcile(dao.observe().first())
  }
  suspend fun deliver(activityId:String) {
+  if(activityId.startsWith("weight:"))kotlinx.coroutines.withTimeoutOrNull(6000){HealthBackground.refresh(context,true)}
+
   mutex.withLock {
    if(!permissionGranted())return@withLock
    val s=state();if(!decode(s).enabled)return@withLock
@@ -125,7 +127,7 @@ class ReminderScheduler(private val context:Context,private val dao:EurosDao,pri
    val open=PendingIntent.getActivity(context,0,Intent(context,MainActivity::class.java).setData(Uri.parse("euros://activity/"+Uri.encode(p.destination))).putExtra("activity_id",p.destination).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP),PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE)
    val joke=ReminderCopyCache(context,dao).joke(p)
    val copy=p.facts+(joke?.let{" $it"} ?: "")
-   val builder=Notification.Builder(context,CHANNEL).setSmallIcon(android.R.drawable.ic_menu_edit).setContentTitle(p.title).setContentText(copy).setStyle(Notification.BigTextStyle().bigText(copy)).setContentIntent(open).setAutoCancel(true).addAction(Notification.Action.Builder(null,"Open",open).build())
+   val builder=Notification.Builder(context,CHANNEL).setSmallIcon(R.drawable.ic_notification_weasel).setContentTitle(p.title).setContentText(copy).setStyle(Notification.BigTextStyle().bigText(copy)).setContentIntent(open).setAutoCancel(true).addAction(Notification.Action.Builder(null,"Open",open).build())
    for(minutes in listOf(30)) {
     val snooze=PendingIntent.getBroadcast(context,0,Intent(context,ReminderReceiver::class.java).setAction("euros.snooze").setData(Uri.parse("euros://snooze/$minutes/"+Uri.encode(activityId))).putExtra("activity_id",activityId).putExtra("minutes",minutes),PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE)
     builder.addAction(Notification.Action.Builder(null,"Snooze $minutes min",snooze).build())

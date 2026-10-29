@@ -84,6 +84,7 @@ import java.time.format.DateTimeFormatter
  }
  Column(verticalArrangement=Arrangement.spacedBy(18.dp)) {
   NutritionWidget(FoodDomain.summary(records,date),targets){creating=true;editingId=null;entryActivityId=null}
+  if(FoodDomain.needsMealReview(records,date))Text("Training changed. Ask your agent to adjust this day’s meals.",style=MaterialTheme.typography.bodyMedium)
   key(date) { RemainingMeals(repo,records,date,mealReferences) }
   if(entries.isNotEmpty()) {
    TextButton(onClick={expanded=!expanded},contentPadding=PaddingValues(0.dp)) {
@@ -271,7 +272,7 @@ import java.time.format.DateTimeFormatter
 }
 
 @Composable private fun FoodIconButton(label:String,onClick:()->Unit,enabled:Boolean=true,content:@Composable ()->Unit) {
- Surface(onClick=onClick,enabled=enabled,shape=RoundedCornerShape(8.dp),color=MaterialTheme.colorScheme.surface,contentColor=MaterialTheme.colorScheme.primary,border=BorderStroke(1.dp,MaterialTheme.colorScheme.outlineVariant),modifier=Modifier.size(44.dp).semantics{contentDescription=label}) {
+ Surface(onClick=onClick,enabled=enabled,shape=RoundedCornerShape(12.dp),color=Color(0xFFDFEAFF),contentColor=MaterialTheme.colorScheme.primary,modifier=Modifier.size(44.dp).semantics{contentDescription=label}) {
   Box(contentAlignment=Alignment.Center){content()}
  }
 }

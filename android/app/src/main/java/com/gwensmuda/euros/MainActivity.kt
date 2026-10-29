@@ -33,6 +33,7 @@ class EurosApplication:android.app.Application() {
  val weekTracker by lazy { WeekTrackerCache(repository.dao.observeMeta(HealthImport.KEY),applicationScope) }
  override fun onCreate(){super.onCreate();weekTracker;applicationScope.launch {
   connection.initialize()
+  HealthBackground.schedule(this@EurosApplication)
   val trigger=PendingSyncTrigger()
   repository.dao.observePending().collect { if(trigger.changed(it))connection.request() }
  }}
@@ -40,7 +41,7 @@ class EurosApplication:android.app.Application() {
 class MainActivity:ComponentActivity() {
  private var notificationId by mutableStateOf<String?>(null)
  override fun onStart(){super.onStart();(application as EurosApplication).let { app ->
-  lifecycleScope.launch(Dispatchers.IO){app.connection.initialize();app.connection.request()}
+  lifecycleScope.launch(Dispatchers.IO){app.connection.initialize();app.connection.request();HealthBackground.refresh(app)}
  }}
  override fun onNewIntent(intent:android.content.Intent){super.onNewIntent(intent);setIntent(intent);notificationId=intent.getStringExtra("activity_id")}
  override fun onCreate(savedInstanceState:Bundle?) {
@@ -64,6 +65,7 @@ class MainActivity:ComponentActivity() {
  var selected by rememberSaveable { mutableStateOf<String?>(null) }
  var settings by rememberSaveable { mutableStateOf(false) }
  var importedId by rememberSaveable{mutableStateOf<String?>(null)}
+ var weighing by rememberSaveable{mutableStateOf(false)}
  var review by rememberSaveable { mutableStateOf(false) }
  var foodEditor by remember { mutableStateOf(false) }
  var openFoodEntry by remember { mutableStateOf(false) }
@@ -87,7 +89,7 @@ class MainActivity:ComponentActivity() {
  val localReminderInputs by repo.dao.observeMeta(HealthImport.KEY).collectAsState(initial=null)
  val dismissedReminderMeals by repo.dao.observeMeta("dismissed_meals:$today").collectAsState(initial=null)
  LaunchedEffect(records,localReminderInputs,dismissedReminderMeals,today){try{reminders.reconcile(records)}catch(e:kotlinx.coroutines.CancellationException){throw e}catch(_:Exception){error="Couldn't update reminders"}}
- LaunchedEffect(notificationId){if(notificationId!=null){selected=null;settings=false;review=false;when(notificationId){"@today"->tab=RootTab.Today;"@food-overview"->{tab=RootTab.Food;foodDate=today.toString();openFoodEntry=false};"@food"->{tab=RootTab.Food;foodDate=today.toString();openFoodEntry=true};"@review"->{tab=RootTab.Week;week=today.with(java.time.DayOfWeek.MONDAY).toString();review=true};else->if(notificationId.startsWith("@snooze:"))snoozeId=notificationId.removePrefix("@snooze:") else selected=notificationId};onNotificationHandled()}}
+ LaunchedEffect(notificationId){if(notificationId!=null){selected=null;settings=false;review=false;when(notificationId){"@weight"->{weighing=true;tab=RootTab.Today};"@today"->tab=RootTab.Today;"@food-overview"->{tab=RootTab.Food;foodDate=today.toString();openFoodEntry=false};"@food"->{tab=RootTab.Food;foodDate=today.toString();openFoodEntry=true};"@review"->{tab=RootTab.Week;week=today.with(java.time.DayOfWeek.MONDAY).toString();review=true};else->if(notificationId.startsWith("@snooze:"))snoozeId=notificationId.removePrefix("@snooze:") else selected=notificationId};onNotificationHandled()}}
  snoozeId?.let{id->
   var chosen by remember(id){mutableStateOf(java.time.LocalTime.now(PlanDomain.zone).plusMinutes(30).withSecond(0).withNano(0).toString())}
   fun snooze(until:java.time.Instant){reminderScope.launch{try{reminders.snoozeUntil(id,until);snoozeId=null}catch(e:Exception){error=e.message}}}
@@ -104,8 +106,9 @@ class MainActivity:ComponentActivity() {
   settings=false
   review=false
   importedId=null
+  weighing=false
  }
- val hasOverlay=selected!=null || settings || review || importedId!=null
+ val hasOverlay=selected!=null || settings || review || importedId!=null || weighing
  BackHandler(hasOverlay,::closeOverlay)
  val focused=hasOverlay || foodEditor
  var completionSequence by remember{mutableLongStateOf(0L)}
@@ -130,11 +133,23 @@ class MainActivity:ComponentActivity() {
  val pageScroll=rememberScrollState()
  LaunchedEffect(tab,selected,settings,review,importedId,foodEditor){pageScroll.scrollTo(0)}
  val snackbar=remember{SnackbarHostState()}
+ val actionScope=rememberCoroutineScope()
+ CompositionLocalProvider(LocalExerciseDone provides { record -> actionScope.launch {
+  try {
+   repo.complete(record,"done")
+   val completed=repo.dao.record(record.type,record.id)
+   if(snackbar.showSnackbar("${org.json.JSONObject(record.payload).optString("title")} done","Undo",duration=SnackbarDuration.Short)==SnackbarResult.ActionPerformed && completed!=null) {
+    val restored=org.json.JSONObject(completed.payload).put("status","pending");restored.remove("completed_at")
+    repo.upsert(record.type,record.id,restored,expectedPayload=completed.payload)
+   }
+  } catch(e:Exception){snackbar.showSnackbar(e.message ?: "Couldn't update activity")}
+ } }) {
  Scaffold(snackbarHost={SnackbarHost(snackbar)},containerColor=Color.White,bottomBar={if(!focused) EurosNavigation(tab){tab=it}}) { padding ->
   Column(Modifier.fillMaxSize().padding(padding).imePadding()) {
    if(!focused) EurosHeader(actions={if(tab==RootTab.Today)HomeHealthSync(repo,snackbar)}) {settings=true}
    Column(Modifier.fillMaxSize().verticalScroll(pageScroll).padding(horizontal=22.dp,vertical=18.dp),verticalArrangement=Arrangement.spacedBy(16.dp)) {
    when {
+    weighing -> {Row(Modifier.fillMaxWidth(),horizontalArrangement=Arrangement.SpaceBetween){Text("Weight",style=MaterialTheme.typography.headlineMedium);IconButton(onClick={weighing=false}){Icon(Icons.Outlined.Close,"Close")}};WeightPanel(repo,records,today,onSaved={weighing=false})}
     settings -> SettingsScreen(repo,pending,records,onClose={settings=false})
     importedId!=null -> ImportedWorkoutScreen(importedId!!,repo){importedId=null}
     review -> WeeklyReview(repo,records,LocalDate.parse(week)){review=false}
@@ -159,5 +174,6 @@ class MainActivity:ComponentActivity() {
    error?.let { Text(it,color=MaterialTheme.colorScheme.error);TextButton(onClick={error=null}){Text("Dismiss")} }
    }
   }
+ }
  }
 }

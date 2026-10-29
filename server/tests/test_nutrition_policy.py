@@ -21,3 +21,27 @@ def test_policy_matches_android_authored_config():
     assert plan['nutrition']['daily']==DAILY
     assert plan['nutrition']['maintenance']==MAINTENANCE
     assert plan['goal']['selectedGoalLb']==GOAL_LB
+
+def test_seven_distinct_consecutive_days_and_persistent_transition():
+    records=[weight(f'2026-10-{d}', '155') for d in range(22,29)]
+    assert resolve(records[:-1],'2026-10-28',today='2026-10-28')['mode']=='loss'
+    result=resolve(records+[weight('2026-10-29','160')],'2026-10-29',today='2026-10-29')
+    assert result['maintenance_start']=='2026-10-28'
+    assert result['targets']['kcal']==2050
+    assert resolve(records,'2026-10-27',today='2026-10-29')['mode']=='loss'
+    records[2]['deleted']=True
+    assert resolve(records,'2026-10-29',today='2026-10-29')['mode']=='loss'
+
+def test_daily_reading_not_seven_readings_same_day_or_future():
+    assert resolve([weight('2026-10-22','154') for _ in range(7)],'2026-10-28',today='2026-10-28')['mode']=='loss'
+    records=[weight(f'2026-10-{d}', '154') for d in range(22,29)]
+    assert resolve(records,'2026-10-28',today='2026-10-27')['mode']=='loss'
+
+def test_maintenance_adds_to_saved_tier_without_mutation():
+    from euros_server.nutrition_policy import TIERS
+    records=[weight(f'2026-10-{d}','155') for d in range(22,29)]
+    for name,t in TIERS.items():
+        actual=resolve(records,'2026-11-01',t,today='2026-10-29')['targets']
+        assert actual['kcal']==t['kcal']+200
+        assert actual['proteinG']==135
+        assert actual['carbohydrateG']==t['carbohydrateG']+50

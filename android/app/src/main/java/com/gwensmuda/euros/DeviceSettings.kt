@@ -11,6 +11,9 @@ import kotlinx.coroutines.CancellationException
 @Composable fun DeviceSettings() {
  val context=LocalContext.current
  val scope=rememberCoroutineScope()
+ val repo=(context.applicationContext as EurosApplication).repository
+ val refreshError by repo.dao.observeMeta("health_refresh_error").collectAsState(initial=null)
+ refreshError?.takeIf{it.isNotBlank()}?.let{Text(it,color=MaterialTheme.colorScheme.error)}
  val probe=remember(context){HealthConnectProbe(context)}
  var report by remember { mutableStateOf<HealthProbeReport?>(null) }
  var healthMessage by remember { mutableStateOf<String?>(null) }
@@ -20,6 +23,8 @@ import kotlinx.coroutines.CancellationException
   catch(_:Exception){healthMessage="Couldn't read Health Connect"}
  } }
  val permissions=rememberLauncherForActivityResult(PermissionController.createRequestPermissionResultContract()){inspect()}
+ val background=rememberLauncherForActivityResult(PermissionController.createRequestPermissionResultContract()){scope.launch{HealthBackground.refresh(context,true)};inspect()}
+ if(HealthBackground.available(context))TextButton(onClick={background.launch(setOf(androidx.health.connect.client.permission.HealthPermission.PERMISSION_READ_HEALTH_DATA_IN_BACKGROUND))}){Text("Allow background refresh")}
  Text("Polar Flow",style=MaterialTheme.typography.titleMedium)
  Text("Workouts and heart rate",style=MaterialTheme.typography.bodyMedium)
  Text("Fitbit",style=MaterialTheme.typography.titleMedium)

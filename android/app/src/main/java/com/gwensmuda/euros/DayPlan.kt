@@ -5,7 +5,7 @@ import java.time.LocalDate
 
 /** Typed view of the plan. Record payloads remain immutable historical snapshots. */
 enum class PlanItemKind(val wireName:String) {
- BJJ("bjj"), WEIGHTS("weights"), REST("rest"), RECOVERY("recovery"), FOOD("food"), MORNING("morning"), WEIGHT("weight"), UNKNOWN("");
+ PREP("prep"), BJJ("bjj"), WEIGHTS("weights"), REST("rest"), RECOVERY("recovery"), FOOD("food"), MORNING("morning"), WEIGHT("weight"), UNKNOWN("");
  companion object { fun from(value:String)=entries.firstOrNull{it.wireName==value} ?: UNKNOWN }
 }
 enum class LoggingMode { SESSION, COMPLETION, STEPS, INTAKE, FOOD, WEIGHT, UNSUPPORTED }
@@ -27,7 +27,7 @@ object DayPlanComposer {
    kind==PlanItemKind.RECOVERY && payload.optString("recovery_step_type")=="supplement"->LoggingMode.INTAKE
    else->when(kind) {
     PlanItemKind.BJJ->LoggingMode.SESSION
-    PlanItemKind.WEIGHTS,PlanItemKind.REST,PlanItemKind.RECOVERY,PlanItemKind.MORNING->LoggingMode.COMPLETION
+    PlanItemKind.PREP,PlanItemKind.WEIGHTS,PlanItemKind.REST,PlanItemKind.RECOVERY,PlanItemKind.MORNING->LoggingMode.COMPLETION
     PlanItemKind.FOOD->LoggingMode.FOOD
     PlanItemKind.WEIGHT->LoggingMode.WEIGHT
     PlanItemKind.UNKNOWN->LoggingMode.UNSUPPORTED

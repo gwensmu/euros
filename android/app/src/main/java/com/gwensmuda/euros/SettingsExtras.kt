@@ -30,7 +30,9 @@ import kotlinx.coroutines.launch
  if(confirmRemoval)AlertDialog(onDismissRequest={confirmRemoval=false},title={Text("Remove local tracker data?")},text={Text("Manual logs and shared workout copies stay in Euros. Refresh can import tracker data on this phone again.")},confirmButton={TextButton(onClick={scope.launch{health.clearImports();confirmRemoval=false;status="Imported data removed"}}){Text("Remove")}},dismissButton={TextButton(onClick={confirmRemoval=false}){Text("Cancel")}})
  }
  if(section=="Notifications") {
- Row(Modifier.fillMaxWidth(),horizontalArrangement=Arrangement.SpaceBetween,verticalAlignment=Alignment.CenterVertically){Text("Weasel reminders");Switch(settings.enabled,onCheckedChange={enabled->if(enabled && Build.VERSION.SDK_INT>=33 && !reminders.permissionGranted())permission.launch(Manifest.permission.POST_NOTIFICATIONS) else scope.launch{settings=settings.copy(enabled=enabled);reminders.saveSettings(settings);reminders.reconcile(records)}})}
+ Text(if(settings.enabled && reminders.permissionGranted()) "Notifications enabled" else "Notifications are off")
+ TextButton(onClick={if(Build.VERSION.SDK_INT>=33 && !reminders.permissionGranted())permission.launch(Manifest.permission.POST_NOTIFICATIONS) else scope.launch{settings=settings.copy(enabled=true);reminders.saveSettings(settings);reminders.reconcile(records);status="Notifications enabled"}}){Text("Enable notifications")}
+ TextButton(onClick={context.startActivity(android.content.Intent(android.provider.Settings.ACTION_APP_NOTIFICATION_SETTINGS).putExtra(android.provider.Settings.EXTRA_APP_PACKAGE,context.packageName))}){Text("Android notification settings")}
  SettingsTimeRow("Quiet from",quietStart){quietStart=it}
  SettingsTimeRow("Quiet until",quietEnd){quietEnd=it}
  TextButton(onClick={quietStart="";quietEnd=""}){Text("Clear quiet hours")}

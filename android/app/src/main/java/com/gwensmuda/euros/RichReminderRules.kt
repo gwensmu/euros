@@ -27,7 +27,7 @@ object RichReminderRules {
   if(morningAt.atZone(zone).toLocalDate()==date) {
    val weight=records.any{!it.deleted && it.type=="weight_entries" && JSONObject(it.payload).optString("local_date")==date.toString()}
    val facts=if(sunday) {
-    if(weight) "Your weight is logged. Let's look at this week's training and food logs." else "Sunday weigh-in, then a look at the week. I've got the logs; you bring the number."
+    if(weight) "Your weight is logged. Let's look at this week's training and food logs." else "Let’s look at this week’s training and food logs."
    } else buildList {
     val breakfast=remaining.firstOrNull{it.title.contains("breakfast",true)}
     breakfast?.let{add("For breakfast, the plan is ${it.foods.ifEmpty{listOf(it.title)}.joinToString(", ")}.")}
@@ -39,8 +39,25 @@ object RichReminderRules {
    }.joinToString(" ").ifBlank{"There are no remaining planned activities or meals for today."}
    result.add(RichReminder("${if(sunday)"sunday" else "morning"}:$date",morningAt,if(sunday)"Sunday review" else "Morning plan",facts,if(sunday)"@review" else "@today",if(sunday)"sunday" else "morning"))
   }
+  val weighAt=at("08:30")
+  val hasWeight=records.any{!it.deleted && it.type=="weight_entries" && JSONObject(it.payload).optString("local_date")==date.toString()}
+  if(!hasWeight && ReminderRules.afterQuiet(weighAt,settings,zone)==weighAt)result.add(RichReminder("weight:$date",weighAt,"Morning weigh-in","I don't have a weight reading for today yet. Step on the scale when you have a moment.","@weight","weight"))
+  val bedtime=at("21:30")
+  val recovery=pending.filter { r -> val p=JSONObject(r.payload)
+   val linked=p.optString("linked_session_id");val session=records.firstOrNull{it.id==linked && !it.deleted}
+   (p.optString("kind")=="recovery" || (p.optString("kind") in setOf("rest","morning") && PlanDomain.children(r,records).any{JSONObject(it.payload).optString("kind")=="recovery"})) && java.time.OffsetDateTime.parse(p.getString("scheduled_at")).toInstant()<=bedtime &&
+    (session==null || PlanDomain.status(session)=="done" || ends[linked]?.let{it<=bedtime}==true)
+  }
+  if(recovery.isNotEmpty() && ReminderRules.afterQuiet(bedtime,settings,zone)==bedtime) {
+   val names=recovery.flatMap{r->PlanDomain.children(r,records).filter{!PlanDomain.resolved(it,records)}.map(::title).ifEmpty{listOf(title(r))}}.distinct()
+   result.add(RichReminder("bedtime:$date",bedtime,"Before bed","Still unchecked: ${names.joinToString(", ")}. Open recovery to finish or update them.",recovery.first().id,"bedtime"))
+  }
   for(r in pending) {
    val p=JSONObject(r.payload);val kind=p.optString("kind")
+   if(kind=="prep") {
+    val due=OffsetDateTime.parse(p.getString("scheduled_at")).toInstant()
+    if(ReminderRules.afterQuiet(due,settings,zone)==due)result.add(RichReminder(r.id,due,title(r),p.optJSONObject("prescription")?.optString("instructions") ?: "Time to prepare the next few meals.",r.id,"prep"))
+   }
    if(kind in setOf("bjj","weights")) {
     val due=OffsetDateTime.parse(p.getString("scheduled_at")).toInstant().minusSeconds(3600)
     val yesterday=PlanDomain.onDay(records,date.minusDays(1)).filter{JSONObject(it.payload).optString("kind")==kind}
@@ -67,13 +84,13 @@ object RichReminderRules {
    val mealTime=meal.time?.let{runCatching{LocalTime.parse(it)}.getOrNull()} ?: continue
    val due=date.atTime(mealTime).atZone(zone).toInstant()
    if(ReminderRules.afterQuiet(due,settings,zone)!=due)continue
-   val note="Have ${FoodDomain.MEAL_WATER} with ${meal.title.lowercase(Locale.US)}."
+   val note="${meal.title}: ${meal.foods.filterNot{it.contains("water",true)}.joinToString(", ")}. Have ${FoodDomain.MEAL_WATER}."
    val shared=result.indexOfFirst{it.due==due && it.kind in setOf("morning","sunday","food")}
    if(shared>=0) {
     val existing=result[shared]
     // Morning already includes the meal's water line through its planned foods.
     if(!existing.facts.contains("water",ignoreCase=true))result[shared]=existing.copy(facts=existing.facts+" "+note)
-   } else result.add(RichReminder("water:$date:${meal.id}",due,"Water · ${meal.title}",note,"@food-overview","water"))
+   } else result.add(RichReminder("water:$date:${meal.id}",due,if(meal.id.contains("pre") || meal.title.contains("pre",true))"Eat before training" else meal.title,note,"@food-overview","water"))
   }
   return result
  }

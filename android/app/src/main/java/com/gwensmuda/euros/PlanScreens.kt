@@ -29,6 +29,8 @@ import java.time.*
 import java.time.format.DateTimeFormatter
 import java.util.UUID
 
+val LocalExerciseDone=staticCompositionLocalOf<(Record)->Unit> { {} }
+
 private val Accent=Color(0xFF2563EB)
 fun activityTime(record:Record)=OffsetDateTime.parse(PlanDomain.payload(record).getString("scheduled_at")).atZoneSameInstant(PlanDomain.zone).format(DateTimeFormatter.ofPattern("h:mm a"))
 object PlanDisplay {
@@ -78,23 +80,29 @@ object PlanDisplay {
 }
 @Composable private fun ActivityGlyph(kind:String) {
  Surface(color=Color(0xFFEDF3FF),shape=RoundedCornerShape(9.dp),modifier=Modifier.size(34.dp)) {
-  Box(contentAlignment=Alignment.Center){Icon(when(kind){"weights"->Icons.Outlined.FitnessCenter;"rest","recovery"->Icons.Outlined.Spa;"weight"->Icons.Outlined.MonitorWeight;"food"->Icons.Outlined.Restaurant;else->Icons.Outlined.SportsMartialArts},null,tint=MaterialTheme.colorScheme.onSurface,modifier=Modifier.size(19.dp))}
+  Box(contentAlignment=Alignment.Center){Icon(when(kind){"weights"->Icons.Outlined.FitnessCenter;"rest","recovery"->Icons.Outlined.Spa;"prep"->Icons.Outlined.SoupKitchen;"weight"->Icons.Outlined.MonitorWeight;"food"->Icons.Outlined.Restaurant;else->Icons.Outlined.SportsMartialArts},null,tint=MaterialTheme.colorScheme.onSurface,modifier=Modifier.size(19.dp))}
  }
 }
-@Composable fun PlanRow(record:Record,records:List<Record>,onOpen:(Record)->Unit) {
+@Composable fun PlanRow(record:Record,records:List<Record>,onOpen:(Record)->Unit,repo:Repository?=null) {
  val p=PlanDomain.payload(record);val status=PlanDomain.progress(record,records)
+ val exercise=p.optString("kind") in setOf("bjj","weights")
+ val done=LocalExerciseDone.current
+ var move by remember(record.id){mutableStateOf(false)}
+ if(move && repo!=null)MoveDialog(record,repo){move=false}
  Column(Modifier.fillMaxWidth()) {
   Row(Modifier.fillMaxWidth().clickable{onOpen(record)}.padding(vertical=13.dp),verticalAlignment=Alignment.CenterVertically) {
    ActivityGlyph(p.getString("kind"));Spacer(Modifier.width(12.dp))
    Column(Modifier.weight(1f),verticalArrangement=Arrangement.spacedBy(3.dp)) {
     Text(p.getString("title"),style=MaterialTheme.typography.titleSmall,fontWeight=FontWeight.SemiBold)
-    Text(activityTime(record),style=MaterialTheme.typography.bodySmall,color=MaterialTheme.colorScheme.onSurfaceVariant)
+    Row(verticalAlignment=Alignment.CenterVertically){Text(activityTime(record),style=MaterialTheme.typography.bodySmall,color=MaterialTheme.colorScheme.onSurfaceVariant);if(repo!=null && p.optString("kind") in setOf("bjj","weights","prep"))TextButton(onClick={move=true},contentPadding=PaddingValues(horizontal=8.dp,vertical=0.dp)){Text("Move",style=MaterialTheme.typography.labelSmall)}}
     PlanDisplay.detail(record)?.takeUnless{p.optString("kind")=="rest" && PlanDomain.children(record,records).isNotEmpty()}?.let{Text(it,style=MaterialTheme.typography.bodySmall,color=MaterialTheme.colorScheme.onSurfaceVariant)}
    }
    Spacer(Modifier.width(8.dp))
-   Surface(onClick={onOpen(record)},color=Color(0xFFEDF3FF),shape=RoundedCornerShape(8.dp),border=androidx.compose.foundation.BorderStroke(1.dp,EurosColors.Line),modifier=Modifier.size(48.dp)){
-    Box(contentAlignment=Alignment.Center){
-    Icon(when(status){"done"->Icons.Filled.CheckCircle;"skipped"->Icons.Outlined.RemoveCircleOutline;"partial"->Icons.Outlined.Timelapse;else->Icons.Outlined.Edit},"${if(status=="pending") "Log" else status} ${p.getString("title")}",tint=if(status=="skipped") Color.Gray else Accent,modifier=Modifier.size(20.dp))
+   Surface(onClick={if(exercise && status=="pending") done(record) else onOpen(record)},color=if(exercise && status=="done") EurosColors.Blue else EurosColors.Soft,shape=RoundedCornerShape(12.dp),modifier=Modifier.size(44.dp)) {
+    Box(contentAlignment=Alignment.Center) {
+     Icon(when {status=="skipped"->Icons.Outlined.Remove;exercise->Icons.Outlined.Check;status=="done"->Icons.Outlined.Check;status=="partial"->Icons.Outlined.Timelapse;p.optString("kind")=="prep"->Icons.Outlined.ChevronRight;else->Icons.Outlined.Edit},
+      "${if(exercise && status=="pending") "Mark done" else if(status=="pending") "Open" else status} ${p.getString("title")}",
+      tint=if(exercise && status=="done")Color.White else if(status=="skipped")Color.Gray else Accent,modifier=Modifier.size(if(exercise)21.dp else 19.dp))
     }
    }
   }
@@ -103,14 +111,13 @@ object PlanDisplay {
 }
 @Composable fun TodayContent(records:List<Record>,dayPlan:DayPlan,onOpen:(Record)->Unit,onFood:()->Unit,repo:Repository,onMealLog:()->Unit=onFood) {
  val items=dayPlan.activities.map{it.record};val next=dayPlan.next?.record ?: PlanDisplay.nextHomeActivity(records,dayPlan.date)
- FoodSummaryBar(records,dayPlan.date,dayPlan.nutrition,onFood)
  if(next!=null) {
   Surface(color=Color(0xFFEDF3FF),shape=RoundedCornerShape(8.dp),modifier=Modifier.fillMaxWidth()) {
    Column(Modifier.padding(horizontal=18.dp,vertical=14.dp)) {
     Text(PlanDisplay.dateHeading(PlanDomain.day(next),dayPlan.date),style=MaterialTheme.typography.titleMedium,fontWeight=FontWeight.SemiBold)
     val children=PlanDomain.children(next,records).filter{PlanDomain.status(it)=="pending"}
-    if(children.isNotEmpty()) children.forEach{PlanRow(it,records,onOpen)} else {
-     PlanRow(next,records,onOpen)
+    if(children.isNotEmpty()) children.forEach{PlanRow(it,records,onOpen,repo)} else {
+     PlanRow(next,records,onOpen,repo)
      PlanDisplay.template(next).optJSONArray("exercises")?.let{e->for(i in 0 until e.length()) {val ex=e.getJSONObject(i);Text(ex.getString("name")+PlanDisplay.exercise(ex).takeIf{it.isNotBlank()}?.let{" · $it"}.orEmpty(),style=MaterialTheme.typography.bodySmall,modifier=Modifier.padding(top=7.dp))}}
     }
    }
@@ -125,7 +132,6 @@ object PlanDisplay {
      Text("Next meal",style=MaterialTheme.typography.titleMedium,fontWeight=FontWeight.SemiBold)
      Text(meal.title+meal.time?.let{" · ${TimeDisplay.label(it)}"}.orEmpty(),style=MaterialTheme.typography.bodyMedium)
     }
-    IconButton(onClick=onMealLog){Icon(Icons.Outlined.Edit,"Log food for ${meal.title}",tint=Accent)}
    }
    meal.foods.forEach{Text(it,style=MaterialTheme.typography.bodyMedium)}
   }
@@ -133,7 +139,7 @@ object PlanDisplay {
  val later=items.filter{it.id!=next?.id && !PlanDomain.resolved(it,records)}
  if(later.isNotEmpty()) {
   Text("Later today",style=MaterialTheme.typography.titleMedium,fontWeight=FontWeight.SemiBold)
-  Column {later.forEach{PlanRow(it,records,onOpen)}}
+  Column {later.forEach{PlanRow(it,records,onOpen,repo)}}
  } else if(items.isEmpty() && next==null) Text("No activities scheduled",style=MaterialTheme.typography.bodyMedium,color=Color.Gray)
 }
 @Composable fun WeekContent(records:List<Record>,authoredPlan:AuthoredPlan,week:LocalDate,onOpen:(Record)->Unit,onWrapUp:()->Unit,repo:Repository,onImported:(String)->Unit) {
@@ -157,7 +163,7 @@ object PlanDisplay {
     Icon(if(open)Icons.Outlined.ExpandLess else Icons.Outlined.ExpandMore,if(open)"Collapse ${date.dayOfWeek}" else "Expand ${date.dayOfWeek}",modifier=Modifier.size(20.dp))
    }
    if(open) Column(Modifier.padding(start=12.dp,bottom=10.dp)) {
-    activities.forEach{activity->PlanRow(activity,records,onOpen);PlanDomain.children(activity,records).forEach{step->PlanRow(step,records,onOpen)}}
+    activities.forEach{activity->PlanRow(activity,records,onOpen,repo);PlanDomain.children(activity,records).forEach{step->PlanRow(step,records,onOpen,repo)}}
     sessions.forEach{item->val session=item.session;Row(Modifier.fillMaxWidth().clickable{onImported(session.sourceKey)}.padding(vertical=14.dp),verticalAlignment=Alignment.CenterVertically){
      ActivityGlyph("bjj");Spacer(Modifier.width(12.dp));Column(Modifier.weight(1f)){Text(PlanDisplay.trackerName(session.sourcePackage,session.exerciseType),style=MaterialTheme.typography.titleSmall);Text("${session.start.atZone(PlanDomain.zone).format(DateTimeFormatter.ofPattern("h:mm a"))} · ${Duration.between(session.start,session.end).toMinutes()} min",style=MaterialTheme.typography.bodySmall)};Icon(Icons.Filled.CheckCircle,"Imported workout",tint=Accent)
     }}
@@ -172,11 +178,13 @@ object PlanDisplay {
  var date by rememberSaveable{mutableStateOf(current.toLocalDate().toString())}
  var time by rememberSaveable{mutableStateOf(current.toLocalTime().format(DateTimeFormatter.ofPattern("HH:mm")))}
  var error by remember{mutableStateOf<String?>(null)};var busy by remember{mutableStateOf(false)};val scope=rememberCoroutineScope()
- AlertDialog(onDismissRequest=onClose,title={Text("Move session")},text={Column(verticalArrangement=Arrangement.spacedBy(12.dp)){
+ var moved by remember{mutableStateOf(false)}
+ if(moved){AlertDialog(onDismissRequest=onClose,title={Text("Review meals")},text={Text("The session moved. Ask your agent to adjust meal timing and portions for the affected days.")},confirmButton={TextButton(onClick=onClose){Text("Close")}});return}
+ AlertDialog(onDismissRequest=onClose,title={Text("Move activity")},text={Column(verticalArrangement=Arrangement.spacedBy(12.dp)){
   OutlinedTextField(date,{date=it},label={Text("Date · YYYY-MM-DD")},singleLine=true)
   TimePickerField(time,{time=it})
   error?.let{Text(it,color=MaterialTheme.colorScheme.error)}
- }},confirmButton={TextButton(enabled=!busy,onClick={scope.launch{busy=true;try{repo.move(record,PlanDomain.moveTimestamp(date,time));onClose()}catch(e:Exception){error=e.message}finally{busy=false}}}){Text("Move")}},dismissButton={TextButton(onClick=onClose){Text("Cancel")}})
+ }},confirmButton={TextButton(enabled=!busy,onClick={scope.launch{busy=true;try{repo.move(record,PlanDomain.moveTimestamp(date,time));if(JSONObject(record.payload).optString("kind") in setOf("bjj","weights"))moved=true else onClose()}catch(e:Exception){error=e.message}finally{busy=false}}}){Text("Move")}},dismissButton={TextButton(onClick=onClose){Text("Cancel")}})
 }
 @Composable fun ActivityDetail(record:Record,records:List<Record>,repo:Repository,onClose:()->Unit,onOpen:(Record)->Unit,onFood:()->Unit) {
  val p=PlanDomain.payload(record);val item=DayPlanComposer.item(record,records);val kind=item.kind.wireName;val children=item.steps;val logging=item.logging
@@ -208,7 +216,7 @@ object PlanDisplay {
   Box(Modifier.fillMaxWidth(),contentAlignment=Alignment.Center) {
    Row(Modifier.widthIn(max=360.dp).fillMaxWidth().padding(vertical=4.dp),horizontalArrangement=Arrangement.spacedBy(12.dp)) {
     Button(enabled=!busy,onClick={if(logging==LoggingMode.FOOD)onFood() else finish("done")},modifier=Modifier.weight(1f).heightIn(min=52.dp),shape=RoundedCornerShape(14.dp)) {
-     Text(if(kind in setOf("weights","rest") || p.optString("recovery_step_type")=="hydration")"Done" else "Log")
+     Text(if(kind in setOf("weights","rest","prep") || (kind=="recovery" && logging==LoggingMode.COMPLETION) || p.optString("recovery_step_type")=="hydration")"Done" else "Log")
     }
     OutlinedButton(enabled=!busy,onClick={finish("skipped")},modifier=Modifier.weight(1f).heightIn(min=52.dp),shape=RoundedCornerShape(14.dp)) {
      Text(if(kind=="weights")"Skipped" else "Skip")
@@ -217,12 +225,12 @@ object PlanDisplay {
   }
  }
  if(move) MoveDialog(record,repo){move=false}
- val reminderContext=LocalContext.current
- var reminderEnabled by remember{mutableStateOf(false)}
- LaunchedEffect(record.id){reminderEnabled=ReminderScheduler(reminderContext,repo.dao).settings().enabled}
- if(reminderEnabled && PlanDomain.status(record)=="pending") Row {listOf(10,30,60).forEach{minutes->TextButton(onClick={scope.launch{try{ReminderScheduler(reminderContext,repo.dao).snooze(record.id,minutes)}catch(e:Exception){error=e.message}}}){Text("Snooze ${minutes}m")}}}
  error?.let{Text(it,color=MaterialTheme.colorScheme.error)}
- if(children.isNotEmpty()) children.forEach{PlanRow(it,records,onOpen)}
+ if(kind=="prep")p.optJSONArray("covered_meals")?.let{meals->
+  Text("Meals",style=MaterialTheme.typography.titleMedium)
+  for(i in 0 until meals.length()){val m=meals.getJSONObject(i);Text("${m.getString("date")} · ${TimeDisplay.label(m.getString("localTime"))} · ${m.getString("title")}",style=MaterialTheme.typography.bodyMedium)}
+ }
+ if(children.isNotEmpty()) children.forEach{PlanRow(it,records,onOpen,repo)}
  else if(logging==LoggingMode.WEIGHT) WeightPanel(repo,records,PlanDomain.day(record),record,onClose)
  else {
   val snapshot=p.optJSONObject("plan_snapshot");val template=snapshot?.optJSONObject("template") ?: snapshot

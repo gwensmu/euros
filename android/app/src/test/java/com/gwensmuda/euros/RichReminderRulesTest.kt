@@ -16,7 +16,7 @@ class RichReminderRulesTest {
  @Test fun trainingIsAnHourBeforeAndUnknownNeverMeansSkipped(){val p=plans().single{it.kind=="training"};assertEquals(Instant.parse("2026-10-15T22:30:00Z"),p.due);assertEquals("Comp class is scheduled for Oct 15 at 6:30 PM.",p.facts);assertFalse(p.allowSkipJoke)}
  @Test fun explicitYesterdaySkipMayBeMentionedButLaterCompletionSuppressesIt(){val yesterday=activity("old",status="skipped",day=date.minusDays(1));assertTrue(plans(listOf(yesterday,activity())).single{it.kind=="training"}.allowSkipJoke);assertFalse(plans(listOf(yesterday,activity(),activity("done",status="done"))).single{it.kind=="training"}.allowSkipJoke)}
  @Test fun morningHasActualFoodsAndRestSteps(){val rest=activity(kind="rest");val child=activity("step",kind="recovery"){it.put("parent_id",rest.id).put("title","Breathing")};val p=plans(listOf(rest,child)).single{it.kind=="morning"};assertTrue(p.facts.contains("eggs, toast"));assertTrue(p.facts.contains("Breathing"));assertEquals(0,plans(listOf(rest,child)).count{it.kind=="training"})}
- @Test fun sundayReplacesMorningAndWeightChangesCopy(){val sunday=LocalDate.parse("2026-10-18");val before=plans(emptyList(),day=sunday);assertEquals(0,before.count{it.kind=="morning"});assertTrue(before.single{it.kind=="sunday"}.facts.contains("weigh-in"));val weight=Record("weight_entries","w",1,JSONObject().put("local_date",sunday.toString()).toString());assertTrue(plans(listOf(weight),day=sunday).single{it.kind=="sunday"}.facts.startsWith("Your weight is logged"))}
+ @Test fun sundayReplacesMorningAndWeightChangesCopy(){val sunday=LocalDate.parse("2026-10-18");val before=plans(emptyList(),day=sunday);assertEquals(0,before.count{it.kind=="morning"});assertFalse(before.single{it.kind=="sunday"}.facts.contains("weigh-in"));assertEquals(1,before.count{it.kind=="weight"});val weight=Record("weight_entries","w",1,JSONObject().put("local_date",sunday.toString()).toString());assertTrue(plans(listOf(weight),day=sunday).single{it.kind=="sunday"}.facts.startsWith("Your weight is logged"))}
  @Test fun dismissalRemovesMealWithoutClaimingIntakeAndChangesCacheKey(){val before=plans().single{it.kind=="food"};val after=plans(dismissed=setOf("breakfast")).single{it.kind=="food"};assertTrue(before.facts.contains("Breakfast"));assertFalse(after.facts.contains("Breakfast"));assertNotEquals(before.contextKey,after.contextKey);assertFalse(after.facts.contains("eaten"))}
  @Test fun recoveryRequiresKnownEndAndTrackerWins(){val session=activity();val recovery=activity("recovery",kind="recovery"){it.put("linked_session_id","class")};assertFalse(plans(listOf(session,recovery)).any{it.kind=="recovery"});val end=Instant.parse("2026-10-16T01:00:00Z");assertEquals(end.plusSeconds(900),plans(listOf(session,recovery),ends=mapOf("class" to end)).single{it.kind=="recovery"}.due);val withDuration=activity{it.put("prescription",JSONObject().put("durationMinutes",90))};assertEquals(Instant.parse("2026-10-16T01:15:00Z"),plans(listOf(withDuration,recovery)).single{it.kind=="recovery"}.due)}
  @Test fun completionCancelsTrainingAndRecoveryChildrenCancelRoutine(){assertFalse(plans(listOf(activity(status="done"))).any{it.kind=="training"});val r=activity("recovery",kind="recovery"){it.put("linked_session_id","class")};val child=activity("child",kind="recovery",status="skipped"){it.put("parent_id",r.id)};assertFalse(plans(listOf(activity(),r,child),ends=mapOf("class" to Instant.parse("2026-10-16T01:00:00Z"))).any{it.kind=="recovery"})}
@@ -30,4 +30,26 @@ class RichReminderRulesTest {
   assertFalse(p.facts.contains("yesterday"));assertFalse(p.facts.contains("tonight"))
  }
 
+ @Test fun dailyWeighInUsesEightThirtyAndStopsAfterReading() {
+  assertEquals(date.atTime(8,30).atZone(zone).toInstant(),plans().single{it.kind=="weight"}.due)
+  val w=Record("weight_entries","scale",1,JSONObject().put("local_date",date.toString()).put("weight_lb","159").toString())
+  assertFalse(plans(listOf(w)).any{it.kind=="weight"})
+ }
+ @Test fun bedtimeChecksOnlyUnfinishedRecoveryAfterWorkout() {
+  val r=activity("recovery",kind="recovery"){it.put("linked_session_id","class")}
+  assertFalse(plans(listOf(activity(),r)).any{it.kind=="bedtime"})
+  assertEquals(date.atTime(21,30).atZone(zone).toInstant(),plans(listOf(activity(status="done"),r)).single{it.kind=="bedtime"}.due)
+  val child=activity("child",kind="recovery",status="done"){it.put("parent_id",r.id)}
+  assertFalse(plans(listOf(activity(status="done"),r,child)).any{it.kind=="bedtime"})
+ }
+ @Test fun prepReminderOpensItsActivityAndCompletionSuppressesIt() {
+  val prep=activity("prep",kind="prep")
+  assertEquals("prep",plans(listOf(prep)).single{it.kind=="prep"}.destination)
+  assertFalse(plans(listOf(activity("prep",kind="prep",status="done"))).any{it.kind=="prep"})
+ }
+ @Test fun bedtimeIncludesUnfinishedRestDayRecoverySteps() {
+  val rest=activity("rest",kind="rest")
+  val child=activity("legs",kind="recovery"){it.put("parent_id","rest").put("title","Legs up")}
+  assertTrue(plans(listOf(rest,child)).single{it.kind=="bedtime"}.facts.contains("Legs up"))
+ }
 }

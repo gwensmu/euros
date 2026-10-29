@@ -218,8 +218,22 @@ object FoodDomain {
   if(latest.deleted)return null
   return JSONObject(latest.payload).takeIf{it.optString("date")==date.toString()}
  }
+ fun needsMealReview(records:List<Record>,date:LocalDate):Boolean {
+  val saved=savedMealPlan(records,date) ?: return false
+  val snapshot=saved.optJSONArray("training_snapshot") ?: return false
+  if(saved.optString("training_basis")=="provisional-weekly-pattern")return false
+  fun signature(id:String,p:JSONObject)=listOf(id,p.optString("scheduled_at"),p.optString("kind"),(p.optString("status")=="skipped").toString()).joinToString("|")
+  val expected=(0 until snapshot.length()).map{val p=snapshot.getJSONObject(it);signature(p.getString("id"),p)}.toSet()
+  val actual=PlanDomain.onDay(records,date).filter{JSONObject(it.payload).optString("kind") in setOf("bjj","weights")}.map{signature(it.id,JSONObject(it.payload))}.toSet()
+  return expected!=actual
+ }
  fun mealReferences(plan:JSONObject,date:LocalDate?=null,records:List<Record> = emptyList()):List<FoodMealReference> {
-  val dated=date?.let{savedMealPlan(records,it)?.optJSONArray("meals")}
+  val dated=date?.let { day ->
+   val saved=savedMealPlan(records,day)
+   val start=NutritionPolicy.maintenanceStart(plan,records)
+   val maintenance=start!=null && start<=LocalDate.now(PlanDomain.zone) && day>=start && day>=NutritionPolicy.effective
+   (if(maintenance)saved?.optJSONArray("maintenance_meals") else null) ?: saved?.optJSONArray("meals")
+  }
   val references=dated ?: plan.optJSONArray("mealTargets") ?: JSONArray()
   return (0 until references.length()).map { index -> val item=references.getJSONObject(index)
    val foods=item.optJSONArray("foods")

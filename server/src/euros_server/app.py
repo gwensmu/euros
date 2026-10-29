@@ -64,11 +64,23 @@ def create_app(store, api_token, mcp_token, public_hosts=(), model_service=None)
         raise ValueError("Separate app and MCP tokens of at least 32 characters are required")
     hosts = ["127.0.0.1", "localhost", *public_hosts]
     origins = [f"https://{h}" for h in public_hosts]
-    mcp = FastMCP("Euros", stateless_http=True, json_response=True,
+    mcp = FastMCP("Euros", instructions="Before planning or changing meals, call meal_planning_context and read the dated plan and training. Proposals never log food. Use preview_meal_plan before revision-checked saves.", stateless_http=True, json_response=True,
                   transport_security=TransportSecuritySettings(
                       allowed_hosts=[h for host in hosts for h in (host, f"{host}:*")],
                       allowed_origins=origins))
     read = ToolAnnotations(readOnlyHint=True, destructiveHint=False, idempotentHint=True, openWorldHint=False)
+
+    @mcp.tool(annotations=read)
+    def meal_planning_context() -> dict:
+        """Read nutrition policy, meal templates, provenance and safe planning workflow first."""
+        from .meal_planning import context
+        return context()
+
+    @mcp.tool(annotations=read)
+    def preview_meal_plan(payload: dict) -> dict:
+        """Validate a dated meal proposal and calculate known planned totals; never save."""
+        from .meal_planning import preview
+        return preview(payload)
 
     @mcp.tool(annotations=read)
     def read_records(entity_type: str | None = None) -> dict:

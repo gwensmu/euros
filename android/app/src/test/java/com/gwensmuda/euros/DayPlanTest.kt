@@ -81,9 +81,9 @@ class DayPlanTest {
   val result=DayPlanComposer.compose(plan(),records,date)
   assertEquals(1,result.activities.size);assertEquals(2,result.activities.single().steps.size);assertNull(result.next)
  }
- @Test fun bundledRestDayHasDinnerAndIndependentRecoveryWithoutTrainingMeals() {
+ @Test fun referenceRestDayHasDinnerAndIndependentRecoveryWithoutTrainingMeals() {
   val config=JSONObject(java.io.File("src/main/assets/euros.json").readText())
-  val commands=JSONArray(java.io.File("src/main/assets/schedule-commands.json").readText())
+  val commands=JSONArray(java.io.File("../../scripts/fixtures/schedule-commands.json").readText())
   val records=(0 until commands.length()).map{commands.getJSONObject(it)}.map{Record("activities",it.getString("entity_id"),0,it.getJSONObject("payload").toString())}
   val result=DayPlanComposer.compose(config,records,date)
   val rest=result.activities.single()

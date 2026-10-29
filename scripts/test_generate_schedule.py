@@ -10,7 +10,7 @@ from generate_schedule import generate, ROOT
 
 class ScheduleTests(unittest.TestCase):
     def setUp(self):
-        self.plan = json.loads((ROOT/'plan/euros.json').read_text())
+        self.plan = json.loads((ROOT/'scripts/fixtures/schedule-plan.json').read_text())
         self.commands = generate(self.plan)
 
     def test_confirmed_slots_and_scope(self):
@@ -36,7 +36,7 @@ class ScheduleTests(unittest.TestCase):
 
     def test_assets_match_generation(self):
         for path in ['plan/schedule-commands.json','android/app/src/main/assets/schedule-commands.json']:
-            self.assertEqual(self.commands, json.loads((ROOT/path).read_text()))
+            self.assertEqual(generate(json.loads((ROOT/'plan/euros.json').read_text())), json.loads((ROOT/path).read_text()))
 
     def test_wednesday_recovery_uses_existing_parent_and_templates(self):
         byid = {c['entity_id']: c['payload'] for c in self.commands}

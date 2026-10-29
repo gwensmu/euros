@@ -1,0 +1,675 @@
+{
+  "schemaVersion": 1,
+  "revision": "2026-10-14-shared-daily-nutrition",
+  "status": "capacity-schedule-authored",
+  "event": {
+    "id": "euros-2027",
+    "name": "Euros",
+    "date": "2027-01-13"
+  },
+  "units": {
+    "bodyWeight": "lb",
+    "food": "g",
+    "macros": "g",
+    "energy": "kcal",
+    "heartRate": "bpm",
+    "supplement": "mg"
+  },
+  "weeklyWeighIn": {
+    "day": "SUNDAY",
+    "context": "after_waking",
+    "time": null,
+    "sourceRef": "sunday"
+  },
+  "goal": {
+    "lossLb": {
+      "min": 5,
+      "max": 8
+    },
+    "baselineLb": null,
+    "baselineDate": null,
+    "selectedGoalLb": 155,
+    "maintenanceRangeLb": null,
+    "transition": "logged_weight_at_or_below",
+    "transitionEnabledFrom": "2026-10-15"
+  },
+  "nutrition": {
+    "maintenance": {
+      "kcal": 2050,
+      "proteinG": 130,
+      "carbohydrateG": 250,
+      "fatG": 59
+    },
+    "automaticCalorieAdjustment": false,
+    "sourceRef": "nutrition",
+    "daily": {
+      "kcal": 1900,
+      "proteinG": 130,
+      "carbohydrateG": 225,
+      "fatG": {
+        "min": 50,
+        "max": 53
+      }
+    }
+  },
+  "phases": [
+    {
+      "id": "capacity",
+      "start": "2026-10-14",
+      "end": "2026-11-15",
+      "weeklyMatSessions": {
+        "min": 3,
+        "max": 4
+      },
+      "accessorySessions": 2,
+      "sourceRef": "roadmap"
+    },
+    {
+      "id": "positional",
+      "start": "2026-11-16",
+      "end": "2026-12-13",
+      "weeklyMatSessions": {
+        "min": 4,
+        "max": 4
+      },
+      "sourceRef": "roadmap"
+    },
+    {
+      "id": "sharpening",
+      "start": "2026-12-14",
+      "end": "2026-12-27",
+      "weeklyMatSessions": {
+        "min": 3,
+        "max": 4
+      },
+      "sourceRef": "roadmap"
+    },
+    {
+      "id": "unassigned",
+      "start": "2026-12-28",
+      "end": "2027-01-02",
+      "weeklyMatSessions": null,
+      "sourceRef": "roadmap"
+    },
+    {
+      "id": "taper",
+      "start": null,
+      "end": "2027-01-12",
+      "weeklyMatSessions": {
+        "min": 2,
+        "max": 3
+      },
+      "sessionMinutes": {
+        "min": 30,
+        "max": 45
+      },
+      "sourceRef": "roadmap"
+    }
+  ],
+  "recovery": {
+    "emphasis": "after_heavy_sessions",
+    "activeProtocolRevision": null,
+    "activeMagnesiumDoseMg": null,
+    "referenceSteps": [
+      {
+        "id": "breathing",
+        "title": "Physiological sighing",
+        "durationSeconds": 300,
+        "timing": {
+          "anchor": "class_end",
+          "offsetMinutes": 0
+        },
+        "sourceRef": "recoveryDraft",
+        "status": "reference_not_activated"
+      },
+      {
+        "id": "shower-finish",
+        "title": "Cool shower finish",
+        "durationSeconds": {
+          "min": 60,
+          "max": 90
+        },
+        "timing": {
+          "anchor": "home_arrival",
+          "withinMinutes": 45,
+          "interpretationConfirmed": false
+        },
+        "sourceRef": "recoveryDraft",
+        "status": "reference_not_activated"
+      },
+      {
+        "id": "legs-up",
+        "title": "Legs-up-the-wall",
+        "durationSeconds": {
+          "min": 480,
+          "max": 600
+        },
+        "timing": {
+          "anchor": "dinner",
+          "relation": "before"
+        },
+        "sourceRef": "recoveryDraft",
+        "status": "reference_not_activated"
+      },
+      {
+        "id": "hydration",
+        "title": "Hydration",
+        "volume": {
+          "min": 16,
+          "max": 20,
+          "unit": "oz",
+          "unitConvention": null
+        },
+        "sodiumMg": {
+          "min": 400,
+          "max": 500
+        },
+        "potassiumMg": 300,
+        "timing": {
+          "anchor": "class_end",
+          "withinMinutes": 60
+        },
+        "sourceRef": "recoveryDraft",
+        "status": "reference_not_activated"
+      },
+      {
+        "id": "dinner",
+        "title": "Dinner",
+        "proteinG": {
+          "min": 30,
+          "max": 35
+        },
+        "carbohydrateG": {
+          "min": 50,
+          "max": 70
+        },
+        "timing": {
+          "anchor": "class_end",
+          "offsetMinutes": {
+            "min": 60,
+            "max": 90
+          }
+        },
+        "sourceRef": "recoveryDraft",
+        "status": "reference_not_activated"
+      },
+      {
+        "id": "tissue",
+        "title": "Tissue work",
+        "secondsPerMuscleGroup": 60,
+        "muscleGroups": [
+          "quads",
+          "outer glutes",
+          "calves"
+        ],
+        "sourceRef": "recoveryDraft",
+        "status": "reference_not_activated"
+      },
+      {
+        "id": "psoas",
+        "title": "Psoas stretch",
+        "secondsPerSide": 60,
+        "sourceRef": "recoveryDraft",
+        "status": "reference_not_activated"
+      },
+      {
+        "id": "figure-four",
+        "title": "Figure-four stretch",
+        "secondsPerSide": 90,
+        "sourceRef": "recoveryDraft",
+        "status": "reference_not_activated"
+      }
+    ],
+    "supplementReferences": [
+      {
+        "id": "magnesium-roadmap",
+        "substance": "magnesium glycinate",
+        "amountMg": {
+          "min": 200,
+          "max": 300
+        },
+        "elementalSpecified": false,
+        "timingNote": "after training",
+        "sourceRef": "roadmap",
+        "status": "alternate_reference_not_activated"
+      },
+      {
+        "id": "magnesium-recovery",
+        "substance": "magnesium",
+        "form": "glycinate",
+        "elementalMg": {
+          "min": 300,
+          "max": 400
+        },
+        "timingNote": "45 minutes before bed",
+        "sourceRef": "recoveryDraft",
+        "status": "alternate_reference_not_activated"
+      },
+      {
+        "id": "magnesium-checklist",
+        "substance": "magnesium glycinate",
+        "amountMg": 300,
+        "elementalSpecified": false,
+        "timingNote": "45 minutes before sleep",
+        "sourceRef": "recoveryDraft",
+        "status": "alternate_reference_not_activated"
+      },
+      {
+        "id": "theanine-recovery",
+        "substance": "L-theanine",
+        "amountMg": {
+          "min": 100,
+          "max": 200
+        },
+        "timingNote": "45 minutes before bed",
+        "sourceRef": "recoveryDraft",
+        "status": "reference_not_activated"
+      }
+    ],
+    "activeTheanineDoseMg": null,
+    "sleepTracking": false,
+    "eveningTimesLogger": false
+  },
+  "schedule": {
+    "weekStartsOn": "MONDAY",
+    "crossWeekCredit": "original_prescription_week",
+    "status": "confirmed_capacity_placements",
+    "allActivitiesRequireDateTime": true,
+    "weeklyActivities": [
+      {
+        "id": "moderate-mon",
+        "templateId": "bjj-moderate",
+        "day": "MONDAY",
+        "localTime": "11:00",
+        "sourceRef": "scheduleConfirmation"
+      },
+      {
+        "id": "competition-tue",
+        "templateId": "bjj-competition",
+        "day": "TUESDAY",
+        "localTime": "18:00",
+        "sourceRef": "scheduleConfirmation"
+      },
+      {
+        "id": "weights-thu",
+        "templateId": "accessory",
+        "day": "THURSDAY",
+        "localTime": "16:00",
+        "sourceRef": "scheduleConfirmation"
+      },
+      {
+        "id": "flow-thu",
+        "templateId": "bjj-flow",
+        "day": "THURSDAY",
+        "localTime": "20:30",
+        "sourceRef": "scheduleConfirmation"
+      },
+      {
+        "id": "moderate-sat",
+        "templateId": "bjj-moderate",
+        "day": "SATURDAY",
+        "localTime": "10:00",
+        "sourceRef": "scheduleConfirmation"
+      },
+      {
+        "id": "weights-sun",
+        "templateId": "accessory",
+        "day": "SUNDAY",
+        "localTime": "11:00",
+        "sourceRef": "scheduleConfirmation"
+      },
+      {
+        "id": "rest-wed",
+        "templateId": "rest",
+        "day": "WEDNESDAY",
+        "localTime": "08:00",
+        "sourceRef": "implementationTimingDefaults",
+        "protocolId": "recovery-basic",
+        "protocolInstanceId": "wed"
+      },
+      {
+        "id": "weight-sun",
+        "templateId": "weekly-weight",
+        "day": "SUNDAY",
+        "localTime": "09:00",
+        "sourceRef": "implementationTimingDefaults"
+      },
+      {
+        "id": "recovery-tue",
+        "templateId": "recovery",
+        "day": "TUESDAY",
+        "localTime": "20:00",
+        "sourceRef": "implementationTimingDefaults",
+        "linkedSessionSlotId": "competition-tue",
+        "protocolId": "recovery-basic",
+        "protocolInstanceId": "tue"
+      }
+    ],
+    "sourceRef": "currentReview",
+    "phaseId": "capacity",
+    "timeZone": "America/Chicago",
+    "restDays": [
+      "WEDNESDAY"
+    ],
+    "scheduledCommandsFile": "schedule-commands.json"
+  },
+  "unresolved": [
+    "post-capacity schedule and class durations",
+    "taper start",
+    "baseline and goal weight",
+    "maintenance targets",
+    "active recovery timing and doses",
+    "notification times",
+    "Health Connect source coverage"
+  ],
+  "ui": {
+    "navigation": [
+      "Today",
+      "Week",
+      "Food"
+    ],
+    "foodRemainingHeading": "Keep eating",
+    "shoppingAndMealAuthoring": "external",
+    "wrapup": "read_only",
+    "theme": {
+      "background": "white",
+      "accents": [
+        "black",
+        "blue"
+      ],
+      "mascot": "weasel",
+      "mascotPlacement": "beside_home_title",
+      "mascotMoodLabels": false
+    }
+  },
+  "llm": {
+    "foodInterpretation": true,
+    "weeklyWrapup": true,
+    "automaticPlanChanges": false,
+    "sessionInterpretation": true
+  },
+  "architecture": {
+    "backend": true,
+    "mcp": "server",
+    "offlineLogging": true,
+    "sync": "bidirectional"
+  },
+  "sources": {
+    "roadmap": {
+      "threadId": "01a13adf-8e2f-72a9-b851-3657221d702c",
+      "turnId": "01a13adf-936e-72ab-9f0e-ddf4a33a9798",
+      "messageId": "01a13ae1-3c84-77dc-8386-84dc529a0216"
+    },
+    "nutrition": {
+      "threadId": "01a13adf-8e2f-72a9-b851-3657221d702c",
+      "turnId": "01a13ae5-44d2-75ab-b3e9-c8685dd4d61d"
+    },
+    "recoveryDraft": {
+      "threadId": "01a13adf-8e2f-72a9-b851-3657221d702c",
+      "turnId": "01a13ae6-e0f0-7039-b804-025f08b82621"
+    },
+    "sunday": {
+      "threadId": "01a13adf-8e2f-72a9-b851-3657221d702c",
+      "turnId": "01a13b01-5df1-7049-bc80-368db860af9c"
+    },
+    "currentReview": {
+      "threadId": "01a13b07-2183-71a0-84c1-7fd53332c5c7",
+      "document": "SPEC.md",
+      "precedence": "current_user_feedback_over_original_source"
+    },
+    "scheduleConfirmation": {
+      "threadId": "01a13b07-2183-71a0-84c1-7fd53332c5c7",
+      "description": "User supplied weekly BJJ schedule; confirmed Thursday flow20:30 and weights Thursday16:00/Sunday11:00."
+    },
+    "implementationTimingDefaults": {
+      "description": "Initial timings proposed in current chat: Wednesday rest08:00 with breathing08:00, hydration08:05, tissue08:10 and legs08:20; Tuesday recovery20:00; Sunday weigh-in09:00. Recovery child offsets are initial placements; no supplement doses activated."
+    }
+  },
+  "trainingTemplates": [
+    {
+      "id": "bjj-competition",
+      "kind": "bjj",
+      "title": "Competition practice",
+      "category": "competition",
+      "weeklyFrequency": {
+        "min": 1,
+        "max": 1
+      },
+      "durationMinutes": null,
+      "sourceRef": "roadmap"
+    },
+    {
+      "id": "bjj-moderate",
+      "kind": "bjj",
+      "title": "Moderate BJJ",
+      "category": "moderate",
+      "weeklyFrequency": {
+        "min": 1,
+        "max": 2
+      },
+      "durationMinutes": null,
+      "sourceRef": "roadmap"
+    },
+    {
+      "id": "bjj-flow",
+      "kind": "bjj",
+      "title": "Technical flow",
+      "category": "flow",
+      "weeklyFrequency": {
+        "min": 1,
+        "max": 1
+      },
+      "durationMinutes": null,
+      "sourceRef": "roadmap"
+    },
+    {
+      "id": "accessory",
+      "kind": "weights",
+      "title": "Accessory session",
+      "weeklyFrequency": {
+        "min": 2,
+        "max": 2
+      },
+      "phaseIds": [
+        "capacity"
+      ],
+      "durationMinutes": null,
+      "sourceRef": "roadmap",
+      "exercises": [
+        {
+          "name": "Hollow-body holds",
+          "sets": null,
+          "holdSeconds": null,
+          "sourceRef": "roadmap"
+        },
+        {
+          "name": "Single-leg hip thrusts",
+          "sets": null,
+          "reps": null,
+          "loadLb": null,
+          "sourceRef": "roadmap"
+        },
+        {
+          "name": "Anti-extension core work",
+          "exercise": null,
+          "sets": null,
+          "reps": null,
+          "sourceRef": "roadmap"
+        }
+      ]
+    },
+    {
+      "id": "rest",
+      "kind": "rest",
+      "title": "Rest day",
+      "instructions": "",
+      "sourceRef": "currentReview"
+    },
+    {
+      "id": "weekly-weight",
+      "kind": "weight",
+      "title": "Weekly weigh-in",
+      "instructions": "After waking.",
+      "sourceRef": "currentReview"
+    },
+    {
+      "id": "recovery",
+      "kind": "recovery",
+      "title": "Recovery",
+      "instructions": "",
+      "sourceRef": "recoveryDraft"
+    },
+    {
+      "id": "breathing",
+      "kind": "recovery",
+      "title": "Breathing",
+      "instructions": "Five minutes of physiological sighing.",
+      "sourceRef": "recoveryDraft"
+    },
+    {
+      "id": "hydration",
+      "kind": "recovery",
+      "title": "Hydration",
+      "instructions": "12\u201320 oz of water",
+      "sourceRef": "currentReview"
+    },
+    {
+      "id": "tissue",
+      "kind": "recovery",
+      "title": "Tissue work",
+      "instructions": "Massage gun: 60 seconds per muscle group, quads, outer glutes and calves. Psoas stretch: 60 seconds per side. Figure-four stretch: 90 seconds per side.",
+      "sourceRef": "recoveryDraft"
+    },
+    {
+      "id": "legs",
+      "kind": "recovery",
+      "title": "Legs up",
+      "instructions": "Eight to ten minutes.",
+      "sourceRef": "recoveryDraft"
+    }
+  ],
+  "mealTargets": [
+    {
+      "id": "breakfast",
+      "title": "Breakfast",
+      "proteinG": 30,
+      "carbohydrateG": 45,
+      "sourceRef": "nutrition",
+      "status": "reference_allocation",
+      "localTime": null,
+      "foods": [],
+      "fatG": null,
+      "appliesWhen": "every_day"
+    },
+    {
+      "id": "lunch",
+      "title": "Lunch",
+      "proteinG": 35,
+      "carbohydrateG": 55,
+      "sourceRef": "nutrition",
+      "status": "reference_allocation",
+      "localTime": null,
+      "foods": [],
+      "fatG": null,
+      "appliesWhen": "every_day"
+    },
+    {
+      "id": "pre-class",
+      "title": "Pre-class snack",
+      "proteinG": null,
+      "carbohydrateG": 30,
+      "relativeTiming": {
+        "anchor": "class_start",
+        "beforeMinutes": 90
+      },
+      "foodExamples": [
+        "banana",
+        "rice cake"
+      ],
+      "sourceRef": "nutrition",
+      "status": "reference_allocation",
+      "localTime": null,
+      "foods": [],
+      "fatG": null,
+      "appliesWhen": "bjj_day"
+    },
+    {
+      "id": "post-training",
+      "title": "Post-training meal",
+      "proteinG": 35,
+      "carbohydrateG": {
+        "min": 65,
+        "max": 70
+      },
+      "foodExamples": [
+        "potatoes",
+        "rice",
+        "cornbread"
+      ],
+      "sourceRef": "nutrition",
+      "status": "reference_allocation",
+      "localTime": null,
+      "foods": [],
+      "fatG": null,
+      "appliesWhen": "bjj_day"
+    },
+    {
+      "id": "dinner",
+      "title": "Dinner",
+      "proteinG": null,
+      "carbohydrateG": null,
+      "fatG": null,
+      "sourceRef": "currentReview",
+      "status": "reference_allocation",
+      "localTime": null,
+      "foods": [],
+      "appliesWhen": "every_day"
+    },
+    {
+      "id": "recovery-snack",
+      "title": "Recovery snack",
+      "proteinG": 30,
+      "carbohydrateG": null,
+      "foodExamples": [
+        "whey",
+        "dairy"
+      ],
+      "sourceRef": "nutrition",
+      "status": "reference_allocation",
+      "localTime": null,
+      "foods": [],
+      "fatG": null,
+      "appliesWhen": "every_day"
+    }
+  ],
+  "recoveryProtocols": [
+    {
+      "id": "recovery-basic",
+      "offsetMode": "wall_clock",
+      "sourceRef": "implementationTimingDefaults",
+      "steps": [
+        {
+          "id": "breathing",
+          "templateId": "breathing",
+          "offsetMinutes": 0
+        },
+        {
+          "id": "hydration",
+          "templateId": "hydration",
+          "offsetMinutes": 5,
+          "recoveryStepType": "hydration"
+        },
+        {
+          "id": "tissue",
+          "templateId": "tissue",
+          "offsetMinutes": 10
+        },
+        {
+          "id": "legs",
+          "templateId": "legs",
+          "offsetMinutes": 20
+        }
+      ]
+    }
+  ]
+}

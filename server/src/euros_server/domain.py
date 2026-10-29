@@ -116,7 +116,7 @@ def validate_payload(kind, p):
     elif kind == "activities":
         if not isinstance(p.get("title"), str) or not p["title"].strip():
             raise DomainError("title_required")
-        if not isinstance(p.get("kind"), str) or p.get("kind") not in {"bjj", "weights", "food", "recovery", "morning", "weight", "rest"}:
+        if not isinstance(p.get("kind"), str) or p.get("kind") not in {"bjj", "weights", "food", "recovery", "morning", "weight", "rest", "prep"}:
             raise DomainError("invalid_activity_kind")
         instant(p.get("scheduled_at"), "scheduled_at")
         if not isinstance(p.get("status"), str) or p.get("status") not in {"pending", "done", "skipped"}:

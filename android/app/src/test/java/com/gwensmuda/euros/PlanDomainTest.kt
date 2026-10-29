@@ -17,7 +17,7 @@ class PlanDomainTest {
  @Test fun missingHourRejected(){assertThrows(IllegalArgumentException::class.java){PlanDomain.moveTimestamp("2027-03-14","02:30")}}
  @Test fun weightRejectsInvalidAndPreservesDecimal(){assertEquals("145.25",PlanDomain.weightPayload("145.25",OffsetDateTime.parse("2026-10-18T09:00:00-05:00")).getString("weight_lb"));listOf("0","-1","NaN","1501").forEach{v->assertThrows(IllegalArgumentException::class.java){PlanDomain.weightPayload(v,OffsetDateTime.now())}}}
  @Test fun authoredWednesdayRemainsOneActionableParentUntilEachRecoveryStepIsResolved() {
-  val commands=org.json.JSONArray(java.io.File("src/main/assets/schedule-commands.json").readText())
+  val commands=org.json.JSONArray(java.io.File("../../scripts/fixtures/schedule-commands.json").readText())
   val records=(0 until commands.length()).map{commands.getJSONObject(it)}.map{Record("activities",it.getString("entity_id"),0,it.getJSONObject("payload").toString())}
   val day=LocalDate.parse("2026-10-14")
   val parent=PlanDomain.onDay(records,day).single()

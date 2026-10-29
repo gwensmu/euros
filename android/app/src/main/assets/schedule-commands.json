@@ -1,187 +1,38 @@
 [
   {
-    "command_id": "create-capacity-2026-10-14-breathing-wed",
+    "command_id": "create-capacity-2026-10-14-stretch-wed",
     "entity_type": "activities",
-    "entity_id": "capacity-2026-10-14-breathing-wed",
+    "entity_id": "capacity-2026-10-14-stretch-wed",
     "expected_revision": 0,
     "operation": "upsert",
     "payload": {
-      "title": "Breathing",
+      "title": "Down Dog gentle stretching \u00b7 10\u201315 min",
       "kind": "recovery",
-      "scheduled_at": "2026-10-14T08:00:00-05:00",
+      "scheduled_at": "2026-10-14T20:30:00-05:00",
       "status": "pending",
       "plan_revision": "2026-10-14-shared-daily-nutrition",
-      "template_id": "breathing",
+      "template_id": "gentle-stretching",
       "phase_id": "capacity",
       "time_zone": "America/Chicago",
-      "schedule_source": "implementationTimingDefaults",
+      "schedule_source": "recoveryPreference20261021",
       "prescription": {
-        "id": "breathing",
+        "id": "gentle-stretching",
         "kind": "recovery",
-        "title": "Breathing",
-        "instructions": "Five minutes of physiological sighing.",
-        "sourceRef": "recoveryDraft"
+        "title": "Down Dog gentle stretching \u00b7 10\u201315 min",
+        "instructions": "Open Down Dog and choose 10\u201315 minutes of gentle stretching. Keep it easy. Mark Done when finished, or Skip if you decide not to do it.",
+        "sourceRef": "recoveryPreference20261021"
       },
       "plan_snapshot": {
         "template": {
-          "id": "breathing",
+          "id": "gentle-stretching",
           "kind": "recovery",
-          "title": "Breathing",
-          "instructions": "Five minutes of physiological sighing.",
-          "sourceRef": "recoveryDraft"
-        },
-        "category": null,
-        "nutrition_profile": "daily"
-      },
-      "parent_id": "capacity-2026-10-14-rest-wed"
-    }
-  },
-  {
-    "command_id": "create-capacity-2026-10-14-rest-wed",
-    "entity_type": "activities",
-    "entity_id": "capacity-2026-10-14-rest-wed",
-    "expected_revision": 0,
-    "operation": "upsert",
-    "payload": {
-      "title": "Rest day",
-      "kind": "rest",
-      "scheduled_at": "2026-10-14T08:00:00-05:00",
-      "status": "pending",
-      "plan_revision": "2026-10-14-shared-daily-nutrition",
-      "template_id": "rest",
-      "phase_id": "capacity",
-      "time_zone": "America/Chicago",
-      "schedule_source": "implementationTimingDefaults",
-      "prescription": {
-        "id": "rest",
-        "kind": "rest",
-        "title": "Rest day",
-        "instructions": "",
-        "sourceRef": "currentReview"
-      },
-      "plan_snapshot": {
-        "template": {
-          "id": "rest",
-          "kind": "rest",
-          "title": "Rest day",
-          "instructions": "",
-          "sourceRef": "currentReview"
+          "title": "Down Dog gentle stretching \u00b7 10\u201315 min",
+          "instructions": "Open Down Dog and choose 10\u201315 minutes of gentle stretching. Keep it easy. Mark Done when finished, or Skip if you decide not to do it.",
+          "sourceRef": "recoveryPreference20261021"
         },
         "category": null,
         "nutrition_profile": "daily"
       }
-    }
-  },
-  {
-    "command_id": "create-capacity-2026-10-14-hydration-wed",
-    "entity_type": "activities",
-    "entity_id": "capacity-2026-10-14-hydration-wed",
-    "expected_revision": 0,
-    "operation": "upsert",
-    "payload": {
-      "title": "Hydration",
-      "kind": "recovery",
-      "scheduled_at": "2026-10-14T08:05:00-05:00",
-      "status": "pending",
-      "plan_revision": "2026-10-14-shared-daily-nutrition",
-      "template_id": "hydration",
-      "phase_id": "capacity",
-      "time_zone": "America/Chicago",
-      "schedule_source": "implementationTimingDefaults",
-      "prescription": {
-        "id": "hydration",
-        "kind": "recovery",
-        "title": "Hydration",
-        "instructions": "12\u201320 oz of water",
-        "sourceRef": "currentReview"
-      },
-      "plan_snapshot": {
-        "template": {
-          "id": "hydration",
-          "kind": "recovery",
-          "title": "Hydration",
-          "instructions": "12\u201320 oz of water",
-          "sourceRef": "currentReview"
-        },
-        "category": null,
-        "nutrition_profile": "daily"
-      },
-      "parent_id": "capacity-2026-10-14-rest-wed",
-      "recovery_step_type": "hydration"
-    }
-  },
-  {
-    "command_id": "create-capacity-2026-10-14-tissue-wed",
-    "entity_type": "activities",
-    "entity_id": "capacity-2026-10-14-tissue-wed",
-    "expected_revision": 0,
-    "operation": "upsert",
-    "payload": {
-      "title": "Tissue work",
-      "kind": "recovery",
-      "scheduled_at": "2026-10-14T08:10:00-05:00",
-      "status": "pending",
-      "plan_revision": "2026-10-14-shared-daily-nutrition",
-      "template_id": "tissue",
-      "phase_id": "capacity",
-      "time_zone": "America/Chicago",
-      "schedule_source": "implementationTimingDefaults",
-      "prescription": {
-        "id": "tissue",
-        "kind": "recovery",
-        "title": "Tissue work",
-        "instructions": "Massage gun: 60 seconds per muscle group, quads, outer glutes and calves. Psoas stretch: 60 seconds per side. Figure-four stretch: 90 seconds per side.",
-        "sourceRef": "recoveryDraft"
-      },
-      "plan_snapshot": {
-        "template": {
-          "id": "tissue",
-          "kind": "recovery",
-          "title": "Tissue work",
-          "instructions": "Massage gun: 60 seconds per muscle group, quads, outer glutes and calves. Psoas stretch: 60 seconds per side. Figure-four stretch: 90 seconds per side.",
-          "sourceRef": "recoveryDraft"
-        },
-        "category": null,
-        "nutrition_profile": "daily"
-      },
-      "parent_id": "capacity-2026-10-14-rest-wed"
-    }
-  },
-  {
-    "command_id": "create-capacity-2026-10-14-legs-wed",
-    "entity_type": "activities",
-    "entity_id": "capacity-2026-10-14-legs-wed",
-    "expected_revision": 0,
-    "operation": "upsert",
-    "payload": {
-      "title": "Legs up",
-      "kind": "recovery",
-      "scheduled_at": "2026-10-14T08:20:00-05:00",
-      "status": "pending",
-      "plan_revision": "2026-10-14-shared-daily-nutrition",
-      "template_id": "legs",
-      "phase_id": "capacity",
-      "time_zone": "America/Chicago",
-      "schedule_source": "implementationTimingDefaults",
-      "prescription": {
-        "id": "legs",
-        "kind": "recovery",
-        "title": "Legs up",
-        "instructions": "Eight to ten minutes.",
-        "sourceRef": "recoveryDraft"
-      },
-      "plan_snapshot": {
-        "template": {
-          "id": "legs",
-          "kind": "recovery",
-          "title": "Legs up",
-          "instructions": "Eight to ten minutes.",
-          "sourceRef": "recoveryDraft"
-        },
-        "category": null,
-        "nutrition_profile": "daily"
-      },
-      "parent_id": "capacity-2026-10-14-rest-wed"
     }
   },
   {
@@ -323,6 +174,42 @@
         "nutrition_profile": "daily"
       },
       "category": "flow"
+    }
+  },
+  {
+    "command_id": "create-capacity-2026-10-16-stretch-fri",
+    "entity_type": "activities",
+    "entity_id": "capacity-2026-10-16-stretch-fri",
+    "expected_revision": 0,
+    "operation": "upsert",
+    "payload": {
+      "title": "Down Dog gentle stretching \u00b7 10\u201315 min",
+      "kind": "recovery",
+      "scheduled_at": "2026-10-16T20:30:00-05:00",
+      "status": "pending",
+      "plan_revision": "2026-10-14-shared-daily-nutrition",
+      "template_id": "gentle-stretching",
+      "phase_id": "capacity",
+      "time_zone": "America/Chicago",
+      "schedule_source": "recoveryPreference20261021",
+      "prescription": {
+        "id": "gentle-stretching",
+        "kind": "recovery",
+        "title": "Down Dog gentle stretching \u00b7 10\u201315 min",
+        "instructions": "Open Down Dog and choose 10\u201315 minutes of gentle stretching. Keep it easy. Mark Done when finished, or Skip if you decide not to do it.",
+        "sourceRef": "recoveryPreference20261021"
+      },
+      "plan_snapshot": {
+        "template": {
+          "id": "gentle-stretching",
+          "kind": "recovery",
+          "title": "Down Dog gentle stretching \u00b7 10\u201315 min",
+          "instructions": "Open Down Dog and choose 10\u201315 minutes of gentle stretching. Keep it easy. Mark Done when finished, or Skip if you decide not to do it.",
+          "sourceRef": "recoveryPreference20261021"
+        },
+        "category": null,
+        "nutrition_profile": "daily"
+      }
     }
   },
   {
@@ -597,374 +484,39 @@
     }
   },
   {
-    "command_id": "create-capacity-2026-10-20-breathing-tue",
+    "command_id": "create-capacity-2026-10-21-stretch-wed",
     "entity_type": "activities",
-    "entity_id": "capacity-2026-10-20-breathing-tue",
+    "entity_id": "capacity-2026-10-21-stretch-wed",
     "expected_revision": 0,
     "operation": "upsert",
     "payload": {
-      "title": "Breathing",
+      "title": "Down Dog gentle stretching \u00b7 10\u201315 min",
       "kind": "recovery",
-      "scheduled_at": "2026-10-20T20:00:00-05:00",
+      "scheduled_at": "2026-10-21T20:30:00-05:00",
       "status": "pending",
       "plan_revision": "2026-10-14-shared-daily-nutrition",
-      "template_id": "breathing",
+      "template_id": "gentle-stretching",
       "phase_id": "capacity",
       "time_zone": "America/Chicago",
-      "schedule_source": "implementationTimingDefaults",
+      "schedule_source": "recoveryPreference20261021",
       "prescription": {
-        "id": "breathing",
+        "id": "gentle-stretching",
         "kind": "recovery",
-        "title": "Breathing",
-        "instructions": "Five minutes of physiological sighing.",
-        "sourceRef": "recoveryDraft"
+        "title": "Down Dog gentle stretching \u00b7 10\u201315 min",
+        "instructions": "Open Down Dog and choose 10\u201315 minutes of gentle stretching. Keep it easy. Mark Done when finished, or Skip if you decide not to do it.",
+        "sourceRef": "recoveryPreference20261021"
       },
       "plan_snapshot": {
         "template": {
-          "id": "breathing",
+          "id": "gentle-stretching",
           "kind": "recovery",
-          "title": "Breathing",
-          "instructions": "Five minutes of physiological sighing.",
-          "sourceRef": "recoveryDraft"
-        },
-        "category": null,
-        "nutrition_profile": "daily"
-      },
-      "parent_id": "capacity-2026-10-20-recovery-tue"
-    }
-  },
-  {
-    "command_id": "create-capacity-2026-10-20-recovery-tue",
-    "entity_type": "activities",
-    "entity_id": "capacity-2026-10-20-recovery-tue",
-    "expected_revision": 0,
-    "operation": "upsert",
-    "payload": {
-      "title": "Recovery",
-      "kind": "recovery",
-      "scheduled_at": "2026-10-20T20:00:00-05:00",
-      "status": "pending",
-      "plan_revision": "2026-10-14-shared-daily-nutrition",
-      "template_id": "recovery",
-      "phase_id": "capacity",
-      "time_zone": "America/Chicago",
-      "schedule_source": "implementationTimingDefaults",
-      "prescription": {
-        "id": "recovery",
-        "kind": "recovery",
-        "title": "Recovery",
-        "instructions": "",
-        "sourceRef": "recoveryDraft"
-      },
-      "plan_snapshot": {
-        "template": {
-          "id": "recovery",
-          "kind": "recovery",
-          "title": "Recovery",
-          "instructions": "",
-          "sourceRef": "recoveryDraft"
-        },
-        "category": null,
-        "nutrition_profile": "daily"
-      },
-      "linked_session_id": "capacity-2026-10-20-competition-tue"
-    }
-  },
-  {
-    "command_id": "create-capacity-2026-10-20-hydration-tue",
-    "entity_type": "activities",
-    "entity_id": "capacity-2026-10-20-hydration-tue",
-    "expected_revision": 0,
-    "operation": "upsert",
-    "payload": {
-      "title": "Hydration",
-      "kind": "recovery",
-      "scheduled_at": "2026-10-20T20:05:00-05:00",
-      "status": "pending",
-      "plan_revision": "2026-10-14-shared-daily-nutrition",
-      "template_id": "hydration",
-      "phase_id": "capacity",
-      "time_zone": "America/Chicago",
-      "schedule_source": "implementationTimingDefaults",
-      "prescription": {
-        "id": "hydration",
-        "kind": "recovery",
-        "title": "Hydration",
-        "instructions": "12\u201320 oz of water",
-        "sourceRef": "currentReview"
-      },
-      "plan_snapshot": {
-        "template": {
-          "id": "hydration",
-          "kind": "recovery",
-          "title": "Hydration",
-          "instructions": "12\u201320 oz of water",
-          "sourceRef": "currentReview"
-        },
-        "category": null,
-        "nutrition_profile": "daily"
-      },
-      "parent_id": "capacity-2026-10-20-recovery-tue",
-      "recovery_step_type": "hydration"
-    }
-  },
-  {
-    "command_id": "create-capacity-2026-10-20-tissue-tue",
-    "entity_type": "activities",
-    "entity_id": "capacity-2026-10-20-tissue-tue",
-    "expected_revision": 0,
-    "operation": "upsert",
-    "payload": {
-      "title": "Tissue work",
-      "kind": "recovery",
-      "scheduled_at": "2026-10-20T20:10:00-05:00",
-      "status": "pending",
-      "plan_revision": "2026-10-14-shared-daily-nutrition",
-      "template_id": "tissue",
-      "phase_id": "capacity",
-      "time_zone": "America/Chicago",
-      "schedule_source": "implementationTimingDefaults",
-      "prescription": {
-        "id": "tissue",
-        "kind": "recovery",
-        "title": "Tissue work",
-        "instructions": "Massage gun: 60 seconds per muscle group, quads, outer glutes and calves. Psoas stretch: 60 seconds per side. Figure-four stretch: 90 seconds per side.",
-        "sourceRef": "recoveryDraft"
-      },
-      "plan_snapshot": {
-        "template": {
-          "id": "tissue",
-          "kind": "recovery",
-          "title": "Tissue work",
-          "instructions": "Massage gun: 60 seconds per muscle group, quads, outer glutes and calves. Psoas stretch: 60 seconds per side. Figure-four stretch: 90 seconds per side.",
-          "sourceRef": "recoveryDraft"
-        },
-        "category": null,
-        "nutrition_profile": "daily"
-      },
-      "parent_id": "capacity-2026-10-20-recovery-tue"
-    }
-  },
-  {
-    "command_id": "create-capacity-2026-10-20-legs-tue",
-    "entity_type": "activities",
-    "entity_id": "capacity-2026-10-20-legs-tue",
-    "expected_revision": 0,
-    "operation": "upsert",
-    "payload": {
-      "title": "Legs up",
-      "kind": "recovery",
-      "scheduled_at": "2026-10-20T20:20:00-05:00",
-      "status": "pending",
-      "plan_revision": "2026-10-14-shared-daily-nutrition",
-      "template_id": "legs",
-      "phase_id": "capacity",
-      "time_zone": "America/Chicago",
-      "schedule_source": "implementationTimingDefaults",
-      "prescription": {
-        "id": "legs",
-        "kind": "recovery",
-        "title": "Legs up",
-        "instructions": "Eight to ten minutes.",
-        "sourceRef": "recoveryDraft"
-      },
-      "plan_snapshot": {
-        "template": {
-          "id": "legs",
-          "kind": "recovery",
-          "title": "Legs up",
-          "instructions": "Eight to ten minutes.",
-          "sourceRef": "recoveryDraft"
-        },
-        "category": null,
-        "nutrition_profile": "daily"
-      },
-      "parent_id": "capacity-2026-10-20-recovery-tue"
-    }
-  },
-  {
-    "command_id": "create-capacity-2026-10-21-breathing-wed",
-    "entity_type": "activities",
-    "entity_id": "capacity-2026-10-21-breathing-wed",
-    "expected_revision": 0,
-    "operation": "upsert",
-    "payload": {
-      "title": "Breathing",
-      "kind": "recovery",
-      "scheduled_at": "2026-10-21T08:00:00-05:00",
-      "status": "pending",
-      "plan_revision": "2026-10-14-shared-daily-nutrition",
-      "template_id": "breathing",
-      "phase_id": "capacity",
-      "time_zone": "America/Chicago",
-      "schedule_source": "implementationTimingDefaults",
-      "prescription": {
-        "id": "breathing",
-        "kind": "recovery",
-        "title": "Breathing",
-        "instructions": "Five minutes of physiological sighing.",
-        "sourceRef": "recoveryDraft"
-      },
-      "plan_snapshot": {
-        "template": {
-          "id": "breathing",
-          "kind": "recovery",
-          "title": "Breathing",
-          "instructions": "Five minutes of physiological sighing.",
-          "sourceRef": "recoveryDraft"
-        },
-        "category": null,
-        "nutrition_profile": "daily"
-      },
-      "parent_id": "capacity-2026-10-21-rest-wed"
-    }
-  },
-  {
-    "command_id": "create-capacity-2026-10-21-rest-wed",
-    "entity_type": "activities",
-    "entity_id": "capacity-2026-10-21-rest-wed",
-    "expected_revision": 0,
-    "operation": "upsert",
-    "payload": {
-      "title": "Rest day",
-      "kind": "rest",
-      "scheduled_at": "2026-10-21T08:00:00-05:00",
-      "status": "pending",
-      "plan_revision": "2026-10-14-shared-daily-nutrition",
-      "template_id": "rest",
-      "phase_id": "capacity",
-      "time_zone": "America/Chicago",
-      "schedule_source": "implementationTimingDefaults",
-      "prescription": {
-        "id": "rest",
-        "kind": "rest",
-        "title": "Rest day",
-        "instructions": "",
-        "sourceRef": "currentReview"
-      },
-      "plan_snapshot": {
-        "template": {
-          "id": "rest",
-          "kind": "rest",
-          "title": "Rest day",
-          "instructions": "",
-          "sourceRef": "currentReview"
+          "title": "Down Dog gentle stretching \u00b7 10\u201315 min",
+          "instructions": "Open Down Dog and choose 10\u201315 minutes of gentle stretching. Keep it easy. Mark Done when finished, or Skip if you decide not to do it.",
+          "sourceRef": "recoveryPreference20261021"
         },
         "category": null,
         "nutrition_profile": "daily"
       }
-    }
-  },
-  {
-    "command_id": "create-capacity-2026-10-21-hydration-wed",
-    "entity_type": "activities",
-    "entity_id": "capacity-2026-10-21-hydration-wed",
-    "expected_revision": 0,
-    "operation": "upsert",
-    "payload": {
-      "title": "Hydration",
-      "kind": "recovery",
-      "scheduled_at": "2026-10-21T08:05:00-05:00",
-      "status": "pending",
-      "plan_revision": "2026-10-14-shared-daily-nutrition",
-      "template_id": "hydration",
-      "phase_id": "capacity",
-      "time_zone": "America/Chicago",
-      "schedule_source": "implementationTimingDefaults",
-      "prescription": {
-        "id": "hydration",
-        "kind": "recovery",
-        "title": "Hydration",
-        "instructions": "12\u201320 oz of water",
-        "sourceRef": "currentReview"
-      },
-      "plan_snapshot": {
-        "template": {
-          "id": "hydration",
-          "kind": "recovery",
-          "title": "Hydration",
-          "instructions": "12\u201320 oz of water",
-          "sourceRef": "currentReview"
-        },
-        "category": null,
-        "nutrition_profile": "daily"
-      },
-      "parent_id": "capacity-2026-10-21-rest-wed",
-      "recovery_step_type": "hydration"
-    }
-  },
-  {
-    "command_id": "create-capacity-2026-10-21-tissue-wed",
-    "entity_type": "activities",
-    "entity_id": "capacity-2026-10-21-tissue-wed",
-    "expected_revision": 0,
-    "operation": "upsert",
-    "payload": {
-      "title": "Tissue work",
-      "kind": "recovery",
-      "scheduled_at": "2026-10-21T08:10:00-05:00",
-      "status": "pending",
-      "plan_revision": "2026-10-14-shared-daily-nutrition",
-      "template_id": "tissue",
-      "phase_id": "capacity",
-      "time_zone": "America/Chicago",
-      "schedule_source": "implementationTimingDefaults",
-      "prescription": {
-        "id": "tissue",
-        "kind": "recovery",
-        "title": "Tissue work",
-        "instructions": "Massage gun: 60 seconds per muscle group, quads, outer glutes and calves. Psoas stretch: 60 seconds per side. Figure-four stretch: 90 seconds per side.",
-        "sourceRef": "recoveryDraft"
-      },
-      "plan_snapshot": {
-        "template": {
-          "id": "tissue",
-          "kind": "recovery",
-          "title": "Tissue work",
-          "instructions": "Massage gun: 60 seconds per muscle group, quads, outer glutes and calves. Psoas stretch: 60 seconds per side. Figure-four stretch: 90 seconds per side.",
-          "sourceRef": "recoveryDraft"
-        },
-        "category": null,
-        "nutrition_profile": "daily"
-      },
-      "parent_id": "capacity-2026-10-21-rest-wed"
-    }
-  },
-  {
-    "command_id": "create-capacity-2026-10-21-legs-wed",
-    "entity_type": "activities",
-    "entity_id": "capacity-2026-10-21-legs-wed",
-    "expected_revision": 0,
-    "operation": "upsert",
-    "payload": {
-      "title": "Legs up",
-      "kind": "recovery",
-      "scheduled_at": "2026-10-21T08:20:00-05:00",
-      "status": "pending",
-      "plan_revision": "2026-10-14-shared-daily-nutrition",
-      "template_id": "legs",
-      "phase_id": "capacity",
-      "time_zone": "America/Chicago",
-      "schedule_source": "implementationTimingDefaults",
-      "prescription": {
-        "id": "legs",
-        "kind": "recovery",
-        "title": "Legs up",
-        "instructions": "Eight to ten minutes.",
-        "sourceRef": "recoveryDraft"
-      },
-      "plan_snapshot": {
-        "template": {
-          "id": "legs",
-          "kind": "recovery",
-          "title": "Legs up",
-          "instructions": "Eight to ten minutes.",
-          "sourceRef": "recoveryDraft"
-        },
-        "category": null,
-        "nutrition_profile": "daily"
-      },
-      "parent_id": "capacity-2026-10-21-rest-wed"
     }
   },
   {
@@ -1106,6 +658,42 @@
         "nutrition_profile": "daily"
       },
       "category": "flow"
+    }
+  },
+  {
+    "command_id": "create-capacity-2026-10-23-stretch-fri",
+    "entity_type": "activities",
+    "entity_id": "capacity-2026-10-23-stretch-fri",
+    "expected_revision": 0,
+    "operation": "upsert",
+    "payload": {
+      "title": "Down Dog gentle stretching \u00b7 10\u201315 min",
+      "kind": "recovery",
+      "scheduled_at": "2026-10-23T20:30:00-05:00",
+      "status": "pending",
+      "plan_revision": "2026-10-14-shared-daily-nutrition",
+      "template_id": "gentle-stretching",
+      "phase_id": "capacity",
+      "time_zone": "America/Chicago",
+      "schedule_source": "recoveryPreference20261021",
+      "prescription": {
+        "id": "gentle-stretching",
+        "kind": "recovery",
+        "title": "Down Dog gentle stretching \u00b7 10\u201315 min",
+        "instructions": "Open Down Dog and choose 10\u201315 minutes of gentle stretching. Keep it easy. Mark Done when finished, or Skip if you decide not to do it.",
+        "sourceRef": "recoveryPreference20261021"
+      },
+      "plan_snapshot": {
+        "template": {
+          "id": "gentle-stretching",
+          "kind": "recovery",
+          "title": "Down Dog gentle stretching \u00b7 10\u201315 min",
+          "instructions": "Open Down Dog and choose 10\u201315 minutes of gentle stretching. Keep it easy. Mark Done when finished, or Skip if you decide not to do it.",
+          "sourceRef": "recoveryPreference20261021"
+        },
+        "category": null,
+        "nutrition_profile": "daily"
+      }
     }
   },
   {
@@ -1380,374 +968,39 @@
     }
   },
   {
-    "command_id": "create-capacity-2026-10-27-breathing-tue",
+    "command_id": "create-capacity-2026-10-28-stretch-wed",
     "entity_type": "activities",
-    "entity_id": "capacity-2026-10-27-breathing-tue",
+    "entity_id": "capacity-2026-10-28-stretch-wed",
     "expected_revision": 0,
     "operation": "upsert",
     "payload": {
-      "title": "Breathing",
+      "title": "Down Dog gentle stretching \u00b7 10\u201315 min",
       "kind": "recovery",
-      "scheduled_at": "2026-10-27T20:00:00-05:00",
+      "scheduled_at": "2026-10-28T20:30:00-05:00",
       "status": "pending",
       "plan_revision": "2026-10-14-shared-daily-nutrition",
-      "template_id": "breathing",
+      "template_id": "gentle-stretching",
       "phase_id": "capacity",
       "time_zone": "America/Chicago",
-      "schedule_source": "implementationTimingDefaults",
+      "schedule_source": "recoveryPreference20261021",
       "prescription": {
-        "id": "breathing",
+        "id": "gentle-stretching",
         "kind": "recovery",
-        "title": "Breathing",
-        "instructions": "Five minutes of physiological sighing.",
-        "sourceRef": "recoveryDraft"
+        "title": "Down Dog gentle stretching \u00b7 10\u201315 min",
+        "instructions": "Open Down Dog and choose 10\u201315 minutes of gentle stretching. Keep it easy. Mark Done when finished, or Skip if you decide not to do it.",
+        "sourceRef": "recoveryPreference20261021"
       },
       "plan_snapshot": {
         "template": {
-          "id": "breathing",
+          "id": "gentle-stretching",
           "kind": "recovery",
-          "title": "Breathing",
-          "instructions": "Five minutes of physiological sighing.",
-          "sourceRef": "recoveryDraft"
-        },
-        "category": null,
-        "nutrition_profile": "daily"
-      },
-      "parent_id": "capacity-2026-10-27-recovery-tue"
-    }
-  },
-  {
-    "command_id": "create-capacity-2026-10-27-recovery-tue",
-    "entity_type": "activities",
-    "entity_id": "capacity-2026-10-27-recovery-tue",
-    "expected_revision": 0,
-    "operation": "upsert",
-    "payload": {
-      "title": "Recovery",
-      "kind": "recovery",
-      "scheduled_at": "2026-10-27T20:00:00-05:00",
-      "status": "pending",
-      "plan_revision": "2026-10-14-shared-daily-nutrition",
-      "template_id": "recovery",
-      "phase_id": "capacity",
-      "time_zone": "America/Chicago",
-      "schedule_source": "implementationTimingDefaults",
-      "prescription": {
-        "id": "recovery",
-        "kind": "recovery",
-        "title": "Recovery",
-        "instructions": "",
-        "sourceRef": "recoveryDraft"
-      },
-      "plan_snapshot": {
-        "template": {
-          "id": "recovery",
-          "kind": "recovery",
-          "title": "Recovery",
-          "instructions": "",
-          "sourceRef": "recoveryDraft"
-        },
-        "category": null,
-        "nutrition_profile": "daily"
-      },
-      "linked_session_id": "capacity-2026-10-27-competition-tue"
-    }
-  },
-  {
-    "command_id": "create-capacity-2026-10-27-hydration-tue",
-    "entity_type": "activities",
-    "entity_id": "capacity-2026-10-27-hydration-tue",
-    "expected_revision": 0,
-    "operation": "upsert",
-    "payload": {
-      "title": "Hydration",
-      "kind": "recovery",
-      "scheduled_at": "2026-10-27T20:05:00-05:00",
-      "status": "pending",
-      "plan_revision": "2026-10-14-shared-daily-nutrition",
-      "template_id": "hydration",
-      "phase_id": "capacity",
-      "time_zone": "America/Chicago",
-      "schedule_source": "implementationTimingDefaults",
-      "prescription": {
-        "id": "hydration",
-        "kind": "recovery",
-        "title": "Hydration",
-        "instructions": "12\u201320 oz of water",
-        "sourceRef": "currentReview"
-      },
-      "plan_snapshot": {
-        "template": {
-          "id": "hydration",
-          "kind": "recovery",
-          "title": "Hydration",
-          "instructions": "12\u201320 oz of water",
-          "sourceRef": "currentReview"
-        },
-        "category": null,
-        "nutrition_profile": "daily"
-      },
-      "parent_id": "capacity-2026-10-27-recovery-tue",
-      "recovery_step_type": "hydration"
-    }
-  },
-  {
-    "command_id": "create-capacity-2026-10-27-tissue-tue",
-    "entity_type": "activities",
-    "entity_id": "capacity-2026-10-27-tissue-tue",
-    "expected_revision": 0,
-    "operation": "upsert",
-    "payload": {
-      "title": "Tissue work",
-      "kind": "recovery",
-      "scheduled_at": "2026-10-27T20:10:00-05:00",
-      "status": "pending",
-      "plan_revision": "2026-10-14-shared-daily-nutrition",
-      "template_id": "tissue",
-      "phase_id": "capacity",
-      "time_zone": "America/Chicago",
-      "schedule_source": "implementationTimingDefaults",
-      "prescription": {
-        "id": "tissue",
-        "kind": "recovery",
-        "title": "Tissue work",
-        "instructions": "Massage gun: 60 seconds per muscle group, quads, outer glutes and calves. Psoas stretch: 60 seconds per side. Figure-four stretch: 90 seconds per side.",
-        "sourceRef": "recoveryDraft"
-      },
-      "plan_snapshot": {
-        "template": {
-          "id": "tissue",
-          "kind": "recovery",
-          "title": "Tissue work",
-          "instructions": "Massage gun: 60 seconds per muscle group, quads, outer glutes and calves. Psoas stretch: 60 seconds per side. Figure-four stretch: 90 seconds per side.",
-          "sourceRef": "recoveryDraft"
-        },
-        "category": null,
-        "nutrition_profile": "daily"
-      },
-      "parent_id": "capacity-2026-10-27-recovery-tue"
-    }
-  },
-  {
-    "command_id": "create-capacity-2026-10-27-legs-tue",
-    "entity_type": "activities",
-    "entity_id": "capacity-2026-10-27-legs-tue",
-    "expected_revision": 0,
-    "operation": "upsert",
-    "payload": {
-      "title": "Legs up",
-      "kind": "recovery",
-      "scheduled_at": "2026-10-27T20:20:00-05:00",
-      "status": "pending",
-      "plan_revision": "2026-10-14-shared-daily-nutrition",
-      "template_id": "legs",
-      "phase_id": "capacity",
-      "time_zone": "America/Chicago",
-      "schedule_source": "implementationTimingDefaults",
-      "prescription": {
-        "id": "legs",
-        "kind": "recovery",
-        "title": "Legs up",
-        "instructions": "Eight to ten minutes.",
-        "sourceRef": "recoveryDraft"
-      },
-      "plan_snapshot": {
-        "template": {
-          "id": "legs",
-          "kind": "recovery",
-          "title": "Legs up",
-          "instructions": "Eight to ten minutes.",
-          "sourceRef": "recoveryDraft"
-        },
-        "category": null,
-        "nutrition_profile": "daily"
-      },
-      "parent_id": "capacity-2026-10-27-recovery-tue"
-    }
-  },
-  {
-    "command_id": "create-capacity-2026-10-28-breathing-wed",
-    "entity_type": "activities",
-    "entity_id": "capacity-2026-10-28-breathing-wed",
-    "expected_revision": 0,
-    "operation": "upsert",
-    "payload": {
-      "title": "Breathing",
-      "kind": "recovery",
-      "scheduled_at": "2026-10-28T08:00:00-05:00",
-      "status": "pending",
-      "plan_revision": "2026-10-14-shared-daily-nutrition",
-      "template_id": "breathing",
-      "phase_id": "capacity",
-      "time_zone": "America/Chicago",
-      "schedule_source": "implementationTimingDefaults",
-      "prescription": {
-        "id": "breathing",
-        "kind": "recovery",
-        "title": "Breathing",
-        "instructions": "Five minutes of physiological sighing.",
-        "sourceRef": "recoveryDraft"
-      },
-      "plan_snapshot": {
-        "template": {
-          "id": "breathing",
-          "kind": "recovery",
-          "title": "Breathing",
-          "instructions": "Five minutes of physiological sighing.",
-          "sourceRef": "recoveryDraft"
-        },
-        "category": null,
-        "nutrition_profile": "daily"
-      },
-      "parent_id": "capacity-2026-10-28-rest-wed"
-    }
-  },
-  {
-    "command_id": "create-capacity-2026-10-28-rest-wed",
-    "entity_type": "activities",
-    "entity_id": "capacity-2026-10-28-rest-wed",
-    "expected_revision": 0,
-    "operation": "upsert",
-    "payload": {
-      "title": "Rest day",
-      "kind": "rest",
-      "scheduled_at": "2026-10-28T08:00:00-05:00",
-      "status": "pending",
-      "plan_revision": "2026-10-14-shared-daily-nutrition",
-      "template_id": "rest",
-      "phase_id": "capacity",
-      "time_zone": "America/Chicago",
-      "schedule_source": "implementationTimingDefaults",
-      "prescription": {
-        "id": "rest",
-        "kind": "rest",
-        "title": "Rest day",
-        "instructions": "",
-        "sourceRef": "currentReview"
-      },
-      "plan_snapshot": {
-        "template": {
-          "id": "rest",
-          "kind": "rest",
-          "title": "Rest day",
-          "instructions": "",
-          "sourceRef": "currentReview"
+          "title": "Down Dog gentle stretching \u00b7 10\u201315 min",
+          "instructions": "Open Down Dog and choose 10\u201315 minutes of gentle stretching. Keep it easy. Mark Done when finished, or Skip if you decide not to do it.",
+          "sourceRef": "recoveryPreference20261021"
         },
         "category": null,
         "nutrition_profile": "daily"
       }
-    }
-  },
-  {
-    "command_id": "create-capacity-2026-10-28-hydration-wed",
-    "entity_type": "activities",
-    "entity_id": "capacity-2026-10-28-hydration-wed",
-    "expected_revision": 0,
-    "operation": "upsert",
-    "payload": {
-      "title": "Hydration",
-      "kind": "recovery",
-      "scheduled_at": "2026-10-28T08:05:00-05:00",
-      "status": "pending",
-      "plan_revision": "2026-10-14-shared-daily-nutrition",
-      "template_id": "hydration",
-      "phase_id": "capacity",
-      "time_zone": "America/Chicago",
-      "schedule_source": "implementationTimingDefaults",
-      "prescription": {
-        "id": "hydration",
-        "kind": "recovery",
-        "title": "Hydration",
-        "instructions": "12\u201320 oz of water",
-        "sourceRef": "currentReview"
-      },
-      "plan_snapshot": {
-        "template": {
-          "id": "hydration",
-          "kind": "recovery",
-          "title": "Hydration",
-          "instructions": "12\u201320 oz of water",
-          "sourceRef": "currentReview"
-        },
-        "category": null,
-        "nutrition_profile": "daily"
-      },
-      "parent_id": "capacity-2026-10-28-rest-wed",
-      "recovery_step_type": "hydration"
-    }
-  },
-  {
-    "command_id": "create-capacity-2026-10-28-tissue-wed",
-    "entity_type": "activities",
-    "entity_id": "capacity-2026-10-28-tissue-wed",
-    "expected_revision": 0,
-    "operation": "upsert",
-    "payload": {
-      "title": "Tissue work",
-      "kind": "recovery",
-      "scheduled_at": "2026-10-28T08:10:00-05:00",
-      "status": "pending",
-      "plan_revision": "2026-10-14-shared-daily-nutrition",
-      "template_id": "tissue",
-      "phase_id": "capacity",
-      "time_zone": "America/Chicago",
-      "schedule_source": "implementationTimingDefaults",
-      "prescription": {
-        "id": "tissue",
-        "kind": "recovery",
-        "title": "Tissue work",
-        "instructions": "Massage gun: 60 seconds per muscle group, quads, outer glutes and calves. Psoas stretch: 60 seconds per side. Figure-four stretch: 90 seconds per side.",
-        "sourceRef": "recoveryDraft"
-      },
-      "plan_snapshot": {
-        "template": {
-          "id": "tissue",
-          "kind": "recovery",
-          "title": "Tissue work",
-          "instructions": "Massage gun: 60 seconds per muscle group, quads, outer glutes and calves. Psoas stretch: 60 seconds per side. Figure-four stretch: 90 seconds per side.",
-          "sourceRef": "recoveryDraft"
-        },
-        "category": null,
-        "nutrition_profile": "daily"
-      },
-      "parent_id": "capacity-2026-10-28-rest-wed"
-    }
-  },
-  {
-    "command_id": "create-capacity-2026-10-28-legs-wed",
-    "entity_type": "activities",
-    "entity_id": "capacity-2026-10-28-legs-wed",
-    "expected_revision": 0,
-    "operation": "upsert",
-    "payload": {
-      "title": "Legs up",
-      "kind": "recovery",
-      "scheduled_at": "2026-10-28T08:20:00-05:00",
-      "status": "pending",
-      "plan_revision": "2026-10-14-shared-daily-nutrition",
-      "template_id": "legs",
-      "phase_id": "capacity",
-      "time_zone": "America/Chicago",
-      "schedule_source": "implementationTimingDefaults",
-      "prescription": {
-        "id": "legs",
-        "kind": "recovery",
-        "title": "Legs up",
-        "instructions": "Eight to ten minutes.",
-        "sourceRef": "recoveryDraft"
-      },
-      "plan_snapshot": {
-        "template": {
-          "id": "legs",
-          "kind": "recovery",
-          "title": "Legs up",
-          "instructions": "Eight to ten minutes.",
-          "sourceRef": "recoveryDraft"
-        },
-        "category": null,
-        "nutrition_profile": "daily"
-      },
-      "parent_id": "capacity-2026-10-28-rest-wed"
     }
   },
   {
@@ -1889,6 +1142,42 @@
         "nutrition_profile": "daily"
       },
       "category": "flow"
+    }
+  },
+  {
+    "command_id": "create-capacity-2026-10-30-stretch-fri",
+    "entity_type": "activities",
+    "entity_id": "capacity-2026-10-30-stretch-fri",
+    "expected_revision": 0,
+    "operation": "upsert",
+    "payload": {
+      "title": "Down Dog gentle stretching \u00b7 10\u201315 min",
+      "kind": "recovery",
+      "scheduled_at": "2026-10-30T20:30:00-05:00",
+      "status": "pending",
+      "plan_revision": "2026-10-14-shared-daily-nutrition",
+      "template_id": "gentle-stretching",
+      "phase_id": "capacity",
+      "time_zone": "America/Chicago",
+      "schedule_source": "recoveryPreference20261021",
+      "prescription": {
+        "id": "gentle-stretching",
+        "kind": "recovery",
+        "title": "Down Dog gentle stretching \u00b7 10\u201315 min",
+        "instructions": "Open Down Dog and choose 10\u201315 minutes of gentle stretching. Keep it easy. Mark Done when finished, or Skip if you decide not to do it.",
+        "sourceRef": "recoveryPreference20261021"
+      },
+      "plan_snapshot": {
+        "template": {
+          "id": "gentle-stretching",
+          "kind": "recovery",
+          "title": "Down Dog gentle stretching \u00b7 10\u201315 min",
+          "instructions": "Open Down Dog and choose 10\u201315 minutes of gentle stretching. Keep it easy. Mark Done when finished, or Skip if you decide not to do it.",
+          "sourceRef": "recoveryPreference20261021"
+        },
+        "category": null,
+        "nutrition_profile": "daily"
+      }
     }
   },
   {
@@ -2163,374 +1452,39 @@
     }
   },
   {
-    "command_id": "create-capacity-2026-11-03-breathing-tue",
+    "command_id": "create-capacity-2026-11-04-stretch-wed",
     "entity_type": "activities",
-    "entity_id": "capacity-2026-11-03-breathing-tue",
+    "entity_id": "capacity-2026-11-04-stretch-wed",
     "expected_revision": 0,
     "operation": "upsert",
     "payload": {
-      "title": "Breathing",
+      "title": "Down Dog gentle stretching \u00b7 10\u201315 min",
       "kind": "recovery",
-      "scheduled_at": "2026-11-03T20:00:00-06:00",
+      "scheduled_at": "2026-11-04T20:30:00-06:00",
       "status": "pending",
       "plan_revision": "2026-10-14-shared-daily-nutrition",
-      "template_id": "breathing",
+      "template_id": "gentle-stretching",
       "phase_id": "capacity",
       "time_zone": "America/Chicago",
-      "schedule_source": "implementationTimingDefaults",
+      "schedule_source": "recoveryPreference20261021",
       "prescription": {
-        "id": "breathing",
+        "id": "gentle-stretching",
         "kind": "recovery",
-        "title": "Breathing",
-        "instructions": "Five minutes of physiological sighing.",
-        "sourceRef": "recoveryDraft"
+        "title": "Down Dog gentle stretching \u00b7 10\u201315 min",
+        "instructions": "Open Down Dog and choose 10\u201315 minutes of gentle stretching. Keep it easy. Mark Done when finished, or Skip if you decide not to do it.",
+        "sourceRef": "recoveryPreference20261021"
       },
       "plan_snapshot": {
         "template": {
-          "id": "breathing",
+          "id": "gentle-stretching",
           "kind": "recovery",
-          "title": "Breathing",
-          "instructions": "Five minutes of physiological sighing.",
-          "sourceRef": "recoveryDraft"
-        },
-        "category": null,
-        "nutrition_profile": "daily"
-      },
-      "parent_id": "capacity-2026-11-03-recovery-tue"
-    }
-  },
-  {
-    "command_id": "create-capacity-2026-11-03-recovery-tue",
-    "entity_type": "activities",
-    "entity_id": "capacity-2026-11-03-recovery-tue",
-    "expected_revision": 0,
-    "operation": "upsert",
-    "payload": {
-      "title": "Recovery",
-      "kind": "recovery",
-      "scheduled_at": "2026-11-03T20:00:00-06:00",
-      "status": "pending",
-      "plan_revision": "2026-10-14-shared-daily-nutrition",
-      "template_id": "recovery",
-      "phase_id": "capacity",
-      "time_zone": "America/Chicago",
-      "schedule_source": "implementationTimingDefaults",
-      "prescription": {
-        "id": "recovery",
-        "kind": "recovery",
-        "title": "Recovery",
-        "instructions": "",
-        "sourceRef": "recoveryDraft"
-      },
-      "plan_snapshot": {
-        "template": {
-          "id": "recovery",
-          "kind": "recovery",
-          "title": "Recovery",
-          "instructions": "",
-          "sourceRef": "recoveryDraft"
-        },
-        "category": null,
-        "nutrition_profile": "daily"
-      },
-      "linked_session_id": "capacity-2026-11-03-competition-tue"
-    }
-  },
-  {
-    "command_id": "create-capacity-2026-11-03-hydration-tue",
-    "entity_type": "activities",
-    "entity_id": "capacity-2026-11-03-hydration-tue",
-    "expected_revision": 0,
-    "operation": "upsert",
-    "payload": {
-      "title": "Hydration",
-      "kind": "recovery",
-      "scheduled_at": "2026-11-03T20:05:00-06:00",
-      "status": "pending",
-      "plan_revision": "2026-10-14-shared-daily-nutrition",
-      "template_id": "hydration",
-      "phase_id": "capacity",
-      "time_zone": "America/Chicago",
-      "schedule_source": "implementationTimingDefaults",
-      "prescription": {
-        "id": "hydration",
-        "kind": "recovery",
-        "title": "Hydration",
-        "instructions": "12\u201320 oz of water",
-        "sourceRef": "currentReview"
-      },
-      "plan_snapshot": {
-        "template": {
-          "id": "hydration",
-          "kind": "recovery",
-          "title": "Hydration",
-          "instructions": "12\u201320 oz of water",
-          "sourceRef": "currentReview"
-        },
-        "category": null,
-        "nutrition_profile": "daily"
-      },
-      "parent_id": "capacity-2026-11-03-recovery-tue",
-      "recovery_step_type": "hydration"
-    }
-  },
-  {
-    "command_id": "create-capacity-2026-11-03-tissue-tue",
-    "entity_type": "activities",
-    "entity_id": "capacity-2026-11-03-tissue-tue",
-    "expected_revision": 0,
-    "operation": "upsert",
-    "payload": {
-      "title": "Tissue work",
-      "kind": "recovery",
-      "scheduled_at": "2026-11-03T20:10:00-06:00",
-      "status": "pending",
-      "plan_revision": "2026-10-14-shared-daily-nutrition",
-      "template_id": "tissue",
-      "phase_id": "capacity",
-      "time_zone": "America/Chicago",
-      "schedule_source": "implementationTimingDefaults",
-      "prescription": {
-        "id": "tissue",
-        "kind": "recovery",
-        "title": "Tissue work",
-        "instructions": "Massage gun: 60 seconds per muscle group, quads, outer glutes and calves. Psoas stretch: 60 seconds per side. Figure-four stretch: 90 seconds per side.",
-        "sourceRef": "recoveryDraft"
-      },
-      "plan_snapshot": {
-        "template": {
-          "id": "tissue",
-          "kind": "recovery",
-          "title": "Tissue work",
-          "instructions": "Massage gun: 60 seconds per muscle group, quads, outer glutes and calves. Psoas stretch: 60 seconds per side. Figure-four stretch: 90 seconds per side.",
-          "sourceRef": "recoveryDraft"
-        },
-        "category": null,
-        "nutrition_profile": "daily"
-      },
-      "parent_id": "capacity-2026-11-03-recovery-tue"
-    }
-  },
-  {
-    "command_id": "create-capacity-2026-11-03-legs-tue",
-    "entity_type": "activities",
-    "entity_id": "capacity-2026-11-03-legs-tue",
-    "expected_revision": 0,
-    "operation": "upsert",
-    "payload": {
-      "title": "Legs up",
-      "kind": "recovery",
-      "scheduled_at": "2026-11-03T20:20:00-06:00",
-      "status": "pending",
-      "plan_revision": "2026-10-14-shared-daily-nutrition",
-      "template_id": "legs",
-      "phase_id": "capacity",
-      "time_zone": "America/Chicago",
-      "schedule_source": "implementationTimingDefaults",
-      "prescription": {
-        "id": "legs",
-        "kind": "recovery",
-        "title": "Legs up",
-        "instructions": "Eight to ten minutes.",
-        "sourceRef": "recoveryDraft"
-      },
-      "plan_snapshot": {
-        "template": {
-          "id": "legs",
-          "kind": "recovery",
-          "title": "Legs up",
-          "instructions": "Eight to ten minutes.",
-          "sourceRef": "recoveryDraft"
-        },
-        "category": null,
-        "nutrition_profile": "daily"
-      },
-      "parent_id": "capacity-2026-11-03-recovery-tue"
-    }
-  },
-  {
-    "command_id": "create-capacity-2026-11-04-breathing-wed",
-    "entity_type": "activities",
-    "entity_id": "capacity-2026-11-04-breathing-wed",
-    "expected_revision": 0,
-    "operation": "upsert",
-    "payload": {
-      "title": "Breathing",
-      "kind": "recovery",
-      "scheduled_at": "2026-11-04T08:00:00-06:00",
-      "status": "pending",
-      "plan_revision": "2026-10-14-shared-daily-nutrition",
-      "template_id": "breathing",
-      "phase_id": "capacity",
-      "time_zone": "America/Chicago",
-      "schedule_source": "implementationTimingDefaults",
-      "prescription": {
-        "id": "breathing",
-        "kind": "recovery",
-        "title": "Breathing",
-        "instructions": "Five minutes of physiological sighing.",
-        "sourceRef": "recoveryDraft"
-      },
-      "plan_snapshot": {
-        "template": {
-          "id": "breathing",
-          "kind": "recovery",
-          "title": "Breathing",
-          "instructions": "Five minutes of physiological sighing.",
-          "sourceRef": "recoveryDraft"
-        },
-        "category": null,
-        "nutrition_profile": "daily"
-      },
-      "parent_id": "capacity-2026-11-04-rest-wed"
-    }
-  },
-  {
-    "command_id": "create-capacity-2026-11-04-rest-wed",
-    "entity_type": "activities",
-    "entity_id": "capacity-2026-11-04-rest-wed",
-    "expected_revision": 0,
-    "operation": "upsert",
-    "payload": {
-      "title": "Rest day",
-      "kind": "rest",
-      "scheduled_at": "2026-11-04T08:00:00-06:00",
-      "status": "pending",
-      "plan_revision": "2026-10-14-shared-daily-nutrition",
-      "template_id": "rest",
-      "phase_id": "capacity",
-      "time_zone": "America/Chicago",
-      "schedule_source": "implementationTimingDefaults",
-      "prescription": {
-        "id": "rest",
-        "kind": "rest",
-        "title": "Rest day",
-        "instructions": "",
-        "sourceRef": "currentReview"
-      },
-      "plan_snapshot": {
-        "template": {
-          "id": "rest",
-          "kind": "rest",
-          "title": "Rest day",
-          "instructions": "",
-          "sourceRef": "currentReview"
+          "title": "Down Dog gentle stretching \u00b7 10\u201315 min",
+          "instructions": "Open Down Dog and choose 10\u201315 minutes of gentle stretching. Keep it easy. Mark Done when finished, or Skip if you decide not to do it.",
+          "sourceRef": "recoveryPreference20261021"
         },
         "category": null,
         "nutrition_profile": "daily"
       }
-    }
-  },
-  {
-    "command_id": "create-capacity-2026-11-04-hydration-wed",
-    "entity_type": "activities",
-    "entity_id": "capacity-2026-11-04-hydration-wed",
-    "expected_revision": 0,
-    "operation": "upsert",
-    "payload": {
-      "title": "Hydration",
-      "kind": "recovery",
-      "scheduled_at": "2026-11-04T08:05:00-06:00",
-      "status": "pending",
-      "plan_revision": "2026-10-14-shared-daily-nutrition",
-      "template_id": "hydration",
-      "phase_id": "capacity",
-      "time_zone": "America/Chicago",
-      "schedule_source": "implementationTimingDefaults",
-      "prescription": {
-        "id": "hydration",
-        "kind": "recovery",
-        "title": "Hydration",
-        "instructions": "12\u201320 oz of water",
-        "sourceRef": "currentReview"
-      },
-      "plan_snapshot": {
-        "template": {
-          "id": "hydration",
-          "kind": "recovery",
-          "title": "Hydration",
-          "instructions": "12\u201320 oz of water",
-          "sourceRef": "currentReview"
-        },
-        "category": null,
-        "nutrition_profile": "daily"
-      },
-      "parent_id": "capacity-2026-11-04-rest-wed",
-      "recovery_step_type": "hydration"
-    }
-  },
-  {
-    "command_id": "create-capacity-2026-11-04-tissue-wed",
-    "entity_type": "activities",
-    "entity_id": "capacity-2026-11-04-tissue-wed",
-    "expected_revision": 0,
-    "operation": "upsert",
-    "payload": {
-      "title": "Tissue work",
-      "kind": "recovery",
-      "scheduled_at": "2026-11-04T08:10:00-06:00",
-      "status": "pending",
-      "plan_revision": "2026-10-14-shared-daily-nutrition",
-      "template_id": "tissue",
-      "phase_id": "capacity",
-      "time_zone": "America/Chicago",
-      "schedule_source": "implementationTimingDefaults",
-      "prescription": {
-        "id": "tissue",
-        "kind": "recovery",
-        "title": "Tissue work",
-        "instructions": "Massage gun: 60 seconds per muscle group, quads, outer glutes and calves. Psoas stretch: 60 seconds per side. Figure-four stretch: 90 seconds per side.",
-        "sourceRef": "recoveryDraft"
-      },
-      "plan_snapshot": {
-        "template": {
-          "id": "tissue",
-          "kind": "recovery",
-          "title": "Tissue work",
-          "instructions": "Massage gun: 60 seconds per muscle group, quads, outer glutes and calves. Psoas stretch: 60 seconds per side. Figure-four stretch: 90 seconds per side.",
-          "sourceRef": "recoveryDraft"
-        },
-        "category": null,
-        "nutrition_profile": "daily"
-      },
-      "parent_id": "capacity-2026-11-04-rest-wed"
-    }
-  },
-  {
-    "command_id": "create-capacity-2026-11-04-legs-wed",
-    "entity_type": "activities",
-    "entity_id": "capacity-2026-11-04-legs-wed",
-    "expected_revision": 0,
-    "operation": "upsert",
-    "payload": {
-      "title": "Legs up",
-      "kind": "recovery",
-      "scheduled_at": "2026-11-04T08:20:00-06:00",
-      "status": "pending",
-      "plan_revision": "2026-10-14-shared-daily-nutrition",
-      "template_id": "legs",
-      "phase_id": "capacity",
-      "time_zone": "America/Chicago",
-      "schedule_source": "implementationTimingDefaults",
-      "prescription": {
-        "id": "legs",
-        "kind": "recovery",
-        "title": "Legs up",
-        "instructions": "Eight to ten minutes.",
-        "sourceRef": "recoveryDraft"
-      },
-      "plan_snapshot": {
-        "template": {
-          "id": "legs",
-          "kind": "recovery",
-          "title": "Legs up",
-          "instructions": "Eight to ten minutes.",
-          "sourceRef": "recoveryDraft"
-        },
-        "category": null,
-        "nutrition_profile": "daily"
-      },
-      "parent_id": "capacity-2026-11-04-rest-wed"
     }
   },
   {
@@ -2672,6 +1626,42 @@
         "nutrition_profile": "daily"
       },
       "category": "flow"
+    }
+  },
+  {
+    "command_id": "create-capacity-2026-11-06-stretch-fri",
+    "entity_type": "activities",
+    "entity_id": "capacity-2026-11-06-stretch-fri",
+    "expected_revision": 0,
+    "operation": "upsert",
+    "payload": {
+      "title": "Down Dog gentle stretching \u00b7 10\u201315 min",
+      "kind": "recovery",
+      "scheduled_at": "2026-11-06T20:30:00-06:00",
+      "status": "pending",
+      "plan_revision": "2026-10-14-shared-daily-nutrition",
+      "template_id": "gentle-stretching",
+      "phase_id": "capacity",
+      "time_zone": "America/Chicago",
+      "schedule_source": "recoveryPreference20261021",
+      "prescription": {
+        "id": "gentle-stretching",
+        "kind": "recovery",
+        "title": "Down Dog gentle stretching \u00b7 10\u201315 min",
+        "instructions": "Open Down Dog and choose 10\u201315 minutes of gentle stretching. Keep it easy. Mark Done when finished, or Skip if you decide not to do it.",
+        "sourceRef": "recoveryPreference20261021"
+      },
+      "plan_snapshot": {
+        "template": {
+          "id": "gentle-stretching",
+          "kind": "recovery",
+          "title": "Down Dog gentle stretching \u00b7 10\u201315 min",
+          "instructions": "Open Down Dog and choose 10\u201315 minutes of gentle stretching. Keep it easy. Mark Done when finished, or Skip if you decide not to do it.",
+          "sourceRef": "recoveryPreference20261021"
+        },
+        "category": null,
+        "nutrition_profile": "daily"
+      }
     }
   },
   {
@@ -2946,374 +1936,39 @@
     }
   },
   {
-    "command_id": "create-capacity-2026-11-10-breathing-tue",
+    "command_id": "create-capacity-2026-11-11-stretch-wed",
     "entity_type": "activities",
-    "entity_id": "capacity-2026-11-10-breathing-tue",
+    "entity_id": "capacity-2026-11-11-stretch-wed",
     "expected_revision": 0,
     "operation": "upsert",
     "payload": {
-      "title": "Breathing",
+      "title": "Down Dog gentle stretching \u00b7 10\u201315 min",
       "kind": "recovery",
-      "scheduled_at": "2026-11-10T20:00:00-06:00",
+      "scheduled_at": "2026-11-11T20:30:00-06:00",
       "status": "pending",
       "plan_revision": "2026-10-14-shared-daily-nutrition",
-      "template_id": "breathing",
+      "template_id": "gentle-stretching",
       "phase_id": "capacity",
       "time_zone": "America/Chicago",
-      "schedule_source": "implementationTimingDefaults",
+      "schedule_source": "recoveryPreference20261021",
       "prescription": {
-        "id": "breathing",
+        "id": "gentle-stretching",
         "kind": "recovery",
-        "title": "Breathing",
-        "instructions": "Five minutes of physiological sighing.",
-        "sourceRef": "recoveryDraft"
+        "title": "Down Dog gentle stretching \u00b7 10\u201315 min",
+        "instructions": "Open Down Dog and choose 10\u201315 minutes of gentle stretching. Keep it easy. Mark Done when finished, or Skip if you decide not to do it.",
+        "sourceRef": "recoveryPreference20261021"
       },
       "plan_snapshot": {
         "template": {
-          "id": "breathing",
+          "id": "gentle-stretching",
           "kind": "recovery",
-          "title": "Breathing",
-          "instructions": "Five minutes of physiological sighing.",
-          "sourceRef": "recoveryDraft"
-        },
-        "category": null,
-        "nutrition_profile": "daily"
-      },
-      "parent_id": "capacity-2026-11-10-recovery-tue"
-    }
-  },
-  {
-    "command_id": "create-capacity-2026-11-10-recovery-tue",
-    "entity_type": "activities",
-    "entity_id": "capacity-2026-11-10-recovery-tue",
-    "expected_revision": 0,
-    "operation": "upsert",
-    "payload": {
-      "title": "Recovery",
-      "kind": "recovery",
-      "scheduled_at": "2026-11-10T20:00:00-06:00",
-      "status": "pending",
-      "plan_revision": "2026-10-14-shared-daily-nutrition",
-      "template_id": "recovery",
-      "phase_id": "capacity",
-      "time_zone": "America/Chicago",
-      "schedule_source": "implementationTimingDefaults",
-      "prescription": {
-        "id": "recovery",
-        "kind": "recovery",
-        "title": "Recovery",
-        "instructions": "",
-        "sourceRef": "recoveryDraft"
-      },
-      "plan_snapshot": {
-        "template": {
-          "id": "recovery",
-          "kind": "recovery",
-          "title": "Recovery",
-          "instructions": "",
-          "sourceRef": "recoveryDraft"
-        },
-        "category": null,
-        "nutrition_profile": "daily"
-      },
-      "linked_session_id": "capacity-2026-11-10-competition-tue"
-    }
-  },
-  {
-    "command_id": "create-capacity-2026-11-10-hydration-tue",
-    "entity_type": "activities",
-    "entity_id": "capacity-2026-11-10-hydration-tue",
-    "expected_revision": 0,
-    "operation": "upsert",
-    "payload": {
-      "title": "Hydration",
-      "kind": "recovery",
-      "scheduled_at": "2026-11-10T20:05:00-06:00",
-      "status": "pending",
-      "plan_revision": "2026-10-14-shared-daily-nutrition",
-      "template_id": "hydration",
-      "phase_id": "capacity",
-      "time_zone": "America/Chicago",
-      "schedule_source": "implementationTimingDefaults",
-      "prescription": {
-        "id": "hydration",
-        "kind": "recovery",
-        "title": "Hydration",
-        "instructions": "12\u201320 oz of water",
-        "sourceRef": "currentReview"
-      },
-      "plan_snapshot": {
-        "template": {
-          "id": "hydration",
-          "kind": "recovery",
-          "title": "Hydration",
-          "instructions": "12\u201320 oz of water",
-          "sourceRef": "currentReview"
-        },
-        "category": null,
-        "nutrition_profile": "daily"
-      },
-      "parent_id": "capacity-2026-11-10-recovery-tue",
-      "recovery_step_type": "hydration"
-    }
-  },
-  {
-    "command_id": "create-capacity-2026-11-10-tissue-tue",
-    "entity_type": "activities",
-    "entity_id": "capacity-2026-11-10-tissue-tue",
-    "expected_revision": 0,
-    "operation": "upsert",
-    "payload": {
-      "title": "Tissue work",
-      "kind": "recovery",
-      "scheduled_at": "2026-11-10T20:10:00-06:00",
-      "status": "pending",
-      "plan_revision": "2026-10-14-shared-daily-nutrition",
-      "template_id": "tissue",
-      "phase_id": "capacity",
-      "time_zone": "America/Chicago",
-      "schedule_source": "implementationTimingDefaults",
-      "prescription": {
-        "id": "tissue",
-        "kind": "recovery",
-        "title": "Tissue work",
-        "instructions": "Massage gun: 60 seconds per muscle group, quads, outer glutes and calves. Psoas stretch: 60 seconds per side. Figure-four stretch: 90 seconds per side.",
-        "sourceRef": "recoveryDraft"
-      },
-      "plan_snapshot": {
-        "template": {
-          "id": "tissue",
-          "kind": "recovery",
-          "title": "Tissue work",
-          "instructions": "Massage gun: 60 seconds per muscle group, quads, outer glutes and calves. Psoas stretch: 60 seconds per side. Figure-four stretch: 90 seconds per side.",
-          "sourceRef": "recoveryDraft"
-        },
-        "category": null,
-        "nutrition_profile": "daily"
-      },
-      "parent_id": "capacity-2026-11-10-recovery-tue"
-    }
-  },
-  {
-    "command_id": "create-capacity-2026-11-10-legs-tue",
-    "entity_type": "activities",
-    "entity_id": "capacity-2026-11-10-legs-tue",
-    "expected_revision": 0,
-    "operation": "upsert",
-    "payload": {
-      "title": "Legs up",
-      "kind": "recovery",
-      "scheduled_at": "2026-11-10T20:20:00-06:00",
-      "status": "pending",
-      "plan_revision": "2026-10-14-shared-daily-nutrition",
-      "template_id": "legs",
-      "phase_id": "capacity",
-      "time_zone": "America/Chicago",
-      "schedule_source": "implementationTimingDefaults",
-      "prescription": {
-        "id": "legs",
-        "kind": "recovery",
-        "title": "Legs up",
-        "instructions": "Eight to ten minutes.",
-        "sourceRef": "recoveryDraft"
-      },
-      "plan_snapshot": {
-        "template": {
-          "id": "legs",
-          "kind": "recovery",
-          "title": "Legs up",
-          "instructions": "Eight to ten minutes.",
-          "sourceRef": "recoveryDraft"
-        },
-        "category": null,
-        "nutrition_profile": "daily"
-      },
-      "parent_id": "capacity-2026-11-10-recovery-tue"
-    }
-  },
-  {
-    "command_id": "create-capacity-2026-11-11-breathing-wed",
-    "entity_type": "activities",
-    "entity_id": "capacity-2026-11-11-breathing-wed",
-    "expected_revision": 0,
-    "operation": "upsert",
-    "payload": {
-      "title": "Breathing",
-      "kind": "recovery",
-      "scheduled_at": "2026-11-11T08:00:00-06:00",
-      "status": "pending",
-      "plan_revision": "2026-10-14-shared-daily-nutrition",
-      "template_id": "breathing",
-      "phase_id": "capacity",
-      "time_zone": "America/Chicago",
-      "schedule_source": "implementationTimingDefaults",
-      "prescription": {
-        "id": "breathing",
-        "kind": "recovery",
-        "title": "Breathing",
-        "instructions": "Five minutes of physiological sighing.",
-        "sourceRef": "recoveryDraft"
-      },
-      "plan_snapshot": {
-        "template": {
-          "id": "breathing",
-          "kind": "recovery",
-          "title": "Breathing",
-          "instructions": "Five minutes of physiological sighing.",
-          "sourceRef": "recoveryDraft"
-        },
-        "category": null,
-        "nutrition_profile": "daily"
-      },
-      "parent_id": "capacity-2026-11-11-rest-wed"
-    }
-  },
-  {
-    "command_id": "create-capacity-2026-11-11-rest-wed",
-    "entity_type": "activities",
-    "entity_id": "capacity-2026-11-11-rest-wed",
-    "expected_revision": 0,
-    "operation": "upsert",
-    "payload": {
-      "title": "Rest day",
-      "kind": "rest",
-      "scheduled_at": "2026-11-11T08:00:00-06:00",
-      "status": "pending",
-      "plan_revision": "2026-10-14-shared-daily-nutrition",
-      "template_id": "rest",
-      "phase_id": "capacity",
-      "time_zone": "America/Chicago",
-      "schedule_source": "implementationTimingDefaults",
-      "prescription": {
-        "id": "rest",
-        "kind": "rest",
-        "title": "Rest day",
-        "instructions": "",
-        "sourceRef": "currentReview"
-      },
-      "plan_snapshot": {
-        "template": {
-          "id": "rest",
-          "kind": "rest",
-          "title": "Rest day",
-          "instructions": "",
-          "sourceRef": "currentReview"
+          "title": "Down Dog gentle stretching \u00b7 10\u201315 min",
+          "instructions": "Open Down Dog and choose 10\u201315 minutes of gentle stretching. Keep it easy. Mark Done when finished, or Skip if you decide not to do it.",
+          "sourceRef": "recoveryPreference20261021"
         },
         "category": null,
         "nutrition_profile": "daily"
       }
-    }
-  },
-  {
-    "command_id": "create-capacity-2026-11-11-hydration-wed",
-    "entity_type": "activities",
-    "entity_id": "capacity-2026-11-11-hydration-wed",
-    "expected_revision": 0,
-    "operation": "upsert",
-    "payload": {
-      "title": "Hydration",
-      "kind": "recovery",
-      "scheduled_at": "2026-11-11T08:05:00-06:00",
-      "status": "pending",
-      "plan_revision": "2026-10-14-shared-daily-nutrition",
-      "template_id": "hydration",
-      "phase_id": "capacity",
-      "time_zone": "America/Chicago",
-      "schedule_source": "implementationTimingDefaults",
-      "prescription": {
-        "id": "hydration",
-        "kind": "recovery",
-        "title": "Hydration",
-        "instructions": "12\u201320 oz of water",
-        "sourceRef": "currentReview"
-      },
-      "plan_snapshot": {
-        "template": {
-          "id": "hydration",
-          "kind": "recovery",
-          "title": "Hydration",
-          "instructions": "12\u201320 oz of water",
-          "sourceRef": "currentReview"
-        },
-        "category": null,
-        "nutrition_profile": "daily"
-      },
-      "parent_id": "capacity-2026-11-11-rest-wed",
-      "recovery_step_type": "hydration"
-    }
-  },
-  {
-    "command_id": "create-capacity-2026-11-11-tissue-wed",
-    "entity_type": "activities",
-    "entity_id": "capacity-2026-11-11-tissue-wed",
-    "expected_revision": 0,
-    "operation": "upsert",
-    "payload": {
-      "title": "Tissue work",
-      "kind": "recovery",
-      "scheduled_at": "2026-11-11T08:10:00-06:00",
-      "status": "pending",
-      "plan_revision": "2026-10-14-shared-daily-nutrition",
-      "template_id": "tissue",
-      "phase_id": "capacity",
-      "time_zone": "America/Chicago",
-      "schedule_source": "implementationTimingDefaults",
-      "prescription": {
-        "id": "tissue",
-        "kind": "recovery",
-        "title": "Tissue work",
-        "instructions": "Massage gun: 60 seconds per muscle group, quads, outer glutes and calves. Psoas stretch: 60 seconds per side. Figure-four stretch: 90 seconds per side.",
-        "sourceRef": "recoveryDraft"
-      },
-      "plan_snapshot": {
-        "template": {
-          "id": "tissue",
-          "kind": "recovery",
-          "title": "Tissue work",
-          "instructions": "Massage gun: 60 seconds per muscle group, quads, outer glutes and calves. Psoas stretch: 60 seconds per side. Figure-four stretch: 90 seconds per side.",
-          "sourceRef": "recoveryDraft"
-        },
-        "category": null,
-        "nutrition_profile": "daily"
-      },
-      "parent_id": "capacity-2026-11-11-rest-wed"
-    }
-  },
-  {
-    "command_id": "create-capacity-2026-11-11-legs-wed",
-    "entity_type": "activities",
-    "entity_id": "capacity-2026-11-11-legs-wed",
-    "expected_revision": 0,
-    "operation": "upsert",
-    "payload": {
-      "title": "Legs up",
-      "kind": "recovery",
-      "scheduled_at": "2026-11-11T08:20:00-06:00",
-      "status": "pending",
-      "plan_revision": "2026-10-14-shared-daily-nutrition",
-      "template_id": "legs",
-      "phase_id": "capacity",
-      "time_zone": "America/Chicago",
-      "schedule_source": "implementationTimingDefaults",
-      "prescription": {
-        "id": "legs",
-        "kind": "recovery",
-        "title": "Legs up",
-        "instructions": "Eight to ten minutes.",
-        "sourceRef": "recoveryDraft"
-      },
-      "plan_snapshot": {
-        "template": {
-          "id": "legs",
-          "kind": "recovery",
-          "title": "Legs up",
-          "instructions": "Eight to ten minutes.",
-          "sourceRef": "recoveryDraft"
-        },
-        "category": null,
-        "nutrition_profile": "daily"
-      },
-      "parent_id": "capacity-2026-11-11-rest-wed"
     }
   },
   {
@@ -3455,6 +2110,42 @@
         "nutrition_profile": "daily"
       },
       "category": "flow"
+    }
+  },
+  {
+    "command_id": "create-capacity-2026-11-13-stretch-fri",
+    "entity_type": "activities",
+    "entity_id": "capacity-2026-11-13-stretch-fri",
+    "expected_revision": 0,
+    "operation": "upsert",
+    "payload": {
+      "title": "Down Dog gentle stretching \u00b7 10\u201315 min",
+      "kind": "recovery",
+      "scheduled_at": "2026-11-13T20:30:00-06:00",
+      "status": "pending",
+      "plan_revision": "2026-10-14-shared-daily-nutrition",
+      "template_id": "gentle-stretching",
+      "phase_id": "capacity",
+      "time_zone": "America/Chicago",
+      "schedule_source": "recoveryPreference20261021",
+      "prescription": {
+        "id": "gentle-stretching",
+        "kind": "recovery",
+        "title": "Down Dog gentle stretching \u00b7 10\u201315 min",
+        "instructions": "Open Down Dog and choose 10\u201315 minutes of gentle stretching. Keep it easy. Mark Done when finished, or Skip if you decide not to do it.",
+        "sourceRef": "recoveryPreference20261021"
+      },
+      "plan_snapshot": {
+        "template": {
+          "id": "gentle-stretching",
+          "kind": "recovery",
+          "title": "Down Dog gentle stretching \u00b7 10\u201315 min",
+          "instructions": "Open Down Dog and choose 10\u201315 minutes of gentle stretching. Keep it easy. Mark Done when finished, or Skip if you decide not to do it.",
+          "sourceRef": "recoveryPreference20261021"
+        },
+        "category": null,
+        "nutrition_profile": "daily"
+      }
     }
   },
   {
