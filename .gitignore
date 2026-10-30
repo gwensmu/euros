@@ -22,3 +22,12 @@ __pycache__/
 *.sqlite3-shm
 .tools/
 .kotlin/
+# Private enrollment, credentials and exports
+secrets/
+credentials/
+*.pem
+*.key
+*.p12
+*.pfx
+*.sqlite-journal
+*.sqlite3-journal

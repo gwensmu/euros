@@ -2,6 +2,10 @@
 
 A personal Android app for preparing for a BJJ competition: dated training, recovery, meal plans, food logging, tracker workouts and a small weasel companion.
 
+## Who it is for
+
+An individual recreational BJJ athlete preparing for a specific competition, or a developer adapting that workflow for their own training goal. It is designed for a personal Android phone and a self-hosted backend, not a gym management system or a substitute for a coach.
+
 ## Architecture
 
 - **Android:** Kotlin, Jetpack Compose, Room and a durable offline write queue.
@@ -19,7 +23,24 @@ Start with `plan/euros.json`, its Android asset counterpart, the dated schedule 
 
 ## Run the backend
 
-See [backend setup](server/README.md) and the [API contract](docs/API_CONTRACT.md).
+Install Python 3.12+ and run from the project root:
+
+```sh
+python3 -m venv server/.venv
+server/.venv/bin/pip install -r server/requirements-dev.lock
+server/.venv/bin/pip install -e server --no-deps
+```
+
+Create two private token files outside the repository, each containing a different random ASCII token of at least 32 characters. Set these environment variables to your own paths:
+
+```sh
+export EUROS_DB_PATH=/absolute/path/to/private/euros.sqlite3
+export EUROS_API_TOKEN_FILE=/absolute/path/to/private/app-token
+export EUROS_MCP_TOKEN_FILE=/absolute/path/to/private/mcp-token
+server/.venv/bin/euros-server --port 3013
+```
+
+The server binds to loopback. HTTPS hosting and phone enrollment are described in [backend setup](server/README.md); routes are in the [API contract](docs/API_CONTRACT.md). [.env.example](.env.example) lists configuration placeholders; the server does not load dotenv files automatically. AI configuration is optional for storage and sync.
 
 ## Build Android
 
@@ -49,3 +70,7 @@ This repository begins with a fresh source snapshot. Private development history
 ## Demo data
 
 [Demo setup](docs/DEMO.md) creates a separate database with fictional activities, meal plans, food logs and weights. Seeding is explicit and refuses an existing database.
+
+## Plans and license
+
+See [ROADMAP.md](ROADMAP.md) for planned work. Licensed under [MIT](LICENSE).
