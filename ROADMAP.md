@@ -2,9 +2,8 @@
 
 The core personal app is implemented. This list distinguishes remaining options from ongoing observation; it is not a commitment to add every possible feature.
 
-## Remaining options
+## Optional or deferred features
 
-- Older Health Connect history where the platform and source app make it available, preserving source identity and corrections.
 - Optional external meal-planning and shopping nudges, after choosing a delivery channel and cadence. Local meal/prep notifications already exist.
 - CSV export, deferred until there is a concrete use case. JSON export and additive restore already work.
 
@@ -15,7 +14,7 @@ Competition/travel scheduling remains personal planning work as event and itiner
 - The current weekly assessment is useful enough to keep. No prompt redesign or broad evaluation project is queued; revisit specific unhelpful results when they arise and review material changes before release.
 - The accessibility/reliability pass and isolated restore rehearsals are complete. Continue observing real use for concrete defects. Bounded tests and basic TalkBack focus checks do not establish multi-day stability or a full spoken audit.
 
-The proposed completed-session choice dialog and Schedule another flow were dropped before release. Existing Move behavior stays.
+The proposed completed-session choice dialog and Schedule another flow were dropped before release. Existing Move behavior stays. Expanded Health Connect historical access is also out of scope; existing imports and cached history remain available.
 
 ## Possible reuse work, outside the current personal-app backlog
 
