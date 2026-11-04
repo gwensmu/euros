@@ -96,6 +96,15 @@ class Repository(private val db:EurosDatabase, llmClient:LlmClient?=null) {
   dao.put(Record(type,id,current?.revision ?: 0L,raw,delete))
   dao.enqueue(Pending(UUID.randomUUID().toString(),type,id,expected,if(delete) "{}" else raw,created,operation=if(delete) "delete" else "upsert"))
  }
+ private suspend fun refreshStrengthProgression() {
+  val records=dao.recordsIncludingDeleted()
+  val weights=records.filter{it.type=="activities" && JSONObject(it.payload).optString("kind")=="weights"}.map{it.id}.toSet()
+  if(dao.pending().any{it.type=="activities" && it.id in weights && it.error!=null})return
+  for((record,payload) in StrengthProgression.updates(records)) {
+   // Never bypass an unresolved revision conflict with an automatic plan update.
+   if(dao.pendingForEntity(record.type,record.id).none{it.error!=null})enqueue(record.type,record.id,payload)
+  }
+ }
  suspend fun upsert(type:String,id:String,payload:JSONObject,expectedRevision:Long?=null,expectedPayload:String?=null)=mutex.withLock {
   var newlyCompleted=false
   db.withTransaction {
@@ -105,6 +114,7 @@ class Repository(private val db:EurosDatabase, llmClient:LlmClient?=null) {
    if(expectedRevision!=null) check((current?.revision ?: 0L)==expectedRevision) { "This record changed. Reopen it before saving." }
    if(expectedPayload!=null) check(dao.record(type,id)?.payload==expectedPayload) { "This record changed locally. Reopen it before saving." }
    enqueue(type,id,payload)
+   if(type=="activities")refreshStrengthProgression()
    newlyCompleted=(type=="activities" && payload.optString("status")=="done" && current?.let{JSONObject(it.payload).optString("status")}!="done") ||
     (type in setOf("food_entries","weight_entries") && current==null)
   }
@@ -115,18 +125,27 @@ class Repository(private val db:EurosDatabase, llmClient:LlmClient?=null) {
    if(expectedRevision!=null) check((dao.record(type,id)?.revision ?: 0L)==expectedRevision) { "This record changed. Reopen it before deleting." }
    if(expectedPayload!=null) check(dao.record(type,id)?.payload==expectedPayload) { "This record changed locally. Reopen it before deleting." }
    enqueue(type,id,null,true)
+   if(type=="activities")refreshStrengthProgression()
   }
  }
  suspend fun complete(record:Record,status:String)=mutex.withLock {
   var newlyCompleted=false
   db.withTransaction {
    val current=dao.record(record.type,record.id) ?: error("Activity unavailable")
-   if(JSONObject(current.payload).optString("status")==status) return@withTransaction
+   if(JSONObject(current.payload).optString("status")==status) {
+    val existing=JSONObject(current.payload)
+    if(status=="done" && existing.optString("kind")=="weights" && !existing.has("strength_feedback")) {
+     existing.put("strength_feedback",StrengthFeedback.value(StrengthFeeling.ABOUT_RIGHT,"default"))
+     enqueue(current.type,current.id,existing);refreshStrengthProgression()
+    }
+    return@withTransaction
+   }
    val payload=JSONObject(Commands.complete(current,status))
    if(status=="done" && payload.optString("kind")=="weights")payload.put("strength_feedback",StrengthFeedback.value(StrengthFeeling.ABOUT_RIGHT,"default"))
    if(status=="done") {payload.put("completed_at",java.time.OffsetDateTime.now().toString());payload.remove("skipped_at")}
    if(status=="skipped") { payload.remove("strength_feedback");payload.remove("recovery_intake");payload.remove("completed_at");payload.put("skipped_at",java.time.OffsetDateTime.now().toString()) }
    enqueue(current.type,current.id,payload)
+   refreshStrengthProgression()
    newlyCompleted=status=="done"
   }
   if(newlyCompleted)completionEvents.tryEmit(Unit)
@@ -140,6 +159,7 @@ class Repository(private val db:EurosDatabase, llmClient:LlmClient?=null) {
    // Merge into the latest payload so a concurrent schedule move is retained.
    p.put("strength_feedback",StrengthFeedback.value(feeling,"selected"))
    enqueue(current.type,current.id,p)
+   refreshStrengthProgression()
   }
  }
  suspend fun move(record:Record,scheduledAt:String)=mutex.withLock {
@@ -174,6 +194,7 @@ class Repository(private val db:EurosDatabase, llmClient:LlmClient?=null) {
     if(item.id==current.id)payload.put("time_zone",PlanDomain.zone.id)
     enqueue(item.type,item.id,payload)
    }
+   refreshStrengthProgression()
   }
  }
  suspend fun saveWeight(id:String,payload:JSONObject,expectedRevision:Long?=null,expectedPayload:String?=null)=mutex.withLock {
@@ -324,6 +345,7 @@ class Repository(private val db:EurosDatabase, llmClient:LlmClient?=null) {
    }
    more=response.getBoolean("has_more")
   }
+  db.withTransaction {refreshStrengthProgression()}
   interpreter=BackendLlmClient(api)
  }
  suspend fun acceptServer(pending:Pending)=mutex.withLock {

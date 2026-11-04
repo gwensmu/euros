@@ -30,3 +30,7 @@ Centralized personalization, a dedicated Android demo build, broader model-fixtu
 - File-backed additive restore with restart, existing tombstones/pending writes and duplicate-merge checks.
 
 The reference deployment passed an isolated server snapshot/restore/restart rehearsal. Its host-specific scripts and private snapshots are excluded here; follow the recipe's deployment-neutral recovery procedure for your own setup. Scheduled backup coverage and whole-host recovery remain separate operational checks.
+
+## Strength feedback and fixed-load progression
+
+Implemented: Done opens Easy / About right / Too hard, with About right as the durable Back default. Matching future prescribed routines adjust reps or hold times while retaining loads and sets. Offline writes, Undo, correction, source deletion and separate routines are covered by tests. Android computes the adjustments and synchronizes revisioned activity metadata; the server does not independently run progression. External-app placeholders without exercises need an accepted routine before progression applies.

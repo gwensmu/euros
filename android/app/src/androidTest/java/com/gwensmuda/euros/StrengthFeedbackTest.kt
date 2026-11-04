@@ -1,6 +1,8 @@
 package com.gwensmuda.euros
 
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.width
+import androidx.compose.ui.unit.dp
 import androidx.compose.ui.test.*
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.room.Room
@@ -58,6 +60,39 @@ class StrengthFeedbackTest {
   repo.complete(record(),"skipped")
   assertFalse(JSONObject(record().payload).has("strength_feedback"))
   assertTrue(runCatching{repo.saveStrengthFeedback(before,StrengthFeeling.EASY)}.isFailure)
+ }
+ @Test fun nextPrescriptionAndFeedbackCommitTogetherAndUndoRevertsThePendingPlan()=runBlocking {
+  val original=JSONObject(record().payload)
+  val prescription=JSONObject().put("exercises",org.json.JSONArray().put(JSONObject().put("name","Row").put("sets",3).put("reps",10).put("loadLb",25)))
+  original.put("prescription",prescription)
+  repo.upsert("activities",id,original)
+  repo.upsert("activities","next-strength",JSONObject(original.toString()).put("scheduled_at","2026-11-15T11:00:00-06:00"))
+  complete();repo.saveStrengthFeedback(record(),StrengthFeeling.EASY)
+  val next=repo.dao.record("activities","next-strength")!!
+  assertEquals(11,StrengthProgression.template(JSONObject(next.payload)).getJSONArray("exercises").getJSONObject(0).getInt("reps"))
+  assertTrue(repo.dao.pendingForEntity("activities","next-strength").isNotEmpty())
+  val undone=JSONObject(record().payload).put("status","pending").apply{remove("completed_at");remove("strength_feedback")}
+  repo.upsert("activities",id,undone)
+  assertFalse(JSONObject(repo.dao.record("activities","next-strength")!!.payload).has(StrengthProgression.KEY))
+ }
+ @Test fun largeTextHasReachableChoicesAndSystemBackRetainsDefault() {
+  complete();var closed=false
+  var dispatcher:androidx.activity.OnBackPressedDispatcher?=null
+  compose.setContent{
+   dispatcher=androidx.activity.compose.LocalOnBackPressedDispatcherOwner.current!!.onBackPressedDispatcher
+   EurosTheme{androidx.compose.runtime.CompositionLocalProvider(androidx.compose.ui.platform.LocalDensity provides androidx.compose.ui.unit.Density(1f,2f)) {
+    Column(androidx.compose.ui.Modifier.width(320.dp)) {StrengthFeedbackScreen(record(),repo){closed=true}}
+   }}
+  }
+  compose.onNodeWithText("Easy").assertIsDisplayed();compose.onNodeWithText("About right").assertIsDisplayed();compose.onNodeWithText("Too hard").assertIsDisplayed()
+  if(androidx.test.platform.app.InstrumentationRegistry.getArguments().getString("captureStrengthFeedback")=="true") {
+   val bitmap=androidx.test.platform.app.InstrumentationRegistry.getInstrumentation().uiAutomation.takeScreenshot()
+   val context=ApplicationProvider.getApplicationContext<android.content.Context>()
+   java.io.File(context.getExternalFilesDir(null),"strength-feedback-large.png").outputStream().use{bitmap.compress(android.graphics.Bitmap.CompressFormat.PNG,100,it)}
+  }
+  compose.runOnIdle{dispatcher!!.onBackPressed()}
+  compose.runOnIdle{assertTrue(closed)}
+  assertEquals("about_right",feedback().getString("feeling"))
  }
  @Test fun completionRetryPreservesSelectedFeedbackAndDoesNotInventMeasurements()=runBlocking {
   complete();repo.saveStrengthFeedback(record(),StrengthFeeling.EASY)

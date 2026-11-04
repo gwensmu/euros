@@ -43,7 +43,7 @@ object PlanDisplay {
 
  fun template(record:Record):JSONObject {
   val p=PlanDomain.payload(record)
-  return p.optJSONObject("plan_snapshot")?.optJSONObject("template") ?: p.optJSONObject("prescription") ?: JSONObject()
+  return if(p.optString("kind")=="weights")StrengthProgression.template(p) else p.optJSONObject("plan_snapshot")?.optJSONObject("template") ?: p.optJSONObject("prescription") ?: JSONObject()
  }
  fun detail(record:Record):String? {
   if(PlanDomain.payload(record).optString("recovery_step_type")=="hydration")return "12–20 oz of water"
@@ -281,7 +281,8 @@ object PlanDisplay {
  if(children.isNotEmpty()) children.forEach{PlanRow(it,records,onOpen,repo)}
  else if(logging==LoggingMode.WEIGHT) WeightPanel(repo,records,PlanDomain.day(record),record,onClose)
  else {
-  val snapshot=p.optJSONObject("plan_snapshot");val template=snapshot?.optJSONObject("template") ?: snapshot
+  val snapshot=p.optJSONObject("plan_snapshot");val template=if(kind=="weights")PlanDisplay.template(record) else snapshot?.optJSONObject("template") ?: snapshot
+  if(kind=="weights")p.optJSONObject(StrengthProgression.KEY)?.optString("summary")?.takeIf{it.isNotBlank()}?.let{Text(it,style=MaterialTheme.typography.bodyMedium,color=EurosColors.Blue)}
   PlanDisplay.detail(record)?.let { instruction ->
    Surface(modifier=Modifier.fillMaxWidth(),color=EurosColors.Paper,shape=RoundedCornerShape(16.dp)) {
     Text(instruction,modifier=Modifier.padding(22.dp),style=MaterialTheme.typography.bodyLarge)
