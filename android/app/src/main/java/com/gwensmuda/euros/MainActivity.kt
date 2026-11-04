@@ -185,7 +185,7 @@ class MainActivity:ComponentActivity() {
    when {
     strengthFeedbackId!=null -> {
      val feedbackRecord=records.find{it.type=="activities" && it.id==strengthFeedbackId}
-     if(feedbackRecord!=null)StrengthFeedbackScreen(feedbackRecord,repo,::closeStrengthFeedback)
+     if(feedbackRecord!=null && PlanDomain.status(feedbackRecord)=="done")StrengthFeedbackScreen(feedbackRecord,repo,::closeStrengthFeedback)
      else {Text("This activity is no longer available");TextButton(onClick={strengthFeedbackId=null}){Text("Close")}}
     }
     weighing -> {Row(Modifier.fillMaxWidth(),horizontalArrangement=Arrangement.SpaceBetween){Text("Weight",style=MaterialTheme.typography.headlineMedium);IconButton(onClick={weighing=false}){Icon(Icons.Outlined.Close,"Close")}};WeightPanel(repo,records,today,onSaved={weighing=false})}
