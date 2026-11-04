@@ -33,6 +33,20 @@ class AppNavigationTest {
  private fun waitForDescription(label:String) {
   compose.waitUntil(5_000){compose.onAllNodesWithContentDescription(label).fetchSemanticsNodes().isNotEmpty()}
  }
+ @Test fun weightsQuickDoneFeedbackSurvivesRecreationAndUndoClearsIt() {
+  val id="synthetic-feedback-root"
+  runBlocking {repo.upsert("activities",id,org.json.JSONObject().put("kind","weights").put("title","Synthetic strength").put("status","pending").put("scheduled_at",LocalDate.now(PlanDomain.zone).atTime(7,0).atZone(PlanDomain.zone).toOffsetDateTime().toString()))}
+  waitForDescription("Mark done Synthetic strength")
+  compose.onNodeWithContentDescription("Mark done Synthetic strength").performScrollTo().performClick()
+  compose.waitUntil(5_000){compose.onAllNodesWithText("How did it feel?").fetchSemanticsNodes().isNotEmpty()}
+  restoration.emulateSavedInstanceStateRestore()
+  compose.onNodeWithText("How did it feel?").assertExists()
+  compose.onNodeWithContentDescription("Back").performClick()
+  compose.onNodeWithText("Undo").performClick()
+  compose.waitUntil(5_000){runBlocking{org.json.JSONObject(repo.dao.record("activities",id)!!.payload).optString("status")=="pending"}}
+  org.junit.Assert.assertFalse(runBlocking{org.json.JSONObject(repo.dao.record("activities",id)!!.payload).has("strength_feedback")})
+  tab("Today").assertIsSelected()
+ }
  @Test fun foodCloseReturnsToFoodAndReopensTheSameUnsavedDraft() {
   tab("Food").performClick();tab("Food").assertIsSelected()
   compose.onNodeWithContentDescription("Log food").performScrollTo().performClick()

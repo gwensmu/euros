@@ -233,6 +233,7 @@ object PlanDisplay {
  var amount by rememberSaveable(record.id){mutableStateOf(p.optJSONObject("recovery_intake")?.optString("amount") ?: "")}
  var product by rememberSaveable(record.id){mutableStateOf(p.optJSONObject("recovery_intake")?.optString("product") ?: "")}
  val scope=rememberCoroutineScope()
+ val exerciseDone=LocalExerciseDone.current
  fun finish(status:String){scope.launch{busy=true;try {
   if(status=="done" && logging==LoggingMode.INTAKE) {
    val type=p.getString("recovery_step_type")
@@ -257,7 +258,7 @@ object PlanDisplay {
  if(logging !in setOf(LoggingMode.STEPS,LoggingMode.WEIGHT,LoggingMode.UNSUPPORTED)) {
   Box(Modifier.fillMaxWidth(),contentAlignment=Alignment.Center) {
    @Composable fun controls(modifier:Modifier) {
-    Button(enabled=!busy,onClick={if(logging==LoggingMode.FOOD)onFood() else finish("done")},modifier=modifier.heightIn(min=52.dp),shape=RoundedCornerShape(14.dp)) {
+    Button(enabled=!busy,onClick={if(logging==LoggingMode.FOOD)onFood() else if(kind=="weights")exerciseDone(record) else finish("done")},modifier=modifier.heightIn(min=52.dp),shape=RoundedCornerShape(14.dp)) {
      Text(if(kind in setOf("weights","rest","prep") || (kind=="recovery" && logging==LoggingMode.COMPLETION) || p.optString("recovery_step_type")=="hydration")"Done" else "Log")
     }
     OutlinedButton(enabled=!busy,onClick={finish("skipped")},modifier=modifier.heightIn(min=52.dp),shape=RoundedCornerShape(14.dp)) {

@@ -18,6 +18,7 @@ object RecordValidation {
     require(p.optString("kind") in setOf("bjj","weights","food","recovery","morning","weight","rest","prep")) { "Invalid activity" }
     java.time.OffsetDateTime.parse(p.getString("scheduled_at"))
     require(p.optString("status") in setOf("pending","done","skipped"))
+    StrengthFeedback.validate(p)
     val intake=p.optJSONObject("recovery_intake")
     val substance=p.optString("recovery_step_type") in setOf("hydration","supplement")
     if(p.getString("status")=="done" && p.optString("recovery_step_type")=="supplement") require(intake!=null) { "Enter the actual amount" }

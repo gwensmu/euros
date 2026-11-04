@@ -92,6 +92,7 @@ class MainActivity:ComponentActivity() {
  )) { mutableStateOf(RootTab.Today) }
  var selected by rememberSaveable { mutableStateOf<String?>(null) }
  var settings by rememberSaveable { mutableStateOf(false) }
+ var strengthFeedbackId by rememberSaveable{mutableStateOf<String?>(null)}
  var importedId by rememberSaveable{mutableStateOf<String?>(null)}
  var weighing by rememberSaveable{mutableStateOf(false)}
  var review by rememberSaveable { mutableStateOf(false) }
@@ -117,7 +118,7 @@ class MainActivity:ComponentActivity() {
  val localReminderInputs by repo.dao.observeMeta(HealthImport.KEY).collectAsState(initial=null)
  val dismissedReminderMeals by repo.dao.observeMeta("dismissed_meals:$today").collectAsState(initial=null)
  LaunchedEffect(records,localReminderInputs,dismissedReminderMeals,today){try{withContext(Dispatchers.IO){reminders.reconcile(records)}}catch(e:kotlinx.coroutines.CancellationException){throw e}catch(_:Exception){error="Couldn't update reminders"}}
- LaunchedEffect(notificationId){if(notificationId!=null){selected=null;settings=false;review=false;weighing=false;importedId=null;openFoodEntry=false;foodEditor=false;snoozeId=null;when(notificationId){"@weight"->{weighing=true;tab=RootTab.Today};"@today"->tab=RootTab.Today;"@food-overview"->{tab=RootTab.Food;foodDate=today.toString();openFoodEntry=false};"@food"->{tab=RootTab.Food;foodDate=today.toString();openFoodEntry=true};"@review"->{tab=RootTab.Week;week=today.with(java.time.DayOfWeek.MONDAY).toString();review=true};else->if(notificationId.startsWith("@snooze:"))snoozeId=notificationId.removePrefix("@snooze:") else selected=notificationId};onNotificationHandled()}}
+ LaunchedEffect(notificationId){if(notificationId!=null){selected=null;strengthFeedbackId=null;settings=false;review=false;weighing=false;importedId=null;openFoodEntry=false;foodEditor=false;snoozeId=null;when(notificationId){"@weight"->{weighing=true;tab=RootTab.Today};"@today"->tab=RootTab.Today;"@food-overview"->{tab=RootTab.Food;foodDate=today.toString();openFoodEntry=false};"@food"->{tab=RootTab.Food;foodDate=today.toString();openFoodEntry=true};"@review"->{tab=RootTab.Week;week=today.with(java.time.DayOfWeek.MONDAY).toString();review=true};else->if(notificationId.startsWith("@snooze:"))snoozeId=notificationId.removePrefix("@snooze:") else selected=notificationId};onNotificationHandled()}}
  snoozeId?.let{id->SnoozeDialog(onClose={snoozeId=null},onSave={until->withContext(Dispatchers.IO){reminders.snoozeUntil(id,until)};snoozeId=null})}
 
  val detail=records.find { it.type=="activities" && it.id==selected }
@@ -130,7 +131,7 @@ class MainActivity:ComponentActivity() {
   importedId=null
   weighing=false
  }
- val hasOverlay=selected!=null || settings || review || importedId!=null || weighing
+ val hasOverlay=strengthFeedbackId!=null || selected!=null || settings || review || importedId!=null || weighing
  BackHandler(hasOverlay,::closeOverlay)
  val focused=hasOverlay || foodEditor
  var completionSequence by remember{mutableLongStateOf(0L)}
@@ -153,17 +154,28 @@ class MainActivity:ComponentActivity() {
  val mascotState=MascotRules.evaluate(records,java.time.Instant.now(),nextItem=PlanDomain.next(records,today))
  val mascotPose=if(pleased)MascotPose.PLEASED else mascotState.pose
  val pageScroll=rememberScrollState()
- LaunchedEffect(tab,selected,settings,review,importedId,foodEditor){pageScroll.scrollTo(0)}
+ LaunchedEffect(tab,selected,settings,review,importedId,foodEditor,strengthFeedbackId){pageScroll.scrollTo(0)}
  val snackbar=remember{SnackbarHostState()}
  val actionScope=rememberCoroutineScope()
+ fun showCompletionUndo(record:Record) { actionScope.launch {
+  try {
+   val completed=repo.dao.record(record.type,record.id)
+   if(snackbar.showSnackbar("${org.json.JSONObject(record.payload).optString("title")} done","Undo",duration=SnackbarDuration.Short)==SnackbarResult.ActionPerformed && completed!=null) {
+    val restored=org.json.JSONObject(completed.payload).put("status","pending");restored.remove("completed_at");restored.remove("strength_feedback")
+    repo.upsert(record.type,record.id,restored,expectedPayload=completed.payload)
+   }
+  } catch(e:Exception){snackbar.showSnackbar(e.message ?: "Couldn't update activity")}
+ } }
+ fun closeStrengthFeedback() {
+  val saved=records.find{it.type=="activities" && it.id==strengthFeedbackId}
+  strengthFeedbackId=null;selected=null
+  if(saved!=null)showCompletionUndo(saved)
+ }
  CompositionLocalProvider(LocalExerciseDone provides { record -> actionScope.launch {
   try {
    repo.complete(record,"done")
-   val completed=repo.dao.record(record.type,record.id)
-   if(snackbar.showSnackbar("${org.json.JSONObject(record.payload).optString("title")} done","Undo",duration=SnackbarDuration.Short)==SnackbarResult.ActionPerformed && completed!=null) {
-    val restored=org.json.JSONObject(completed.payload).put("status","pending");restored.remove("completed_at")
-    repo.upsert(record.type,record.id,restored,expectedPayload=completed.payload)
-   }
+   if(org.json.JSONObject(record.payload).optString("kind")=="weights")strengthFeedbackId=record.id
+   else showCompletionUndo(record)
   } catch(e:Exception){snackbar.showSnackbar(e.message ?: "Couldn't update activity")}
  } }) {
  Scaffold(snackbarHost={SnackbarHost(snackbar)},containerColor=Color.White,bottomBar={if(!focused) EurosNavigation(tab){tab=it}}) { padding ->
@@ -171,6 +183,11 @@ class MainActivity:ComponentActivity() {
    if(!focused) EurosHeader(actions={if(tab==RootTab.Today)HomeHealthSync(repo,snackbar)}) {settings=true}
    Column(Modifier.fillMaxSize().verticalScroll(pageScroll).padding(horizontal=24.dp,vertical=12.dp),verticalArrangement=Arrangement.spacedBy(16.dp)) {
    when {
+    strengthFeedbackId!=null -> {
+     val feedbackRecord=records.find{it.type=="activities" && it.id==strengthFeedbackId}
+     if(feedbackRecord!=null)StrengthFeedbackScreen(feedbackRecord,repo,::closeStrengthFeedback)
+     else {Text("This activity is no longer available");TextButton(onClick={strengthFeedbackId=null}){Text("Close")}}
+    }
     weighing -> {Row(Modifier.fillMaxWidth(),horizontalArrangement=Arrangement.SpaceBetween){Text("Weight",style=MaterialTheme.typography.headlineMedium);IconButton(onClick={weighing=false}){Icon(Icons.Outlined.Close,"Close")}};WeightPanel(repo,records,today,onSaved={weighing=false})}
     settings -> SettingsScreen(repo,pending,records,onClose={settings=false})
     importedId!=null -> ImportedWorkoutScreen(importedId!!,repo){importedId=null}

@@ -123,12 +123,24 @@ class Repository(private val db:EurosDatabase, llmClient:LlmClient?=null) {
    val current=dao.record(record.type,record.id) ?: error("Activity unavailable")
    if(JSONObject(current.payload).optString("status")==status) return@withTransaction
    val payload=JSONObject(Commands.complete(current,status))
+   if(status=="done" && payload.optString("kind")=="weights")payload.put("strength_feedback",StrengthFeedback.value(StrengthFeeling.ABOUT_RIGHT,"default"))
    if(status=="done") {payload.put("completed_at",java.time.OffsetDateTime.now().toString());payload.remove("skipped_at")}
-   if(status=="skipped") { payload.remove("recovery_intake");payload.remove("completed_at");payload.put("skipped_at",java.time.OffsetDateTime.now().toString()) }
+   if(status=="skipped") { payload.remove("strength_feedback");payload.remove("recovery_intake");payload.remove("completed_at");payload.put("skipped_at",java.time.OffsetDateTime.now().toString()) }
    enqueue(current.type,current.id,payload)
    newlyCompleted=status=="done"
   }
   if(newlyCompleted)completionEvents.tryEmit(Unit)
+ }
+ suspend fun saveStrengthFeedback(record:Record,feeling:StrengthFeeling)=mutex.withLock {
+  db.withTransaction {
+   val current=dao.record(record.type,record.id) ?: error("Activity unavailable")
+   val p=JSONObject(current.payload)
+   check(!current.deleted && p.optString("kind")=="weights" && p.optString("status")=="done") { "This workout changed. Reopen it before saving." }
+   check(p.optString("completed_at")==JSONObject(record.payload).optString("completed_at")) { "This workout changed. Reopen it before saving." }
+   // Merge into the latest payload so a concurrent schedule move is retained.
+   p.put("strength_feedback",StrengthFeedback.value(feeling,"selected"))
+   enqueue(current.type,current.id,p)
+  }
  }
  suspend fun move(record:Record,scheduledAt:String)=mutex.withLock {
   db.withTransaction {

@@ -136,7 +136,7 @@ A future manual text-entry flow can mirror food, but it is not implemented in th
 
 ### Strength session
 
-Read-only prescribed exercises with available sets, reps, holds or loads; **Done / Skipped** controls. No detailed set-by-set performance form. Unspecified loads or sets remain absent rather than invented. Show the plan, not generic filler about resilience or capacity.
+Read-only prescribed exercises with available sets, reps, holds or loads; **Done / Skipped** controls. Done opens the three-choice session-feedback flow described below. No detailed set-by-set performance form. Unspecified loads or sets remain absent rather than invented. Show the saved plan without generic filler.
 
 ### Recovery and rest
 
@@ -381,7 +381,7 @@ Deliver a runnable project, personalized configuration, reusable design assets, 
 
 ### Approved strength direction (schedule update pending)
 
-Use brief full-body strength sessions covering major muscle groups, with exercise selection delegated to the owner’s chosen external workout app. Display the session purpose, duration and Done/Skipped; no detailed exercise/set/load logger or required direct integration. Keep the pre-BJJ strength session easier. The existing prescribed exercise list is superseded as a design direction; dated schedule changes remain pending review.
+Choose the strength-session source with the recipient: saved prescribed exercises or an external workout app. Preserve whichever instructions are actually saved on each dated session; do not assume an external app replaces an existing routine. Display available exercises, purpose and duration with Done/Skipped and lightweight session feedback. No detailed exercise/set/load logger or required direct integration. Schedule changes require an accepted revision.
 
 ### Next meal on Home
 
@@ -575,3 +575,11 @@ Keep the compressed imported-history snapshot in atomic metadata chunks, each at
 Nutrition export uses Health Connect's millisecond timestamp precision; preserve the original higher-precision consumed timestamp in Euros. The technical one-millisecond platform interval begins at that truncated instant. Compare provider readback at its supported precision, while verifying original offset, known nutrients, unknown values, unique identities and deletions.
 
 Acceptance: large snapshots round-trip through storage, observation and portable export without oversized rows; legacy reads work; replacing large with small removes obsolete chunks; rejected replacement preserves old state; missing chunks fail explicitly; real phone refresh succeeds without losing previously cached source identities or links. Source snapshots and provider records used for release verification remain private; count-only results may be documented.
+
+### Strength session feedback — November 4, 2026
+
+Weights Done (row checkmark or detail) saves completion with default “About right” and opens “How did it feel?” with Easy / About right / Too hard. No Workout done confirmation, secondary exercise question, Not now, or set-by-set entry. Toolbar Back and Android Back retain the default and return to the originating main tab. A selected response is saved to that same activity before closing; errors retain the screen, and controls are disabled during the save. Default versus explicitly selected feedback is distinguished internally; neither is an observed rep count, load, duration or numerical effort rating. Existing completed sessions without feedback remain unknown until explicitly edited; imports do not fabricate feedback.
+
+Completion and the default are one local transaction with a durable offline outbox entry. Selecting a response appends a revisioned update; an identical retry is a no-op. Preserve the original completion timestamp and merge into the latest payload so concurrent schedule moves survive. Reject feedback after skip/deletion or a different completion. Skip and completion Undo remove feedback; Undo retains existing revision/conflict protection. Rotation restores the feedback destination. An interruption after Done retains completion and its default. Existing prescribed exercise snapshots and loads remain intact. The current change captures feedback only; automatic prescription progression is not yet implemented, and numerical mockup adjustments are not a shipped policy.
+
+Acceptance: both Done entry points; all three choices; toolbar/system Back; recreation; offline write/retry/reload; Undo; skip/deletion while open; concurrent move; large text and reachable labeled controls. Verify payload round-trip through the existing shared server store without invented measurements or changes to schedules/targets.

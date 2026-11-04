@@ -319,3 +319,16 @@ def test_training_move_budget_is_atomic_idempotent_and_roundtrips(store):
     store.command(back)
     assert store.nutrition('2026-10-30')['targets']['kcal'] == 2300
     assert store.nutrition('2026-10-31')['targets']['kcal'] == 1850
+
+
+def test_strength_feedback_survives_retry_restart_and_change_feed(store):
+    """Additive activity annotations round-trip through the existing shared API/MCP store."""
+    default = {"feeling": "about_right", "source": "default"}
+    first = store.command(command("strength", kind="weights", status="done", strength_feedback=default))
+    selected = {"feeling": "easy", "source": "selected"}
+    update = command("strength", revision=1, kind="weights", status="done", strength_feedback=selected)
+    saved = store.command(update)
+    assert store.command(update) == saved
+    assert first["record"]["payload"]["strength_feedback"] == default
+    assert Store(store.path).records()["records"][0]["payload"]["strength_feedback"] == selected
+    assert store.changes()["changes"][-1]["payload"]["strength_feedback"] == selected
