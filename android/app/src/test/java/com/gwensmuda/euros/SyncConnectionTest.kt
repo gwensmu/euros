@@ -132,7 +132,7 @@ class SyncConnectionTest {
   assertEquals(SyncOutcome.RECONNECT,connection.sync());assertEquals(count,calls);assertNull(store.value);db.close()
  }
  @Test fun publicEndpointAliasPreservesOnlyTheKnownExactOrigin() {
-  assertEquals("https://euros-lan.example.com",canonicalServerIdentity("https://euros.example.com/"))
+  assertEquals("https://euros.example.com",canonicalServerIdentity("https://euros.example.com/"))
   for(other in listOf("http://euros.example.com","https://euros.example.com:443","https://euros.example.com/v1","https://euros.example.com.evil.test","https://other.example","https://euros.example.com?x=1")) {
    assertEquals(other,canonicalServerIdentity(other))
   }

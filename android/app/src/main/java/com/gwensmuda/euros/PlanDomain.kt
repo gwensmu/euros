@@ -4,9 +4,10 @@ import org.json.JSONObject
 import java.time.*
 
 object PlanDomain {
- val zone:ZoneId=ZoneId.of("America/Chicago")
+ val canonicalZone:ZoneId=ZoneId.of("America/Chicago")
+ val zone:ZoneId get()=ZoneId.systemDefault()
  fun payload(record:Record)=JSONObject(record.payload)
- fun day(record:Record):LocalDate=OffsetDateTime.parse(payload(record).getString("scheduled_at")).atZoneSameInstant(zone).toLocalDate()
+ fun day(record:Record,zone:ZoneId=PlanDomain.zone):LocalDate=OffsetDateTime.parse(payload(record).getString("scheduled_at")).atZoneSameInstant(zone).toLocalDate()
  fun status(record:Record)=payload(record).optString("status","pending")
  fun children(parent:Record,records:List<Record>)=records.filter{!it.deleted && it.type=="activities" && payload(it).optString("parent_id")==parent.id}.sortedBy{payload(it).optString("scheduled_at")}
  fun rootActivities(records:List<Record>)=records.filter{!it.deleted && it.type=="activities" && payload(it).optString("parent_id").isBlank()}.sortedBy{payload(it).optString("scheduled_at")}
@@ -28,9 +29,9 @@ object PlanDomain {
   require(offsets.size==1){if(offsets.isEmpty()) "That time doesn't exist because the clocks change" else "Choose a time outside the repeated hour"}
   return local.atOffset(offsets.single()).toString()
  }
- fun weightPayload(value:String,at:OffsetDateTime,context:String="after_waking"):JSONObject {
+ fun weightPayload(value:String,at:OffsetDateTime,context:String="after_waking",recordZone:ZoneId=zone):JSONObject {
   val number=value.toBigDecimalOrNull() ?: throw IllegalArgumentException("Enter a weight in lb")
   require(number>java.math.BigDecimal.ZERO && number<=java.math.BigDecimal("1500") && number.scale()<=3){"Enter a valid weight in lb"}
-  return JSONObject().put("weight_lb",number.toPlainString()).put("measured_at",at.toString()).put("local_date",at.atZoneSameInstant(zone).toLocalDate().toString()).put("context",context)
+  return JSONObject().put("weight_lb",number.toPlainString()).put("measured_at",at.toString()).put("local_date",at.atZoneSameInstant(recordZone).toLocalDate().toString()).put("context",context)
  }
 }

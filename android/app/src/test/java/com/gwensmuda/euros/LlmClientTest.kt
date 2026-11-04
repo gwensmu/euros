@@ -45,6 +45,22 @@ class LlmClientTest {
         assertEquals(setOf("parent","step","late"),BackendLlmClient.weeklySnapshot(week,listOf(parent,step,late)).map{it.id}.toSet())
     }
 
+    @Test fun durableRecapReusesRequestIdentityAndReturnsSavedResult()=runBlocking {
+        val week=LocalDate.parse("2026-10-26")
+        val id="fixed-request-id"
+        var starts=0
+        val client=BackendLlmClient(object:SyncApi {
+            override fun request(path:String,body:JSONObject?):JSONObject {
+                assertEquals("/v1/review/jobs",path)
+                assertEquals(id,body!!.getString("request_id"))
+                starts++
+                return JSONObject().put("job_id",id).put("week_start",week.toString()).put("status","completed").put("result",JSONObject().put("summary","Saved"))
+            }
+        })
+        repeat(2){assertEquals("Saved",client.reviewWeekJob(id,week,emptyList()).getString("summary"))}
+        assertEquals(2,starts)
+    }
+
     @Test fun foodInterpretationSendsOnlyTextAndDoesNotWriteRecords()=runBlocking {
         val db=Room.inMemoryDatabaseBuilder(ApplicationProvider.getApplicationContext(),EurosDatabase::class.java).build()
         try {

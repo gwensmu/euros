@@ -32,4 +32,20 @@ class NutritionPolicyTest {
   assertNull(NutritionPolicy.maintenanceStart(plan,weights.filterIndexed{i,_->i!=2},now))
   assertNull(NutritionPolicy.maintenanceStart(plan,List(7){weight("2026-10-22","154")},now))
  }
+ private fun training(id:String,kind:String,day:String,moved:Boolean=false,status:String="pending")=Record("activities",id,1,JSONObject().put("kind",kind).put("status",status).put("scheduled_at","${day}T09:00:00-05:00").apply {
+  if(moved)put("move_history",org.json.JSONArray().put(JSONObject().put("from","2026-10-30T09:00:00-05:00").put("to","2026-10-31T09:00:00-05:00").put("adjust_nutrition",true)))
+ }.toString(),false)
+ @Test fun movesUpdateBothBudgetsWithoutSkipDebtOrFoodMutation() {
+  val moved=training("a","bjj","2026-10-31",true)
+  val records=listOf(moved,training("b","weights","2026-10-30"),training("c","weights","2026-10-31",status="skipped"))
+  val before=records.map{it.payload}
+  fun calories(day:String,rs:List<Record> = records)=NutritionPolicy.targets(plan,rs,LocalDate.parse(day),LocalDate.parse("2026-10-31"))!!.getInt("kcal")
+  assertEquals(2050,calories("2026-10-30"))
+  assertEquals(2550,calories("2026-10-31"))
+  assertEquals(1850,calories("2026-10-30",listOf(moved)))
+  assertEquals(2300,calories("2026-10-31",listOf(moved)))
+  assertEquals(2500,calories("2026-10-31",listOf(moved)+(22..28).map{weight("2026-10-$it","155")}))
+  assertEquals(before,records.map{it.payload})
+  assertNull(NutritionPolicy.movedTier(listOf(training("a","bjj","2026-10-31")),LocalDate.parse("2026-10-31")))
+ }
 }

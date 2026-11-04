@@ -245,6 +245,15 @@ class Store:
             else:
                 validate_payload(c["entity_type"], c["payload"])
                 payload = c["payload"]
+                if (c["entity_type"] == "activities" and current and payload.get("kind") in {"bjj", "weights"}
+                        and current["payload"].get("scheduled_at") != payload.get("scheduled_at")):
+                    payload = dict(payload)
+                    moves = list(payload.get("move_history", current["payload"].get("move_history", [])))
+                    old, new = current["payload"]["scheduled_at"], payload["scheduled_at"]
+                    if not moves or moves[-1].get("from") != old or moves[-1].get("to") != new:
+                        moves.append({"from": old, "to": new, "changed_at": datetime.now(timezone.utc).isoformat()})
+                    moves[-1] = {**moves[-1], "adjust_nutrition": True}
+                    payload["move_history"] = moves
                 if c["entity_type"] == "meal_plans" and c["entity_id"] != "meal-plan-" + payload["date"]:
                     raise DomainError("meal_plan_identity_mismatch")
                 if c["entity_type"] == "weight_entries":
@@ -331,7 +340,7 @@ class Store:
             totals[k] = {"known_total": str(sum((Decimal(str(v)) for v in values if v is not None), Decimal(0))),
                          "missing_count": sum(v is None for v in values)}
         saved = self.meal_plan(local_date)["record"]
-        policy = resolve_nutrition(self.records("weight_entries")["records"], local_date, saved["payload"]["nutrition_targets"] if saved else None)
+        policy = resolve_nutrition(self.records("weight_entries")["records"] + self.records("activities")["records"], local_date, saved["payload"]["nutrition_targets"] if saved else None)
         return {"local_date": local_date, "entry_count": len(entries), "nutrients": totals, **policy}
 
     def import_plan(self, commands):

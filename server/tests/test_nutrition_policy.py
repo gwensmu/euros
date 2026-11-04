@@ -45,3 +45,17 @@ def test_maintenance_adds_to_saved_tier_without_mutation():
         assert actual['kcal']==t['kcal']+200
         assert actual['proteinG']==135
         assert actual['carbohydrateG']==t['carbohydrateG']+50
+
+
+def test_move_updates_both_days_and_preserves_skip_budget_and_maintenance():
+    from euros_server.nutrition_policy import TIERS
+    moved = dict(entity_type='activities', entity_id='a', payload=dict(kind='bjj', status='pending', scheduled_at='2026-10-31T09:00:00-05:00',
+        move_history=[{'from':'2026-10-30T09:00:00-05:00','to':'2026-10-31T09:00:00-05:00','adjust_nutrition':True}]))
+    lifting = dict(entity_type='activities', entity_id='b', payload=dict(kind='weights',status='skipped',scheduled_at='2026-10-31T10:00:00-05:00'))
+    assert resolve([moved], '2026-10-30', TIERS['bjj'])['targets'] == TIERS['recovery']
+    assert resolve([moved], '2026-10-31')['targets'] == TIERS['bjj']
+    assert resolve([moved,lifting], '2026-10-31')['targets'] == TIERS['double']
+    weights=[weight(f'2026-10-{d}', '155') for d in range(22,29)]
+    assert resolve([moved]+weights,'2026-10-31',today='2026-10-31')['targets']['kcal'] == 2500
+    assert resolve([lifting],'2026-10-31',TIERS['bjj'])['targets'] == TIERS['bjj']
+    assert resolve([moved],'2026-10-20',today='2026-10-31')['targets'] == DAILY

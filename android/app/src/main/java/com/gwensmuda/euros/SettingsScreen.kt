@@ -5,7 +5,7 @@ import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.outlined.Close
+import androidx.compose.material.icons.outlined.*
 import androidx.compose.material.icons.outlined.ChevronRight
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -35,17 +35,17 @@ import java.time.LocalTime
   reminderSummary=if(settings.enabled && reminders.permissionGranted()) {
    if(settings.quietStart!=null && settings.quietEnd!=null) "On · quiet ${settings.quietStart}–${settings.quietEnd}" else "On"
   } else "Off"
-  healthSummary=runCatching {
+  healthSummary=withContext(Dispatchers.IO){runCatching {
    repo.dao.meta(HealthImport.KEY)?.let { raw ->
-    val timestamp=HealthSnapshotStorage.decode(raw).optString("refreshed_at")
+    val timestamp=HealthSnapshotStorage.decode(raw,HealthSnapshotStorage.Samples.NONE).optString("refreshed_at")
     if(timestamp.isBlank()) "No imported records" else "Updated "+java.time.Instant.parse(timestamp).atZone(java.time.ZoneId.systemDefault()).format(java.time.format.DateTimeFormatter.ofPattern("MMM d · h:mm a"))
    } ?: "No imported records"
-  }.getOrDefault("Check connection")
+  }.getOrDefault("Check connection")}
  }
  BackHandler(enabled=section!="Settings") { section="Settings" }
  Row(Modifier.fillMaxWidth(),horizontalArrangement=Arrangement.SpaceBetween,verticalAlignment=Alignment.CenterVertically) {
   Text(section,style=MaterialTheme.typography.headlineMedium)
-  IconButton(onClick={if(section=="Settings")onClose() else section="Settings"}) { Icon(Icons.Outlined.Close,if(section=="Settings")"Close settings" else "Back to settings") }
+  IconButton(onClick={if(section=="Settings")onClose() else section="Settings"}) { Icon(if(section=="Settings")Icons.Outlined.Close else Icons.Outlined.ArrowBack,if(section=="Settings")"Close settings" else "Back to settings") }
  }
  if(section=="Settings") {
   Column {
@@ -65,6 +65,8 @@ import java.time.LocalTime
 
 @Composable private fun SettingsRow(title:String,value:String,onClick:()->Unit) {
  Row(Modifier.fillMaxWidth().clickable(onClick=onClick).padding(vertical=18.dp),verticalAlignment=Alignment.CenterVertically) {
+  Icon(when(title){"Sync"->Icons.Outlined.Sync;"Health Connect"->Icons.Outlined.FavoriteBorder;"Notifications"->Icons.Outlined.NotificationsNone;"Weight goal"->Icons.Outlined.MonitorWeight;"Nutrition targets"->Icons.Outlined.Restaurant;else->Icons.Outlined.Storage},null,tint=EurosColors.Blue,modifier=Modifier.size(24.dp))
+  Spacer(Modifier.width(16.dp))
   Column(Modifier.weight(1f),verticalArrangement=Arrangement.spacedBy(5.dp)) {
    Text(title,style=MaterialTheme.typography.titleMedium)
    Text(value,style=MaterialTheme.typography.bodyMedium,color=MaterialTheme.colorScheme.onSurfaceVariant)

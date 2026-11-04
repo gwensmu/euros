@@ -17,8 +17,9 @@ class HealthPermissionsRationaleActivity:ComponentActivity() {
   setContent { MaterialTheme { Column(Modifier.padding(24.dp)) {
    Text("Health data access",style=MaterialTheme.typography.headlineMedium)
    Text("Euros checks exercise, heart rate, resting heart rate, weight, steps, distance and energy records shared through Health Connect. You can allow each category separately.")
-   Text("The diagnostic shows source counts and heart-rate coverage. When you choose Import, Euros stores exercise, heart-rate and weight records privately on this phone for session recaps and weight selection. Imported records are not uploaded. You can remove local imports in Settings; health export requires a separate selection. It does not read sleep, routes or location, and does not write to Health Connect.")
-   Text("Access is used while the app is open. You can revoke it in Health Connect settings at any time.")
+   Text("Euros imports workouts, heart rate and observed scale readings for your activity recaps and weight chart. Selected Polar training records and observed scale readings synchronize with your Euros server. Background reading requires separate permission.")
+   Text("If you enable Share food logs, Euros writes saved food entries—including existing entries, edits and deletions—to Health Connect. Calories and macros are shared only when known. Planned meals and targets are not shared. Other apps can read these records only with their own Health Connect permissions.")
+   Text("You can stop food sharing in Euros or revoke permissions in Health Connect. Stopping sharing leaves already shared entries in Health Connect. Euros does not read sleep, routes or location.")
    Button(onClick={finish()}) { Text("Close") }
   } } }
  }

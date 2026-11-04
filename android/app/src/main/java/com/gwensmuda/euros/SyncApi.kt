@@ -15,7 +15,7 @@ class Api(private val base:String,private val token:String):SyncApi {
   val connection=URL(base.trimEnd('/')+path).openConnection() as HttpURLConnection
   try {
    connection.instanceFollowRedirects=false
-   connection.connectTimeout=15000; connection.readTimeout=if(path.startsWith("/v1/review/")) 150000 else if(path.startsWith("/v1/interpret/")) 75000 else 20000
+   connection.connectTimeout=15000; connection.readTimeout=if(path=="/v1/review/week") 150000 else if(path.startsWith("/v1/interpret/")) 75000 else 20000
    connection.setRequestProperty("User-Agent","Euros-Android/${BuildConfig.VERSION_NAME}")
    connection.setRequestProperty("Authorization","Bearer $token")
    if(body!=null) { connection.requestMethod="POST";connection.doOutput=true;connection.setRequestProperty("Content-Type","application/json");connection.outputStream.use { it.write(body.toString().toByteArray()) } }
@@ -49,5 +49,5 @@ internal fun backendErrorMessage(code:Int,body:String):String {
 // cache binding when moving from home-network TLS to the public authenticated endpoint.
 internal fun canonicalServerIdentity(base:String):String {
  val normalized=URI(base.trimEnd('/')).normalize().toString()
- return if(normalized=="https://euros.example.com") "https://euros-lan.example.com" else normalized
+ return if(normalized=="https://euros.example.com") "https://euros.example.com" else normalized
 }

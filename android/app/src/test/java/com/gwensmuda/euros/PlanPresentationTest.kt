@@ -46,9 +46,9 @@ class PlanPresentationTest {
   assertEquals("BJJ · Intense",PlanDisplay.trackerSummary(longSession,rounds(1322.0)))
  }
  private fun weight(id:String,day:String,anchor:String?,value:String="164.2",deleted:Boolean=false)=Record("weight_entries",id,1,JSONObject().put("measured_at","${day}T08:00:00-05:00").put("weight_lb",value).apply{if(anchor!=null)put("weekly_anchor",anchor)}.toString(),deleted)
- @Test fun weeklyGraphUsesOnlyLatestTwoSelectedMeasurementsNotFutureOrExtraReadings() {
+ @Test fun weeklyGraphUsesAllMeasurementsThroughSelectedWeek() {
   val records=listOf(weight("old","2026-10-04","2026-09-28"),weight("previous","2026-10-11","2026-10-05"),weight("selected","2026-10-18","2026-10-12"),weight("extra","2026-10-17",null),weight("future","2026-10-25","2026-10-19"),weight("deleted","2026-10-18","2026-10-12",deleted=true))
-  assertEquals(listOf("previous","selected"),WeightDisplay.weeklyRecords(records,LocalDate.parse("2026-10-12")).map{it.id})
+  assertEquals(listOf("old","previous","extra","selected"),WeightDisplay.weeklyRecords(records,LocalDate.parse("2026-10-12")).map{it.id})
  }
  @Test fun weightGraphDoesNotFabricateMissingOrInvalidPoints() {
   val records=listOf(weight("one","2026-10-04",null),weight("two","2026-10-18",null),weight("bad","2026-10-11",null,"NaN"))
@@ -61,5 +61,16 @@ class PlanPresentationTest {
   assertEquals(3,WeightDisplay.coveredDates(week,week.plusDays(2)).size)
   assertEquals(7,WeightDisplay.coveredDates(week,week.plusWeeks(1)).size)
   assertTrue(WeightDisplay.coveredDates(week,week.minusDays(1)).isEmpty())
+ }
+ @Test fun trendGivesEachObservedDayOneVoteAndNeverFillsMissingDays() {
+  fun point(day:String,value:Double,hour:Int=8)=WeightPoint(java.time.OffsetDateTime.parse("${day}T${hour.toString().padStart(2,'0')}:00:00-05:00").toInstant(),value)
+  val data=listOf(point("2026-10-01",160.0),point("2026-10-02",162.0),point("2026-10-02",164.0,9),point("2026-10-08",166.0),point("2026-10-20",170.0))
+  val trend=WeightDisplay.trend(data)
+  assertEquals(listOf(161.5,164.5),trend.map{it.value})
+ }
+ @Test fun chartMergePreservesSourceOverridesAndDeletionTombstones() {
+  val at=java.time.Instant.parse("2026-10-01T12:00:00Z")
+  val records=listOf(Record("weight_entries","saved",1,JSONObject().put("source_key","source").put("weight_lb",160).put("measured_at",at.toString()).toString(),true))
+  assertEquals(records,WeightDisplay.merge(records,listOf(ImportedWeight("source","fitbit",at,165.0))))
  }
 }

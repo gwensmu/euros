@@ -6,6 +6,8 @@ import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.platform.LocalContext
 import java.time.LocalTime
 import java.time.format.DateTimeFormatter
@@ -23,4 +25,13 @@ object TimeDisplay {
   val time=runCatching{LocalTime.parse(value)}.getOrDefault(LocalTime.now())
   TimePickerDialog(context,{_,hour,minute->onChange(TimeDisplay.stored(hour,minute))},time.hour,time.minute,false).show()
  }) {Text(TimeDisplay.label(value))}
+}
+
+
+@Composable fun DatePickerField(value:String,onChange:(String)->Unit,modifier:Modifier=Modifier,enabled:Boolean=true) {
+ val context=LocalContext.current
+ val date=runCatching{java.time.LocalDate.parse(value)}.getOrDefault(java.time.LocalDate.now(PlanDomain.zone))
+ OutlinedButton(enabled=enabled,modifier=modifier.fillMaxWidth().semantics{contentDescription="Choose date"},onClick={
+  android.app.DatePickerDialog(context,{_,year,month,day->onChange(java.time.LocalDate.of(year,month+1,day).toString())},date.year,date.monthValue-1,date.dayOfMonth).show()
+ }) {Text(date.format(DateTimeFormatter.ofPattern("EEE, MMM d, yyyy",Locale.US)))}
 }

@@ -85,14 +85,18 @@ def test_week_computes_coverage_totals_and_excludes_future_deleted_and_untrusted
     future,coverage=weekly_facts({"week_start":"2026-10-19","records":records},date(2026,10,14))
     assert coverage["covered_days"]==0 and coverage["through_date"] is None and future["logged_activities"]==[]
 
-def test_week_sol_high_coverage_separate():
+def test_week_sol_medium_coverage_separate():
     def respond(request):
         body=json.loads(request.content)
-        assert body["model"]=="gpt-6.1-sol" and body["reasoning"]=={"effort":"high"}
-        assert "Every day shares the same nutrition targets" in body["instructions"]
-        assert "Never recommend different calorie or macro targets by activity or day" in body["instructions"]
+        assert body["model"]=="gpt-6.1-sol" and body["reasoning"]=={"effort":"medium"}
+        assert "approximate guides, not precise requirements" in body["instructions"]
+        assert "new calorie targets" in body["instructions"]
+        assert "hobbyist BJJ athlete" in body["instructions"]
+        assert "insights" in body["text"]["format"]["schema"]["properties"]
+        assert "No weight commentary" in body["instructions"]
+        assert "Do not infer exercise eat-back or food debt" in body["instructions"]
         assert "coverage" not in json.loads(body["input"][0]["content"])
-        return httpx.Response(200,json=envelope({"summary":"One practice logged.","adjustments":[],"evidence_record_ids":["activities:a"]}))
+        return httpx.Response(200,json=envelope({"headline":"Keep recovery close","summary":"One practice logged.","insights":[{"kind":"training","title":"Class spacing","body":"Keep recovery alongside the harder session."}],"adjustments":[],"evidence_record_ids":["activities:a"]}))
     result=asyncio.run(service(respond).week({"week_start":"2026-10-12","records":[activity(status="done")]}))
     assert result["summary"]=="One practice logged." and result["coverage"]["logged_activity_count"]==1
 
@@ -136,7 +140,7 @@ def test_all_unknown_nutrient_is_not_zero():
 
 
 def test_invalid_evidence_is_rejected():
-    result={"summary":"Unsupported.","adjustments":[],"evidence_record_ids":["activities:made-up"]}
+    result={"headline":"Unsupported","summary":"Unsupported.","insights":[],"adjustments":[],"evidence_record_ids":["activities:made-up"]}
     with pytest.raises(DomainError,match="invalid_model_evidence"):
         asyncio.run(service(lambda _:httpx.Response(200,json=envelope(result))).week({"week_start":"2026-10-12","records":[activity(status="done")]}))
 
@@ -160,7 +164,7 @@ def test_mcp_model_parity_auth_annotations_and_no_writes(tmp_path):
     store=Store(tmp_path/"db")
     def respond(request):
         body=json.loads(request.content)
-        value=DRAFT if body["model"]=="gpt-6-luna" else {"summary":"One practice logged.","adjustments":[],"evidence_record_ids":["activities:a"]}
+        value=DRAFT if body["model"]=="gpt-6-luna" else {"headline":"Keep recovery close","summary":"One practice logged.","insights":[{"kind":"training","title":"Class spacing","body":"Keep recovery alongside the harder session."}],"adjustments":[],"evidence_record_ids":["activities:a"]}
         return httpx.Response(200,json=envelope(value))
     with TestClient(create_app(store,"a"*40,"b"*40,model_service=service(respond)),base_url="http://localhost") as client:
         api={"Authorization":"Bearer "+"a"*40}
@@ -202,3 +206,40 @@ def test_coaching_goal_context_is_anchored_to_review_week():
     later, _ = weekly_facts({"week_start": "2026-10-12", "records": [activity(status="done")]}, date(2026, 11, 1))
     assert later["goal_context"] == context
     assert set(facts["logged_activities"][0]) == {"record_id", "date", "kind", "status"}
+
+
+@pytest.mark.parametrize("change", [
+    {"summary": "x" * 501},
+    {"headline": "x" * 71},
+    {"insights": [{"kind":"score","title":"Readiness","body":"Unsupported."}]},
+    {"adjustments": ["One", "Two", "Three"]},
+    {"adjustments": ["x" * 181]},
+])
+def test_product_recap_limits_are_enforced(change):
+    result={"headline":"Keep recovery close","summary":"A short takeaway.","insights":[],"adjustments":[],"evidence_record_ids":["activities:a"],**change}
+    with pytest.raises(DomainError):
+        asyncio.run(service(lambda _:httpx.Response(200,json=envelope(result))).week({"week_start":"2026-10-12","records":[activity(status="done")]}))
+
+
+def test_recap_includes_target_and_tracker_context_but_no_weight_narrative():
+    day="2026-10-27"
+    weight=wire("weight_entries","scale",{"local_date":day,"measured_at":day+"T08:00:00-05:00","weight_lb":"160"})
+    food=meal(day=day,kcal="2100")
+    class ContextStore:
+        def records(self):
+            return {"records":[food,weight,wire("meal_plans","plan",{"date":day,"nutrition_targets":{"kcal":2300,"proteinG":135,"carbohydrateG":305,"fatG":60}})]}
+    class Trackers:
+        def list(self,first,last):
+            assert (first,last)==("2026-10-26","2026-10-30")
+            return {"workouts":[{"source_key":"polar:1","deleted":False,"start_at":day+"T18:00:00-05:00","end_at":day+"T19:00:00-05:00","activity_id":"a","sport":"bjj","metrics":{"average_bpm":145,"coverage_fraction":0.9}}]}
+    def respond(request):
+        facts=json.loads(json.loads(request.content)["input"][0]["content"])
+        assert facts["weights"]==facts["previous_weekly_weights"]==[]
+        assert facts["food_days"][0]["targets"]["kcal"]==2300
+        assert facts["food_days"][0]["full_day_logging_confirmed"] is False
+        assert facts["tracker_sessions"][0]["metrics"]["average_bpm"]==145
+        assert facts["tracker_sessions"][0]["activity_id"]=="a"
+        return httpx.Response(200,json=envelope({"headline":"Room between hard sessions","summary":"A whole-week overview.","insights":[{"kind":"heart_rate","title":"Sustained work","body":"x"*600}],"adjustments":["One consideration.","Another consideration."],"evidence_record_ids":["tracker:polar:1","food_entries:meal"]}))
+    models=ModelService(OpenAIProvider("test-secret",httpx.MockTransport(respond)),today=lambda:date(2026,10,30))
+    result=asyncio.run(models.week({"week_start":"2026-10-26","records":[food,weight]},store=ContextStore(),tracker=Trackers()))
+    assert len(result["insights"][0]["body"])==600

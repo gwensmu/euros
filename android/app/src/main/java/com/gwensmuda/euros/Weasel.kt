@@ -44,7 +44,7 @@ internal fun weaselAtlasCell(width:Int,height:Int,pose:MascotPose):AtlasCell {
  return enabled
 }
 
-@Composable internal fun Weasel(pose:MascotPose=MascotPose.IDLE) {
+@Composable internal fun Weasel(pose:MascotPose=MascotPose.IDLE,modifier:Modifier=Modifier.size(96.dp,112.dp)) {
  val atlas=ImageBitmap.imageResource(R.drawable.weasel_poses)
  val cell=remember(atlas,pose){weaselAtlasCell(atlas.width,atlas.height,pose)}
  val painter=remember(atlas,cell){BitmapPainter(atlas,cell.offset,cell.size,FilterQuality.High)}
@@ -70,7 +70,7 @@ internal fun weaselAtlasCell(width:Int,height:Int,pose:MascotPose):AtlasCell {
   MascotPose.RECOVERY->"Blue-belt weasel stretching"
   MascotPose.REST->"Blue-belt weasel resting"
  }
- Image(painter,description,Modifier.size(96.dp,112.dp).graphicsLayer {
+ Image(painter,description,modifier.graphicsLayer {
   scaleY=1f+breath*.012f
   translationY=-breath*1.dp.toPx()+reaction.value*1.5.dp.toPx()
   rotationZ=when(pose){MascotPose.TRAINING->(breath-.5f)*1.2f;MascotPose.JUDGY->reaction.value*-1.5f;else->0f}

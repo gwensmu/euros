@@ -303,3 +303,19 @@ def test_supplement_completion_still_requires_actual_dose(store):
     with pytest.raises(DomainError, match="actual_intake_required"):
         store.command(command("supplement", kind="recovery", recovery_step_type="supplement", status="done"))
     assert store.changes()["changes"] == []
+
+
+def test_training_move_budget_is_atomic_idempotent_and_roundtrips(store):
+    store.command(command(scheduled_at="2026-10-30T18:00:00-05:00"))
+    move = command(revision=1, scheduled_at="2026-10-31T18:00:00-05:00")
+    result = store.command(move)
+    assert result == store.command(move)
+    assert len(result['record']['payload']['move_history']) == 1
+    assert result['record']['payload']['move_history'][0]['adjust_nutrition'] is True
+    assert store.nutrition('2026-10-30')['targets']['kcal'] == 1850
+    assert store.nutrition('2026-10-31')['targets']['kcal'] == 2300
+    assert store.nutrition('2026-10-31')['entry_count'] == 0
+    back = command(revision=2, scheduled_at="2026-10-30T18:00:00-05:00")
+    store.command(back)
+    assert store.nutrition('2026-10-30')['targets']['kcal'] == 2300
+    assert store.nutrition('2026-10-31')['targets']['kcal'] == 1850

@@ -79,7 +79,7 @@ object RichReminderRules {
    }
   }
   val foodAt=at("19:30")
-  if(ReminderRules.afterQuiet(foodAt,settings,zone)==foodAt) result.add(RichReminder("food:$date",foodAt,"Food check-in","What did you eat? Tell me in one go and I'll sort out the numbers."+(if(remaining.isNotEmpty())" Still on the plan: ${remaining.joinToString(", "){it.title}}." else ""),"@food","food"))
+  if(FoodDomain.entries(records,date).isEmpty() && ReminderRules.afterQuiet(foodAt,settings,zone)==foodAt) result.add(RichReminder("food:$date",foodAt,"Food check-in","What did you eat? Tell me in one go and I'll sort out the numbers."+(if(remaining.isNotEmpty())" Still on the plan: ${remaining.joinToString(", "){it.title}}." else ""),"@food","food"))
   for(meal in remaining) {
    val mealTime=meal.time?.let{runCatching{LocalTime.parse(it)}.getOrNull()} ?: continue
    val due=date.atTime(mealTime).atZone(zone).toInstant()

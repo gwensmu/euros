@@ -36,7 +36,7 @@ TEMPLATES = {
 GUIDANCE = [
  'Read meal_planning_context first. Read dated plans, planned training and current intake before proposing changes.',
  'Daily calorie tiers are practical guides. Protein about 135 g daily; macro numbers are planning allocations, not exact tests. No food debt or exercise eat-back.',
- 'Use the accepted planned training tier. A move, addition or explicit skip prompts a proposed adjustment; elapsed time or absent logs never implies skipping. Preserve the accepted target until revision is authorized.',
+ 'Use the accepted planned training tier. Training moves automatically update both affected daily budgets from scheduled tiers without changing saved meal portions or consumed food. Additions or explicit skips may prompt proposed meal adjustments; elapsed time or absent logs never implies skipping. Skip alone never lowers a budget.',
  'Maintenance uses seven consecutive daily readings averaging <=155 lb: earliest observed reading per day, one day one vote. Missing days break the window. Add 200 kcal and 50 g carbs to the accepted tier. Later gains do not revert it; corrections/deletions recompute.',
  'Plan small batches of 3–4 portions. Familiar foods include eggs, oats, yogurt, chicken, salmon, rice, sweet potatoes, bread and fruit. No frozen prepared meals or routine takeout; an occasional burrito is fine.',
  'Rib meat is use-up only; do not replenish or schedule indefinitely. Fridge availability is user-reported, not inferred from meal or prep logs. Never claim a meal was prepped yesterday.',

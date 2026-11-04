@@ -1,5 +1,7 @@
 """Loopback app API + stateless MCP, both using Store commands."""
 import argparse
+import asyncio
+import contextlib
 import hashlib
 import hmac
 import json
@@ -18,6 +20,7 @@ from starlette.routing import Mount, Route
 from .domain import DomainError, Store
 from .llm import ModelService
 from .tracker import TrackerStore
+from .review_jobs import ReviewJobs
 from .security import BodyLimit, LimitedProvider
 from .reminder_copy import ReminderCopyService
 
@@ -60,6 +63,7 @@ def create_app(store, api_token, mcp_token, public_hosts=(), model_service=None)
     models.provider = LimitedProvider(models.provider, store)
     reminder_copy_service = ReminderCopyService(models,store)
     trackers = TrackerStore(store)
+    review_jobs = ReviewJobs(store, models, trackers)
     if len(api_token) < 32 or len(mcp_token) < 32 or api_token == mcp_token:
         raise ValueError("Separate app and MCP tokens of at least 32 characters are required")
     hosts = ["127.0.0.1", "localhost", *public_hosts]
@@ -175,7 +179,7 @@ def create_app(store, api_token, mcp_token, public_hosts=(), model_service=None)
         """Read-only weekly reflection from an explicit snapshot. Sends computed logged facts to OpenAI; never changes a plan."""
         if len(json.dumps(records).encode()) > 1048576:
             return await model_result(_oversized_model_request())
-        return await model_result(models.week({"week_start": week_start, "records": records}))
+        return await model_result(models.week({"week_start": week_start, "records": records}, store=store, tracker=trackers))
 
     async def _oversized_model_request():
         raise DomainError("request_too_large", 413)
@@ -206,8 +210,14 @@ def create_app(store, api_token, mcp_token, public_hosts=(), model_service=None)
     async def reminder_copy(request):
         return JSONResponse(await reminder_copy_service.copy(await read_json(request, 16384)))
 
+    async def start_review_job(request):
+        return JSONResponse(review_jobs.start(await read_json(request,1048576)),status_code=202)
+
+    async def read_review_job(request):
+        return JSONResponse(review_jobs.read(request.path_params["job_id"]))
+
     async def review_week(request):
-        return JSONResponse(await models.week(await read_json(request, 1048576)))
+        return JSONResponse(await models.week(await read_json(request, 1048576), store=store, tracker=trackers))
 
     async def changes(request):
         try:
@@ -228,8 +238,14 @@ def create_app(store, api_token, mcp_token, public_hosts=(), model_service=None)
 
     @asynccontextmanager
     async def lifespan(app):
-        async with mcp.session_manager.run():
-            yield
+        review_jobs.recover()
+        runner=asyncio.create_task(review_jobs.serve())
+        try:
+            async with mcp.session_manager.run():
+                yield
+        finally:
+            runner.cancel()
+            with contextlib.suppress(asyncio.CancelledError):await runner
 
     app = Starlette(routes=[Route("/v1/commands", command, methods=["POST"]),
                             Route("/v1/changes", changes), Route("/v1/records", records),
@@ -237,6 +253,8 @@ def create_app(store, api_token, mcp_token, public_hosts=(), model_service=None)
                             Route("/v1/tracker/workouts", tracker_workouts),
                             Route("/v1/interpret/food", interpret_food, methods=["POST"]),
                             Route("/v1/review/week", review_week, methods=["POST"]),
+                            Route("/v1/review/jobs", start_review_job, methods=["POST"]),
+                            Route("/v1/review/jobs/{job_id}", read_review_job),
                             Route("/v1/reminders/copy", reminder_copy, methods=["POST"]),
                             Route("/v1/nutrition", nutrition), Mount("/", mcp.streamable_http_app())],
                     lifespan=lifespan, exception_handlers={DomainError: domain_error})

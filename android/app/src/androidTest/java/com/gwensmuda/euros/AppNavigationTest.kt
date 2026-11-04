@@ -41,7 +41,7 @@ class AppNavigationTest {
   compose.onNodeWithContentDescription("Close").performScrollTo().performClick()
   waitForDescription("Log food")
   tab("Food").assertIsSelected();tab("Today").assertIsNotSelected()
-  compose.onNodeWithText("Keep eating").assertExists()
+  compose.onNodeWithText("Keep eating").assertDoesNotExist()
   compose.onNodeWithContentDescription("Log food").performScrollTo().performClick()
   compose.waitUntil(5_000){compose.onAllNodesWithText("Synthetic navigation draft").fetchSemanticsNodes().isNotEmpty()}
   compose.onNodeWithText("Synthetic navigation draft").assertExists()
@@ -56,7 +56,14 @@ class AppNavigationTest {
   compose.onNodeWithContentDescription("Collapse $weekday").assertExists()
   tab("Week").assertIsSelected()
   compose.onNodeWithContentDescription("Next week").performScrollTo().performClick()
-  compose.onNodeWithText("This week").performScrollTo().performClick()
+  val selectedWeek=LocalDate.now(PlanDomain.zone).with(java.time.DayOfWeek.MONDAY).plusWeeks(1)
+  val recapLink="Open wrap-up for ${weekTitle(selectedWeek)}"
+  compose.onNodeWithContentDescription(recapLink).performScrollTo().performClick()
+  compose.onNodeWithText("Weekly wrap-up").assertExists()
+  compose.onNodeWithText(weekTitle(selectedWeek)).assertExists()
+  compose.onNodeWithText("No logs for this week yet").assertExists()
+  compose.onNodeWithContentDescription("Close").performScrollTo().performClick()
+  compose.onNodeWithContentDescription(recapLink).assertExists()
   tab("Week").assertIsSelected()
  }
  @Test fun settingsSectionsReturnToSettingsAndClosePreservesFoodTab() {
@@ -67,7 +74,7 @@ class AppNavigationTest {
   compose.onNodeWithContentDescription("Back to settings").performScrollTo().performClick()
   compose.onNodeWithText("Data").performScrollTo().performClick()
   compose.onNodeWithText("Export data").assertExists()
-  compose.onNodeWithText("Restore records").assertExists()
+  compose.onNodeWithText("Restore backup").assertExists()
   compose.onNodeWithContentDescription("Back to settings").performScrollTo().performClick()
   compose.onNodeWithContentDescription("Close settings").performScrollTo().performClick()
   waitForDescription("Log food")

@@ -14,6 +14,10 @@ class WeeklyReviewCacheTest {
   val other=record.copy(id="b")
   assertEquals(WeeklyReviewCache.fingerprint(week,listOf(record,other),today),WeeklyReviewCache.fingerprint(week,listOf(other,record.copy(revision=9)),today))
  }
+ @Test fun jsonKeyOrderAndWhitespaceDoNotInvalidateSyncedSnapshot() {
+  val reordered=record.copy(payload="""{ "scheduled_at":"2026-10-14T10:00:00-05:00", "status":"done" }""")
+  assertEquals(WeeklyReviewCache.fingerprint(week,listOf(record),today),WeeklyReviewCache.fingerprint(week,listOf(reordered),today))
+ }
  @Test fun offlineEditDeletionAndCoverageDateInvalidate() {
   val original=WeeklyReviewCache.fingerprint(week,listOf(record),today)
   assertNotEquals(original,WeeklyReviewCache.fingerprint(week,listOf(record.copy(payload="""{"status":"skipped","scheduled_at":"2026-10-14T10:00:00-05:00"}""")),today))
@@ -65,9 +69,18 @@ class WeeklyReviewCacheTest {
  @Test fun connectionErrorsAreActionableWhileUnknownErrorsAreRedacted() {
   val known="Connect to your server in Settings to continue"
   assertEquals(known,WeeklyReviewCache.errorMessage(IllegalStateException(known)))
+  val limit="Daily model limit reached. Try again tomorrow"
+  assertEquals(limit,WeeklyReviewCache.errorMessage(IllegalStateException(limit)))
   val missing="The model isn't configured on your server yet"
   assertEquals(missing,WeeklyReviewCache.errorMessage(IllegalStateException(missing)))
   assertEquals("Couldn't generate the wrap-up. Try again.",WeeklyReviewCache.errorMessage(IllegalStateException("secret provider body")))
  }
 
+ @Test fun structuredRecapRejectsOversizedOrUnknownInsights() {
+  val valid=response().put("schema_version",2).put("headline","Keep recovery close").put("insights",org.json.JSONArray().put(JSONObject().put("kind","training").put("title","Class spacing").put("body","Leave room for recovery.")))
+  assertNotNull(WeeklyReviewCache.validate(valid))
+  assertTrue(runCatching{WeeklyReviewCache.validate(JSONObject(valid.toString()).put("summary","x".repeat(501)))}.isFailure)
+  val invalid=JSONObject(valid.toString());invalid.getJSONArray("insights").getJSONObject(0).put("kind","readiness_score")
+  assertTrue(runCatching{WeeklyReviewCache.validate(invalid)}.isFailure)
+ }
 }

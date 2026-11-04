@@ -65,8 +65,9 @@ class ReminderScheduler(private val context:Context,private val dao:EurosDao,pri
  fun permissionGranted()=(Build.VERSION.SDK_INT<33 || context.checkSelfPermission(Manifest.permission.POST_NOTIFICATIONS)==PackageManager.PERMISSION_GRANTED) && context.getSystemService(NotificationManager::class.java).areNotificationsEnabled()
  private suspend fun candidates(records:List<Record>,now:Instant):List<RichReminder> {
   val zone=PlanDomain.zone;val date=now.atZone(zone).toLocalDate();val settings=settings()
+  if(!settings.enabled)return emptyList()
   val plan=AuthoredPlan(context).json()
-  val snapshot=dao.meta(HealthImport.KEY)?.let{HealthSnapshotStorage.decode(it)}
+  val snapshot=dao.meta(HealthImport.KEY)?.let{HealthSnapshotStorage.decode(it,HealthSnapshotStorage.Samples.NONE)}
   val links=snapshot?.optJSONObject("links");val imported=snapshot?.optJSONObject("records")
   val ends=links?.keys()?.asSequence()?.mapNotNull{id->val r=imported?.optJSONObject(links.getString(id));if(r!=null && !r.optBoolean("deleted") && r.optString("kind")=="exercise") id to Instant.parse(r.getString("end")) else null}?.toMap() ?: emptyMap()
   return (-1L..7L).flatMap{offset->val day=date.plusDays(offset)
@@ -127,13 +128,9 @@ class ReminderScheduler(private val context:Context,private val dao:EurosDao,pri
    val open=PendingIntent.getActivity(context,0,Intent(context,MainActivity::class.java).setData(Uri.parse("euros://activity/"+Uri.encode(p.destination))).putExtra("activity_id",p.destination).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP),PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE)
    val joke=ReminderCopyCache(context,dao).joke(p)
    val copy=p.facts+(joke?.let{" $it"} ?: "")
-   val builder=Notification.Builder(context,CHANNEL).setSmallIcon(R.drawable.ic_notification_weasel).setContentTitle(p.title).setContentText(copy).setStyle(Notification.BigTextStyle().bigText(copy)).setContentIntent(open).setAutoCancel(true).addAction(Notification.Action.Builder(null,"Open",open).build())
-   for(minutes in listOf(30)) {
-    val snooze=PendingIntent.getBroadcast(context,0,Intent(context,ReminderReceiver::class.java).setAction("euros.snooze").setData(Uri.parse("euros://snooze/$minutes/"+Uri.encode(activityId))).putExtra("activity_id",activityId).putExtra("minutes",minutes),PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE)
-    builder.addAction(Notification.Action.Builder(null,"Snooze $minutes min",snooze).build())
-   }
+   val builder=Notification.Builder(context,CHANNEL).setSmallIcon(R.drawable.ic_notification_weasel).setContentTitle(p.title).setContentText(copy).setStyle(Notification.BigTextStyle().bigText(copy)).setContentIntent(open).setAutoCancel(true)
    val choose=PendingIntent.getActivity(context,0,Intent(context,MainActivity::class.java).setData(Uri.parse("euros://snooze-picker/"+Uri.encode(activityId))).putExtra("activity_id","@snooze:$activityId").addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP),PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE)
-   builder.addAction(Notification.Action.Builder(null,"Snooze…",choose).build())
+   builder.addAction(Notification.Action.Builder(android.graphics.drawable.Icon.createWithResource(context,android.R.drawable.ic_lock_idle_alarm),"Snooze",choose).build())
    manager.notify(activityId,0,builder.build())
    val delivered=s.optJSONObject("delivered") ?: JSONObject();delivered.put(activityId,p.due.toString());s.put("delivered",delivered);val contexts=s.optJSONObject("delivered_context") ?: JSONObject();contexts.put(activityId,p.contextKey);s.put("delivered_context",contexts);dao.meta(Metadata(KEY,s.toString()))
   }

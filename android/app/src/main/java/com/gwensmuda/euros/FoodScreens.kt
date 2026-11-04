@@ -82,9 +82,8 @@ import java.time.format.DateTimeFormatter
   } else FoodEntryEditor(repo,date,existing,mealChoices,if(creating) entryActivityId else null,mealChoicesForDate) {creating=false;editingId=null}
   return
  }
- Column(verticalArrangement=Arrangement.spacedBy(18.dp)) {
+ Column(verticalArrangement=Arrangement.spacedBy(12.dp)) {
   NutritionWidget(FoodDomain.summary(records,date),targets){creating=true;editingId=null;entryActivityId=null}
-  if(FoodDomain.needsMealReview(records,date))Text("Training changed. Ask your agent to adjust this day’s meals.",style=MaterialTheme.typography.bodyMedium)
   key(date) { RemainingMeals(repo,records,date,mealReferences) }
   if(entries.isNotEmpty()) {
    TextButton(onClick={expanded=!expanded},contentPadding=PaddingValues(0.dp)) {
@@ -106,8 +105,8 @@ import java.time.format.DateTimeFormatter
 
 @Composable private fun NutritionWidget(totals:NutritionTotals,targets:JSONObject?,onAdd:()->Unit) {
  val largeText=LocalDensity.current.fontScale>1.5f
- Surface(color=MaterialTheme.colorScheme.primaryContainer,shape=RoundedCornerShape(8.dp),modifier=Modifier.fillMaxWidth()) {
-  Column(Modifier.padding(20.dp),verticalArrangement=Arrangement.spacedBy(12.dp)) {
+ Surface(color=MaterialTheme.colorScheme.primaryContainer,shape=RoundedCornerShape(20.dp),modifier=Modifier.fillMaxWidth()) {
+  Column(Modifier.padding(16.dp),verticalArrangement=Arrangement.spacedBy(12.dp)) {
    Row(verticalAlignment=Alignment.CenterVertically) {
     if(largeText) Column(Modifier.weight(1f)) {
      Text(totals.kcal.display(),style=MaterialTheme.typography.headlineMedium)
@@ -118,7 +117,7 @@ import java.time.format.DateTimeFormatter
     }
     FoodIconButton("Log food",onAdd){Icon(Icons.Outlined.Edit,null,Modifier.size(19.dp))}
    }
-   NutrientProgress(totals.kcal,FoodDomain.targetNumber(targets,"kcal"),"Calories")
+   if(totals.kcal.known!=null)NutrientProgress(totals.kcal,FoodDomain.targetNumber(targets,"kcal"),"Calories")
    if(largeText) Column(verticalArrangement=Arrangement.spacedBy(12.dp)) {
     MacroWidget("Protein",totals.protein,FoodDomain.targetNumber(targets,"proteinG"),FoodDomain.targetLabel(targets,"proteinG"),Modifier.fillMaxWidth())
     MacroWidget("Carbs",totals.carbs,FoodDomain.targetNumber(targets,"carbohydrateG"),FoodDomain.targetLabel(targets,"carbohydrateG"),Modifier.fillMaxWidth())
@@ -133,11 +132,9 @@ import java.time.format.DateTimeFormatter
  }
 }
 @Composable private fun MacroWidget(label:String,total:NutrientTotal,target:BigDecimal?,targetLabel:String?,modifier:Modifier) {
- Column(modifier,verticalArrangement=Arrangement.spacedBy(5.dp)) {
-  Text("${total.display()}g",style=MaterialTheme.typography.titleMedium)
-  Text("/ ${targetLabel ?: "—"}g",style=MaterialTheme.typography.bodySmall,color=MaterialTheme.colorScheme.onSurfaceVariant)
-  Text(label,style=MaterialTheme.typography.bodySmall)
-  NutrientProgress(total,target,label,targetLabel)
+ Column(modifier,verticalArrangement=Arrangement.spacedBy(4.dp)) {
+  Text(label,style=MaterialTheme.typography.bodySmall,color=EurosColors.Muted)
+  Text("${total.display()} / ${targetLabel ?: "—"} g",style=MaterialTheme.typography.titleMedium)
  }
 }
 @Composable private fun NutrientProgress(total:NutrientTotal,target:BigDecimal?,label:String,targetLabel:String?=target?.let{FoodDomain.displayDecimal(it)}) {
@@ -200,11 +197,12 @@ import java.time.format.DateTimeFormatter
  }
  BackHandler{close()}
  Column(Modifier.fillMaxWidth(),verticalArrangement=Arrangement.spacedBy(14.dp)) {
-  Row(Modifier.fillMaxWidth(),horizontalArrangement=Arrangement.End) {FoodIconButton("Close",{close()},!busy || interpreting){Icon(Icons.Outlined.Close,null,Modifier.size(19.dp))}}
   val current=draft
+  Row(Modifier.fillMaxWidth(),verticalAlignment=Alignment.CenterVertically) {
+   Text(current?.let{runCatching{LocalDate.parse(it.dateInput).format(DateTimeFormatter.ofPattern("EEE, MMM d"))}.getOrDefault(it.dateInput)} ?: "",Modifier.weight(1f),style=MaterialTheme.typography.bodyMedium,color=EurosColors.Muted)
+   IconButton(onClick={close()},enabled=!busy || interpreting){Icon(Icons.Outlined.Close,"Close")}
+  }
   if(current==null) {Text(problem ?: "Opening…");return@Column}
-  Text(runCatching{LocalDate.parse(current.localDate).format(DateTimeFormatter.ofPattern("EEEE, MMMM d"))}.getOrDefault(current.dateInput).uppercase(),style=MaterialTheme.typography.labelSmall,letterSpacing=1.5.sp,color=MaterialTheme.colorScheme.onSurfaceVariant)
-  Text("Log food",style=MaterialTheme.typography.headlineLarge)
   val currentMeals=runCatching{mealChoicesForDate?.invoke(LocalDate.parse(current.dateInput))}.getOrNull() ?: meals
   val changed=existing!=null && (existing.revision!=current.baseRevision || existing.payload!=current.originalPayload)
   if(changed) {
@@ -212,17 +210,17 @@ import java.time.format.DateTimeFormatter
    TextButton(onClick={update(FoodDomain.draftFromRecord(existing!!))},enabled=!busy){Text("Reload entry")}
   }
   if(!reviewed) {
-   OutlinedTextField(current.text,{update(current.copy(text=it))},label={Text("What did you eat?")},isError=errors.containsKey("text"),supportingText=errors["text"]?.let{message->{Text(message)}},modifier=Modifier.fillMaxWidth(),minLines=4,shape=RoundedCornerShape(8.dp),enabled=!busy)
+   OutlinedTextField(current.text,{update(current.copy(text=it))},label={Text("What did you eat?")},isError=errors.containsKey("text"),supportingText=errors["text"]?.let{message->{Text(message)}},modifier=Modifier.fillMaxWidth(),minLines=4,shape=RoundedCornerShape(20.dp),enabled=!busy)
    Row(Modifier.fillMaxWidth(),verticalAlignment=Alignment.CenterVertically) {
     TextButton(onClick={details=!details},contentPadding=PaddingValues(horizontal=0.dp),enabled=!busy) {Text("Details");Icon(if(details) Icons.Outlined.ExpandLess else Icons.Outlined.ExpandMore,null)}
     Spacer(Modifier.weight(1f))
-    Button(onClick={add(current)},enabled=!busy,shape=RoundedCornerShape(8.dp)){Text(if(interpreting) "Adding…" else "Add")}
+    Button(onClick={add(current)},enabled=!busy,shape=RoundedCornerShape(20.dp)){Text(if(interpreting) "Adding…" else "Add")}
    }
    if(details) {
    TextButton(onClick={update(current.copy(manualEntry=true));problem=null},enabled=!busy && !current.manualEntry){Text("Use manual details")}
    HorizontalDivider(color=MaterialTheme.colorScheme.outlineVariant)
    Row(horizontalArrangement=Arrangement.spacedBy(8.dp)) {
-    OutlinedTextField(current.dateInput,{update(current.copy(dateInput=it))},label={Text("Date · YYYY-MM-DD")},singleLine=true,enabled=!busy,modifier=Modifier.weight(1f),isError=errors.containsKey("time"))
+    DatePickerField(current.dateInput,{update(current.copy(dateInput=it))},enabled=!busy,modifier=Modifier.weight(1f))
     TimePickerField(current.timeInput,{update(current.copy(timeInput=it))},enabled=!busy,modifier=Modifier.weight(1f))
    }
    errors["time"]?.let{Text(it,color=MaterialTheme.colorScheme.error)}
@@ -242,7 +240,7 @@ import java.time.format.DateTimeFormatter
    }
    }
   } else {
-   OutlinedCard(Modifier.fillMaxWidth(),shape=RoundedCornerShape(8.dp)) {
+   OutlinedCard(Modifier.fillMaxWidth(),shape=RoundedCornerShape(20.dp)) {
     Column(Modifier.padding(16.dp),verticalArrangement=Arrangement.spacedBy(8.dp)) {
      Row(verticalAlignment=Alignment.CenterVertically){Text(current.text,Modifier.weight(1f),style=MaterialTheme.typography.titleMedium);IconButton(onClick={reviewed=false;details=true},enabled=!busy){Icon(Icons.Outlined.Edit,"Edit food details")}}
      if(current.grams.isNotBlank()) Text("${current.grams}g")
@@ -288,9 +286,8 @@ import java.time.format.DateTimeFormatter
    if(snackbar.showSnackbar("${meal.title} dismissed",actionLabel="Undo",duration=SnackbarDuration.Short)==SnackbarResult.ActionPerformed)repo.setMealDismissed(date,meal.id,false)
   } catch(e:CancellationException){throw e} catch(_:Exception){snackbar.showSnackbar("Couldn't update meal")}
  }}
- Row(Modifier.fillMaxWidth(),verticalAlignment=Alignment.CenterVertically) {
-  Text("Keep eating",Modifier.weight(1f),style=MaterialTheme.typography.titleLarge)
-  if(meals.any{it.id in dismissed})IconButton(onClick={scope.launch{try{repo.restoreDismissedMeals(date)}catch(e:CancellationException){throw e}catch(_:Exception){snackbar.showSnackbar("Couldn't restore meals")}}}){Icon(Icons.Outlined.Undo,"Restore dismissed meals")}
+ if(meals.any{it.id in dismissed})Row(Modifier.fillMaxWidth(),horizontalArrangement=Arrangement.End) {
+  IconButton(onClick={scope.launch{try{repo.restoreDismissedMeals(date)}catch(e:CancellationException){throw e}catch(_:Exception){snackbar.showSnackbar("Couldn't restore meals")}}}){Icon(Icons.Outlined.Undo,"Restore dismissed meals")}
  }
  SnackbarHost(snackbar)
  val remaining=FoodDomain.remainingReferences(meals,records,date,dismissed)
@@ -301,16 +298,17 @@ import java.time.format.DateTimeFormatter
    Box(Modifier.fillMaxSize().background(MaterialTheme.colorScheme.primaryContainer).padding(16.dp),contentAlignment=if(swipe.dismissDirection==SwipeToDismissBoxValue.StartToEnd)Alignment.CenterStart else Alignment.CenterEnd){Icon(Icons.Outlined.Check,null,tint=MaterialTheme.colorScheme.primary)}
   }) {
    Surface(color=MaterialTheme.colorScheme.surface) {
-   Row(Modifier.fillMaxWidth(),horizontalArrangement=Arrangement.spacedBy(12.dp),verticalAlignment=Alignment.Top) {
-    Surface(color=MaterialTheme.colorScheme.primaryContainer,shape=RoundedCornerShape(8.dp)) {
-     Icon(Icons.Outlined.Restaurant,null,Modifier.padding(8.dp).size(18.dp),tint=MaterialTheme.colorScheme.onSurface)
+   Row(Modifier.fillMaxWidth().padding(vertical=8.dp),horizontalArrangement=Arrangement.spacedBy(12.dp),verticalAlignment=Alignment.Top) {
+    Surface(color=Color(0xFFF3F5F7),shape=RoundedCornerShape(12.dp)) {
+     Icon(Icons.Outlined.Restaurant,null,Modifier.padding(10.dp).size(20.dp),tint=MaterialTheme.colorScheme.onSurface)
     }
     Column(Modifier.weight(1f),verticalArrangement=Arrangement.spacedBy(4.dp)) {
-     Text(meal.title,style=MaterialTheme.typography.titleMedium)
+     Row(Modifier.fillMaxWidth(),verticalAlignment=Alignment.CenterVertically,horizontalArrangement=Arrangement.spacedBy(8.dp)) {
+      Text(meal.title,Modifier.weight(1f),style=MaterialTheme.typography.titleMedium)
+      meal.time?.let{Text(TimeDisplay.label(it),style=MaterialTheme.typography.bodySmall,color=EurosColors.Muted)}
+     }
      meal.foods.forEach{food->Text(food,style=MaterialTheme.typography.bodySmall,color=MaterialTheme.colorScheme.onSurfaceVariant)}
-     val amounts=listOfNotNull(meal.protein?.let{"${it}g protein"},meal.carbs?.let{"${it}g carbs"},meal.fat?.let{"${it}g fat"}).joinToString(" · ")
-     meal.time?.let{Text(it,style=MaterialTheme.typography.bodySmall,color=MaterialTheme.colorScheme.onSurfaceVariant)}
-     if(amounts.isNotBlank()) Text(amounts,color=MaterialTheme.colorScheme.onSurfaceVariant,style=MaterialTheme.typography.bodySmall)
+
     }
    }
    }

@@ -13,6 +13,8 @@ import androidx.room.Room
 import androidx.test.core.app.ApplicationProvider
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import kotlinx.coroutines.runBlocking
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.cancel
 import org.json.JSONObject
 import org.junit.*
 import org.junit.runner.RunWith
@@ -26,14 +28,16 @@ class WeeklyReviewScreenTest {
  private lateinit var repo:Repository
  private var week by mutableStateOf(LocalDate.of(2026,10,12))
  private var calls=0
+ private val jobScope=kotlinx.coroutines.CoroutineScope(kotlinx.coroutines.SupervisorJob()+kotlinx.coroutines.Dispatchers.IO)
  private var fail=false
- private fun response()=JSONObject("""{"summary":"Two sessions completed.","adjustments":["Keep the scheduled recovery."],"coverage":{"through_date":"2026-10-14","logged_activity_count":2,"unlogged_activity_count":1,"food_days":2,"covered_days":3},"model":"synthetic","provider":"test"}""")
+ private var gate:kotlinx.coroutines.CompletableDeferred<Unit>?=null
+ private fun response()=JSONObject("""{"schema_version":2,"headline":"Keep recovery close","insights":[{"kind":"training","title":"Back-to-back classes","body":"Leave room for recovery between the harder days."}],"summary":"Two sessions completed.","adjustments":["Keep the scheduled recovery."],"coverage":{"through_date":"2026-10-14","logged_activity_count":2,"unlogged_activity_count":1,"food_days":2,"covered_days":3},"model":"synthetic","provider":"test"}""")
  @Before fun setup() {
   db=Room.inMemoryDatabaseBuilder(ApplicationProvider.getApplicationContext(),EurosDatabase::class.java).build()
   repo=Repository(db,object:LlmClient {
    override suspend fun interpretFood(text:String):JSONObject=error("Not used")
    override suspend fun reviewWeek(weekStart:LocalDate,records:List<Record>):JSONObject {
-    calls++;if(fail)throw IllegalStateException("Synthetic provider failure")
+    calls++;gate?.await();if(fail)throw IllegalStateException("Synthetic provider failure")
     return response()
    }
   })
@@ -41,12 +45,15 @@ class WeeklyReviewScreenTest {
    val records by repo.dao.observe().collectAsState(emptyList())
    var open by remember { mutableStateOf(true) }
    EurosTheme {Column(Modifier.verticalScroll(rememberScrollState())) {
-    if(open) WeeklyReview(repo,records,week){open=false}
+    if(open) WeeklyReview(repo,records,week,onClose={open=false},onGenerate={selected,snapshot->jobScope.launch {
+     WeeklyReviewWork.prepare(repo,selected,snapshot)
+     runCatching{WeeklyReviewWork.execute(repo,selected)}
+    }})
     else TextButton(onClick={open=true}){Text("Open wrap-up")}
    }}
   }
  }
- @After fun close(){db.close()}
+ @After fun close(){jobScope.cancel();db.close()}
  private fun waitFor(text:String) {compose.waitUntil(5_000){compose.onAllNodesWithText(text).fetchSemanticsNodes().isNotEmpty()}}
  private fun generate() {waitFor("Generate wrap-up");compose.onNodeWithText("Generate wrap-up").performScrollTo().performClick()}
  private fun assertReadOnly()=runBlocking {
@@ -55,8 +62,10 @@ class WeeklyReviewScreenTest {
  }
  @Test fun generationIsReadOnlyAndReopenUsesSavedSnapshot() {
   generate();waitFor("Two sessions completed.")
+  compose.onNodeWithText("Keep recovery close").assertExists()
+  compose.onNodeWithText("Back-to-back classes").assertExists()
   compose.onNodeWithText("Keep the scheduled recovery.").assertExists()
-  compose.onNodeWithText("1 activities without a complete log · 2 of 3 days with food entries").assertExists()
+  compose.onNodeWithText("1 activities without a complete log · 2 of 3 days with food entries").assertDoesNotExist()
   Assert.assertEquals(1,calls);assertReadOnly()
   val cache=runBlocking{repo.dao.meta(WeeklyReviewCache.key(week))}!!
   Assert.assertTrue(JSONObject(cache).getString("generated_at").isNotBlank())
@@ -64,6 +73,29 @@ class WeeklyReviewScreenTest {
   compose.onNodeWithText("Open wrap-up").performScrollTo().performClick()
   waitFor("Two sessions completed.")
   Assert.assertEquals(1,calls);assertReadOnly()
+ }
+ @Test fun syncDuringGenerationDoesNotCancelRestartOrDiscardResult() {
+  gate=kotlinx.coroutines.CompletableDeferred()
+  generate();waitFor("Reviewing your week…")
+  runBlocking{repo.dao.put(Record("activities","sync-update",1,JSONObject().put("kind","bjj").put("status","done").put("scheduled_at","2026-10-14T18:00:00-05:00").toString()))}
+  compose.waitForIdle()
+  compose.onNodeWithText("Reviewing your week…").assertExists()
+  compose.onNodeWithText("Generate wrap-up").assertDoesNotExist()
+  Assert.assertEquals(1,calls)
+  gate!!.complete(Unit)
+  waitFor("Two sessions completed.")
+  compose.onNodeWithText("Logs updated since this recap. Refresh for the latest.").assertExists()
+  Assert.assertEquals(1,calls)
+ }
+ @Test fun generationContinuesAfterClosingAndReopening() {
+  gate=kotlinx.coroutines.CompletableDeferred()
+  generate();waitFor("Reviewing your week…")
+  compose.onNodeWithContentDescription("Close").performScrollTo().performClick()
+  gate!!.complete(Unit)
+  compose.waitUntil(5_000){runBlocking{repo.dao.meta(WeeklyReviewCache.key(week))!=null}}
+  compose.onNodeWithText("Open wrap-up").performClick()
+  waitFor("Two sessions completed.")
+  Assert.assertEquals(1,calls)
  }
  @Test fun providerFailureOffersRetryWithoutInventingSummary() {
   fail=true;generate();waitFor("Retry")
@@ -78,7 +110,7 @@ class WeeklyReviewScreenTest {
   generate();waitFor("Two sessions completed.")
   val saved=runBlocking{repo.dao.meta(WeeklyReviewCache.key(week))}
   fail=true
-  compose.onNodeWithText("Refresh wrap-up").performScrollTo().performClick()
+  compose.onNodeWithContentDescription("Refresh wrap-up").performScrollTo().performClick()
   waitFor("Retry")
   compose.onNodeWithText("Two sessions completed.").assertExists()
   Assert.assertEquals(saved,runBlocking{repo.dao.meta(WeeklyReviewCache.key(week))})

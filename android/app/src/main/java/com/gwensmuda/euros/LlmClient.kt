@@ -11,6 +11,7 @@ import java.time.LocalDate
 interface LlmClient {
     suspend fun interpretFood(text: String): JSONObject
     suspend fun reviewWeek(weekStart: LocalDate, records: List<Record>): JSONObject
+    suspend fun reviewWeekJob(requestId:String,weekStart:LocalDate,records:List<Record>):JSONObject = reviewWeek(weekStart,records)
 }
 
 class BackendLlmClient(private val api: SyncApi) : LlmClient {
@@ -35,6 +36,28 @@ class BackendLlmClient(private val api: SyncApi) : LlmClient {
                 .put("week_start", weekStart.toString()).put("records", snapshot))
         }
 
+    override suspend fun reviewWeekJob(requestId:String,weekStart:LocalDate,records:List<Record>):JSONObject = withContext(Dispatchers.IO) {
+        val snapshot=JSONArray()
+        weeklySnapshot(weekStart,records).forEach{r->snapshot.put(JSONObject().put("entity_type",r.type).put("entity_id",r.id).put("revision",r.revision).put("deleted",r.deleted).put("payload",JSONObject(r.payload)))}
+        var job=api.request("/v1/review/jobs",JSONObject().put("request_id",requestId).put("week_start",weekStart.toString()).put("records",snapshot))
+        val id=job.getString("job_id")
+        require(id==requestId && job.getString("week_start")==weekStart.toString())
+        val started=System.nanoTime()
+        while(true) {
+            require(job.getString("job_id")==id && job.getString("week_start")==weekStart.toString())
+            when(job.getString("status")) {
+                "completed" -> return@withContext job.getJSONObject("result")
+                "failed" -> throw IllegalStateException(backendErrorMessage(502,JSONObject().put("error",job.optString("error")).toString()))
+                "queued","running" -> Unit
+                else -> error("Invalid wrap-up status")
+            }
+            if((System.nanoTime()-started)/1_000_000_000>210)throw java.io.IOException("Wrap-up status timed out")
+            kotlinx.coroutines.delay(2000)
+            job=api.request("/v1/review/jobs/$id")
+        }
+        @Suppress("UNREACHABLE_CODE") JSONObject()
+    }
+
     companion object {
         /** Raw Health Connect metadata and unrelated weeks never enter the request. */
         fun weeklySnapshot(week: LocalDate, records: List<Record>): List<Record> {
@@ -45,9 +68,9 @@ class BackendLlmClient(private val api: SyncApi) : LlmClient {
             val weekRecords = latest.filter { record ->
                 val payload=JSONObject(record.payload)
                 when (record.type) {
-                    "activities" -> inWeek(PlanDomain.day(record)) || payload.optString("completed_at")
+                    "activities" -> inWeek(PlanDomain.day(record,PlanDomain.canonicalZone)) || payload.optString("completed_at")
                         .takeIf { it.isNotBlank() }?.let {
-                            inWeek(java.time.OffsetDateTime.parse(it).atZoneSameInstant(PlanDomain.zone).toLocalDate())
+                            inWeek(java.time.OffsetDateTime.parse(it).atZoneSameInstant(PlanDomain.canonicalZone).toLocalDate())
                         } == true
                     "food_entries", "weight_entries" -> inWeek(LocalDate.parse(payload.getString("local_date")))
                     else -> false

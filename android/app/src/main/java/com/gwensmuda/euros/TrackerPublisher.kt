@@ -83,7 +83,7 @@ class TrackerPublisher(private val dao:EurosDao) {
    dao.removeMeta(PENDING)
   }
   dao.meta(PENDING)?.let{send(HealthSnapshotStorage.decode(it))}
-  val local=dao.meta(HealthImport.KEY)?.let{HealthSnapshotStorage.decode(it)} ?: return@withLock
+  val local=dao.meta(HealthImport.KEY)?.let{HealthSnapshotStorage.decode(it,HealthSnapshotStorage.Samples.POLAR)} ?: return@withLock
   val checkpoints=dao.meta(CHECKPOINT)?.let(::JSONObject) ?: JSONObject()
   val activeIds=dao.recordsIncludingDeleted().filter{it.type=="activities" && !it.deleted}.map{it.id}.toSet()
   val changed=PolarProjection.workouts(local,activeIds).filter { payload->

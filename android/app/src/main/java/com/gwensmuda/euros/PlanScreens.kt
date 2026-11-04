@@ -79,72 +79,107 @@ object PlanDisplay {
  fun trackerName(source:String,exerciseType:Int?=null)=when{source=="fi.polar.polarflow" && exerciseType==androidx.health.connect.client.records.ExerciseSessionRecord.EXERCISE_TYPE_MARTIAL_ARTS->"BJJ";source.contains("polar",true)->"Polar workout";source.contains("fitbit",true)->"Fitbit workout";else->"Tracker workout"}
 }
 @Composable private fun ActivityGlyph(kind:String) {
- Surface(color=Color(0xFFEDF3FF),shape=RoundedCornerShape(9.dp),modifier=Modifier.size(34.dp)) {
+ Surface(color=EurosColors.Paper,shape=RoundedCornerShape(12.dp),modifier=Modifier.size(40.dp)) {
   Box(contentAlignment=Alignment.Center){Icon(when(kind){"weights"->Icons.Outlined.FitnessCenter;"rest","recovery"->Icons.Outlined.Spa;"prep"->Icons.Outlined.SoupKitchen;"weight"->Icons.Outlined.MonitorWeight;"food"->Icons.Outlined.Restaurant;else->Icons.Outlined.SportsMartialArts},null,tint=MaterialTheme.colorScheme.onSurface,modifier=Modifier.size(19.dp))}
  }
 }
-@Composable fun PlanRow(record:Record,records:List<Record>,onOpen:(Record)->Unit,repo:Repository?=null) {
+@Composable fun PlanRow(record:Record,records:List<Record>,onOpen:(Record)->Unit,repo:Repository?=null,featured:Boolean=false,linkedWorkout:WeekTrackerItem?=null) {
  val p=PlanDomain.payload(record);val status=PlanDomain.progress(record,records)
+ val observed=linkedWorkout
  val exercise=p.optString("kind") in setOf("bjj","weights")
+ val duration=PlanDisplay.template(record).opt("durationMinutes")?.takeIf{it!=JSONObject.NULL}
+ val canMove=repo!=null && p.optString("kind") in setOf("bjj","weights","prep","recovery","rest")
+ // Balance the visible text against the whitespace in the 48 dp Move target.
+ val textInset=with(androidx.compose.ui.platform.LocalDensity.current) {
+  if(canMove && duration==null)((48.dp-MaterialTheme.typography.bodySmall.lineHeight.toDp())/2).coerceAtLeast(0.dp) else 0.dp
+ }
  val done=LocalExerciseDone.current
  var move by remember(record.id){mutableStateOf(false)}
  if(move && repo!=null)MoveDialog(record,repo){move=false}
  Column(Modifier.fillMaxWidth()) {
-  Row(Modifier.fillMaxWidth().clickable{onOpen(record)}.padding(vertical=13.dp),verticalAlignment=Alignment.CenterVertically) {
+  Row(Modifier.fillMaxWidth().semantics{stateDescription=when(status){"done"->"Done";"skipped"->"Skipped";"partial"->"Partially completed";else->"Pending"}}.clickable{onOpen(record)}.padding(vertical=13.dp-textInset/2),verticalAlignment=Alignment.CenterVertically) {
    ActivityGlyph(p.getString("kind"));Spacer(Modifier.width(12.dp))
-   Column(Modifier.weight(1f),verticalArrangement=Arrangement.spacedBy(3.dp)) {
-    Text(p.getString("title"),style=MaterialTheme.typography.titleSmall,fontWeight=FontWeight.SemiBold)
-    Row(verticalAlignment=Alignment.CenterVertically){Text(activityTime(record),style=MaterialTheme.typography.bodySmall,color=MaterialTheme.colorScheme.onSurfaceVariant);if(repo!=null && p.optString("kind") in setOf("bjj","weights","prep"))TextButton(onClick={move=true},contentPadding=PaddingValues(horizontal=8.dp,vertical=0.dp)){Text("Move",style=MaterialTheme.typography.labelSmall)}}
-    PlanDisplay.detail(record)?.takeUnless{p.optString("kind")=="rest" && PlanDomain.children(record,records).isNotEmpty()}?.let{Text(it,style=MaterialTheme.typography.bodySmall,color=MaterialTheme.colorScheme.onSurfaceVariant)}
+   Column(Modifier.weight(1f).padding(top=textInset),verticalArrangement=Arrangement.spacedBy(3.dp)) {
+    Text(p.getString("title").replaceFirstChar{it.titlecase()},style=if(featured)MaterialTheme.typography.titleLarge else MaterialTheme.typography.titleSmall,fontWeight=FontWeight.SemiBold)
+    Row(verticalAlignment=Alignment.CenterVertically){Text(activityTime(record),style=MaterialTheme.typography.bodySmall,color=MaterialTheme.colorScheme.onSurfaceVariant);if(canMove)IconButton(onClick={move=true},modifier=Modifier.size(48.dp)){Icon(Icons.Outlined.EditCalendar,"Move ${p.getString("title")}",modifier=Modifier.size(19.dp),tint=EurosColors.Blue)}}
+    if(observed!=null) Row(verticalAlignment=Alignment.CenterVertically,horizontalArrangement=Arrangement.spacedBy(5.dp)) {
+     Icon(Icons.Outlined.MonitorHeart,"Linked Health Connect workout",Modifier.size(16.dp),tint=EurosColors.Blue)
+     Text("${Duration.between(observed.session.start,observed.session.end).toMinutes()} min recorded",style=MaterialTheme.typography.bodySmall,color=EurosColors.Muted)
+    } else duration?.let{Text("$it min",style=MaterialTheme.typography.bodySmall,color=EurosColors.Muted)}
    }
    Spacer(Modifier.width(8.dp))
-   Surface(onClick={if(exercise && status=="pending") done(record) else onOpen(record)},color=if(exercise && status=="done") EurosColors.Blue else EurosColors.Soft,shape=RoundedCornerShape(12.dp),modifier=Modifier.size(44.dp)) {
+   Surface(onClick={if(exercise && status=="pending") done(record) else onOpen(record)},color=if(status=="done") EurosColors.Blue else if(status=="skipped")EurosColors.Paper else EurosColors.Soft,shape=RoundedCornerShape(12.dp),modifier=Modifier.size(48.dp)) {
     Box(contentAlignment=Alignment.Center) {
      Icon(when {status=="skipped"->Icons.Outlined.Remove;exercise->Icons.Outlined.Check;status=="done"->Icons.Outlined.Check;status=="partial"->Icons.Outlined.Timelapse;p.optString("kind")=="prep"->Icons.Outlined.ChevronRight;else->Icons.Outlined.Edit},
       "${if(exercise && status=="pending") "Mark done" else if(status=="pending") "Open" else status} ${p.getString("title")}",
-      tint=if(exercise && status=="done")Color.White else if(status=="skipped")Color.Gray else Accent,modifier=Modifier.size(if(exercise)21.dp else 19.dp))
+      tint=if(status=="done")Color.White else if(status=="skipped")Color.Gray else Accent,modifier=Modifier.size(if(exercise)21.dp else 19.dp))
     }
    }
   }
-  HorizontalDivider(color=Color(0xFFDCE3EF))
+  HorizontalDivider(color=EurosColors.Line)
  }
 }
 @Composable fun TodayContent(records:List<Record>,dayPlan:DayPlan,onOpen:(Record)->Unit,onFood:()->Unit,repo:Repository,onMealLog:()->Unit=onFood) {
+ val app=LocalContext.current.applicationContext as EurosApplication
+ val linked by app.weekTracker.linked.collectAsState()
  val items=dayPlan.activities.map{it.record};val next=dayPlan.next?.record ?: PlanDisplay.nextHomeActivity(records,dayPlan.date)
- if(next!=null) {
-  Surface(color=Color(0xFFEDF3FF),shape=RoundedCornerShape(8.dp),modifier=Modifier.fillMaxWidth()) {
-   Column(Modifier.padding(horizontal=18.dp,vertical=14.dp)) {
-    Text(PlanDisplay.dateHeading(PlanDomain.day(next),dayPlan.date),style=MaterialTheme.typography.titleMedium,fontWeight=FontWeight.SemiBold)
-    val children=PlanDomain.children(next,records).filter{PlanDomain.status(it)=="pending"}
-    if(children.isNotEmpty()) children.forEach{PlanRow(it,records,onOpen,repo)} else {
-     PlanRow(next,records,onOpen,repo)
-     PlanDisplay.template(next).optJSONArray("exercises")?.let{e->for(i in 0 until e.length()) {val ex=e.getJSONObject(i);Text(ex.getString("name")+PlanDisplay.exercise(ex).takeIf{it.isNotBlank()}?.let{" · $it"}.orEmpty(),style=MaterialTheme.typography.bodySmall,modifier=Modifier.padding(top=7.dp))}}
-    }
+ val pending=items.filter{!PlanDomain.resolved(it,records)}
+ val agenda=if(pending.isNotEmpty())pending else listOfNotNull(next)
+ if(agenda.isNotEmpty()) {
+  Column {
+   Box(Modifier.fillMaxWidth().height(3.dp).background(EurosColors.Line,RoundedCornerShape(2.dp))) {
+    Box(Modifier.width(36.dp).fillMaxHeight().background(EurosColors.Blue,RoundedCornerShape(2.dp)))
    }
+   if(PlanDomain.day(agenda.first())!=dayPlan.date) Text(PlanDisplay.dateHeading(PlanDomain.day(agenda.first()),dayPlan.date),modifier=Modifier.padding(top=12.dp),style=MaterialTheme.typography.titleLarge)
+   agenda.flatMap { activity ->
+    val children=PlanDomain.children(activity,records).filter{PlanDomain.status(it)=="pending"}
+    children.ifEmpty{listOf(activity)}
+   }.sortedBy{OffsetDateTime.parse(PlanDomain.payload(it).getString("scheduled_at")).toInstant()}
+    .forEach{PlanRow(it,records,onOpen,repo,featured=it.id==next?.id,linkedWorkout=linked[it.id])}
   }
- }
+ } else if(items.isEmpty()) Text("No activities scheduled",style=MaterialTheme.typography.bodyMedium,color=Color.Gray)
+
  val dismissed by remember(repo,dayPlan.date){repo.observeDismissedMeals(dayPlan.date)}.collectAsState(initial=emptySet())
  val meal=FoodDomain.nextMeal(dayPlan.meals,records,dayPlan.date,dismissed,LocalTime.now(PlanDomain.zone))
- if(meal!=null) Surface(color=MaterialTheme.colorScheme.surface,shape=RoundedCornerShape(8.dp),border=BorderStroke(1.dp,EurosColors.Line),modifier=Modifier.fillMaxWidth()) {
-  Column(Modifier.padding(18.dp),verticalArrangement=Arrangement.spacedBy(6.dp)) {
-   Row(verticalAlignment=Alignment.CenterVertically) {
-    Column(Modifier.weight(1f)) {
-     Text("Next meal",style=MaterialTheme.typography.titleMedium,fontWeight=FontWeight.SemiBold)
-     Text(meal.title+meal.time?.let{" · ${TimeDisplay.label(it)}"}.orEmpty(),style=MaterialTheme.typography.bodyMedium)
+ if(meal!=null) {
+  Column(Modifier.fillMaxWidth().padding(vertical=8.dp),verticalArrangement=Arrangement.spacedBy(12.dp)) {
+   Surface(color=EurosColors.Paper,shape=RoundedCornerShape(16.dp),modifier=Modifier.fillMaxWidth()) {
+    Column(Modifier.padding(18.dp),verticalArrangement=Arrangement.spacedBy(5.dp)) {
+     Row(Modifier.fillMaxWidth().padding(bottom=4.dp),verticalAlignment=Alignment.CenterVertically,horizontalArrangement=Arrangement.spacedBy(12.dp)) {
+      Text(meal.title,Modifier.weight(1f),style=MaterialTheme.typography.titleMedium)
+      meal.time?.let{Text(TimeDisplay.label(it),style=MaterialTheme.typography.bodySmall,color=EurosColors.Muted)}
+     }
+     meal.foods.forEach{food->
+      if(food.contains("12–20") && food.contains("water",true)) {
+       Row(Modifier.padding(top=7.dp),verticalAlignment=Alignment.CenterVertically,horizontalArrangement=Arrangement.spacedBy(6.dp)) {
+        Icon(Icons.Outlined.WaterDrop,null,Modifier.size(16.dp),tint=EurosColors.Blue)
+        Text(food,style=MaterialTheme.typography.bodySmall,color=EurosColors.Muted)
+       }
+      } else Text(food,style=MaterialTheme.typography.bodyMedium,color=EurosColors.Muted)
+     }
     }
    }
-   meal.foods.forEach{Text(it,style=MaterialTheme.typography.bodyMedium)}
   }
  }
- val later=items.filter{it.id!=next?.id && !PlanDomain.resolved(it,records)}
- if(later.isNotEmpty()) {
-  Text("Later today",style=MaterialTheme.typography.titleMedium,fontWeight=FontWeight.SemiBold)
-  Column {later.forEach{PlanRow(it,records,onOpen,repo)}}
- } else if(items.isEmpty() && next==null) Text("No activities scheduled",style=MaterialTheme.typography.bodyMedium,color=Color.Gray)
+
 }
-@Composable fun WeekContent(records:List<Record>,authoredPlan:AuthoredPlan,week:LocalDate,onOpen:(Record)->Unit,onWrapUp:()->Unit,repo:Repository,onImported:(String)->Unit) {
+@Composable fun SundayWrapUp(date:LocalDate,onOpen:()->Unit) {
+ if(date.dayOfWeek!=java.time.DayOfWeek.SUNDAY)return
+ Surface(onClick=onOpen,color=EurosColors.Soft,shape=RoundedCornerShape(16.dp),modifier=Modifier.fillMaxWidth()) {
+  Row(Modifier.padding(16.dp),verticalAlignment=Alignment.CenterVertically,horizontalArrangement=Arrangement.spacedBy(12.dp)) {
+   Icon(Icons.Outlined.Insights,null,tint=EurosColors.Blue,modifier=Modifier.size(24.dp))
+   Column(Modifier.weight(1f),verticalArrangement=Arrangement.spacedBy(3.dp)) {
+    Text("Weekly wrap-up",style=MaterialTheme.typography.titleMedium,fontWeight=FontWeight.SemiBold)
+    Text(weekTitle(date.with(java.time.DayOfWeek.MONDAY)),style=MaterialTheme.typography.bodySmall,color=EurosColors.Muted)
+   }
+   Icon(Icons.Outlined.ChevronRight,null,tint=EurosColors.Blue)
+  }
+ }
+}
+@Composable fun WeekContent(records:List<Record>,authoredPlan:AuthoredPlan,week:LocalDate,onOpen:(Record)->Unit,repo:Repository,onImported:(String)->Unit) {
  val app=LocalContext.current.applicationContext as EurosApplication
  val tracker by app.weekTracker.state.collectAsState()
+ val linked by app.weekTracker.linked.collectAsState()
  val imported=remember(tracker,week){tracker.filter{val date=it.session.start.atZone(PlanDomain.zone).toLocalDate();date>=week && date<week.plusWeeks(1)}}
  var expanded by rememberSaveable(week.toString()){mutableStateOf<String?>(PlanDisplay.initialExpanded(week,LocalDate.now(PlanDomain.zone)))}
  Column {
@@ -152,39 +187,45 @@ object PlanDisplay {
    val date=week.plusDays(offset);val open=expanded==date.toString()
    val activities=authoredPlan.day(date,records).activities.map{it.record}
    val sessions=imported.filter{it.session.start.atZone(PlanDomain.zone).toLocalDate()==date}
-   Row(Modifier.fillMaxWidth().semantics{stateDescription=if(open)"Expanded" else "Collapsed"}.clickable{expanded=if(open)null else date.toString()}.padding(vertical=17.dp),verticalAlignment=Alignment.CenterVertically){
-    Text(date.dayOfMonth.toString(),Modifier.width(40.dp),style=MaterialTheme.typography.headlineSmall,color=if(date==LocalDate.now(PlanDomain.zone))Accent else MaterialTheme.colorScheme.onSurfaceVariant)
+   Row(Modifier.fillMaxWidth().semantics{stateDescription=if(open)"Expanded" else "Collapsed"}.clickable{expanded=if(open)null else date.toString()}.padding(vertical=12.dp),verticalAlignment=Alignment.CenterVertically){
+    Surface(color=if(date==LocalDate.now(PlanDomain.zone))MaterialTheme.colorScheme.primaryContainer else Color(0xFFF3F5F7),shape=RoundedCornerShape(12.dp)) {
+     Box(Modifier.size(44.dp),contentAlignment=Alignment.Center){Text(date.dayOfMonth.toString(),style=MaterialTheme.typography.titleLarge,color=if(date==LocalDate.now(PlanDomain.zone))Accent else MaterialTheme.colorScheme.onSurface)}
+    }
+    Spacer(Modifier.width(12.dp))
     Column(Modifier.weight(1f),verticalArrangement=Arrangement.spacedBy(4.dp)){
      Text(date.format(DateTimeFormatter.ofPattern("EEEE")),style=MaterialTheme.typography.titleSmall,fontWeight=FontWeight.SemiBold)
-     if(activities.isNotEmpty()) Text(PlanDisplay.daySummary(activities),style=MaterialTheme.typography.bodySmall,color=MaterialTheme.colorScheme.onSurfaceVariant)
-     sessions.forEach{item->Text(item.label,style=MaterialTheme.typography.bodySmall,color=MaterialTheme.colorScheme.onSurfaceVariant)}
+     if(!open && activities.isNotEmpty()) Text(PlanDisplay.daySummary(activities),style=MaterialTheme.typography.bodySmall,color=MaterialTheme.colorScheme.onSurfaceVariant)
+     if(!open)sessions.forEach{item->Text(item.label,style=MaterialTheme.typography.bodySmall,color=MaterialTheme.colorScheme.onSurfaceVariant)}
      if(activities.isEmpty() && sessions.isEmpty())Text("No activities",style=MaterialTheme.typography.bodySmall,color=MaterialTheme.colorScheme.onSurfaceVariant)
     }
     Icon(if(open)Icons.Outlined.ExpandLess else Icons.Outlined.ExpandMore,if(open)"Collapse ${date.dayOfWeek}" else "Expand ${date.dayOfWeek}",modifier=Modifier.size(20.dp))
    }
-   if(open) Column(Modifier.padding(start=12.dp,bottom=10.dp)) {
-    activities.forEach{activity->PlanRow(activity,records,onOpen,repo);PlanDomain.children(activity,records).forEach{step->PlanRow(step,records,onOpen,repo)}}
+   if(open) Column(Modifier.padding(bottom=8.dp)) {
+    activities.forEach{activity->PlanRow(activity,records,onOpen,repo,linkedWorkout=linked[activity.id]);PlanDomain.children(activity,records).forEach{step->PlanRow(step,records,onOpen,repo)}}
     sessions.forEach{item->val session=item.session;Row(Modifier.fillMaxWidth().clickable{onImported(session.sourceKey)}.padding(vertical=14.dp),verticalAlignment=Alignment.CenterVertically){
      ActivityGlyph("bjj");Spacer(Modifier.width(12.dp));Column(Modifier.weight(1f)){Text(PlanDisplay.trackerName(session.sourcePackage,session.exerciseType),style=MaterialTheme.typography.titleSmall);Text("${session.start.atZone(PlanDomain.zone).format(DateTimeFormatter.ofPattern("h:mm a"))} · ${Duration.between(session.start,session.end).toMinutes()} min",style=MaterialTheme.typography.bodySmall)};Icon(Icons.Filled.CheckCircle,"Imported workout",tint=Accent)
     }}
    }
-   HorizontalDivider(color=Color(0xFFDCE3EF))
+   HorizontalDivider(color=Color(0xFFE5EAF1))
   }
  }
- OutlinedButton(onClick=onWrapUp,shape=RoundedCornerShape(10.dp)){Icon(Icons.Outlined.Insights,null,Modifier.size(18.dp));Spacer(Modifier.width(8.dp));Text("Weekly wrap-up")}
+
 }
+@OptIn(ExperimentalLayoutApi::class)
 @Composable fun MoveDialog(record:Record,repo:Repository,onClose:()->Unit) {
  val current=OffsetDateTime.parse(PlanDomain.payload(record).getString("scheduled_at")).atZoneSameInstant(PlanDomain.zone)
  var date by rememberSaveable{mutableStateOf(current.toLocalDate().toString())}
  var time by rememberSaveable{mutableStateOf(current.toLocalTime().format(DateTimeFormatter.ofPattern("HH:mm")))}
  var error by remember{mutableStateOf<String?>(null)};var busy by remember{mutableStateOf(false)};val scope=rememberCoroutineScope()
- var moved by remember{mutableStateOf(false)}
- if(moved){AlertDialog(onDismissRequest=onClose,title={Text("Review meals")},text={Text("The session moved. Ask your agent to adjust meal timing and portions for the affected days.")},confirmButton={TextButton(onClick=onClose){Text("Close")}});return}
- AlertDialog(onDismissRequest=onClose,title={Text("Move activity")},text={Column(verticalArrangement=Arrangement.spacedBy(12.dp)){
-  OutlinedTextField(date,{date=it},label={Text("Date · YYYY-MM-DD")},singleLine=true)
-  TimePickerField(time,{time=it})
+ AlertDialog(onDismissRequest={if(!busy)onClose()},title={Text("Move activity")},text={Column(verticalArrangement=Arrangement.spacedBy(12.dp)){
+  Text(PlanDomain.payload(record).getString("title"),style=MaterialTheme.typography.bodyMedium)
+  FlowRow(horizontalArrangement=Arrangement.spacedBy(8.dp)){
+   listOf("Today" to LocalDate.now(PlanDomain.zone),"Tomorrow" to LocalDate.now(PlanDomain.zone).plusDays(1)).forEach{(label,day)->FilterChip(selected=date==day.toString(),enabled=!busy,onClick={date=day.toString()},label={Text(label)})}
+  }
+  DatePickerField(date,{date=it},enabled=!busy)
+  TimePickerField(time,{time=it},enabled=!busy)
   error?.let{Text(it,color=MaterialTheme.colorScheme.error)}
- }},confirmButton={TextButton(enabled=!busy,onClick={scope.launch{busy=true;try{repo.move(record,PlanDomain.moveTimestamp(date,time));if(JSONObject(record.payload).optString("kind") in setOf("bjj","weights"))moved=true else onClose()}catch(e:Exception){error=e.message}finally{busy=false}}}){Text("Move")}},dismissButton={TextButton(onClick=onClose){Text("Cancel")}})
+ }},confirmButton={TextButton(enabled=!busy,onClick={scope.launch{busy=true;try{repo.move(record,PlanDomain.moveTimestamp(date,time));onClose()}catch(e:Exception){error=e.message}finally{busy=false}}}){Text("Move")}},dismissButton={TextButton(onClick=onClose){Text("Cancel")}})
 }
 @Composable fun ActivityDetail(record:Record,records:List<Record>,repo:Repository,onClose:()->Unit,onOpen:(Record)->Unit,onFood:()->Unit) {
  val p=PlanDomain.payload(record);val item=DayPlanComposer.item(record,records);val kind=item.kind.wireName;val children=item.steps;val logging=item.logging
@@ -201,26 +242,32 @@ object PlanDisplay {
   } else repo.complete(record,status)
   onClose()
  }catch(e:Exception){error=e.message}finally{busy=false}}}
- Column(Modifier.fillMaxWidth(),horizontalAlignment=Alignment.CenterHorizontally,verticalArrangement=Arrangement.spacedBy(10.dp)) {
-  Box(Modifier.fillMaxWidth().height(48.dp),contentAlignment=Alignment.Center) {
+ Column(Modifier.fillMaxWidth(),verticalArrangement=Arrangement.spacedBy(12.dp)) {
+  Row(Modifier.fillMaxWidth(),verticalAlignment=Alignment.CenterVertically,horizontalArrangement=Arrangement.SpaceBetween) {
    ActivityGlyph(kind)
-   IconButton(onClick=onClose,modifier=Modifier.align(Alignment.CenterEnd)){Icon(Icons.Outlined.Close,"Close")}
+   IconButton(onClick=onClose){Icon(Icons.Outlined.Close,"Close")}
   }
-  Text(p.getString("title"),style=MaterialTheme.typography.headlineMedium,textAlign=androidx.compose.ui.text.style.TextAlign.Center,modifier=Modifier.fillMaxWidth())
-  Row(verticalAlignment=Alignment.CenterVertically,horizontalArrangement=Arrangement.Center){
-   Text(activityTime(record),style=MaterialTheme.typography.bodyMedium,color=MaterialTheme.colorScheme.onSurfaceVariant)
-   TextButton(onClick={move=true}){Text("Move")}
+  Text(p.getString("title").replaceFirstChar{it.titlecase()},style=MaterialTheme.typography.headlineSmall)
+  Row(verticalAlignment=Alignment.CenterVertically){
+   Text(PlanDomain.day(record).format(DateTimeFormatter.ofPattern("EEE, MMM d"))+" · "+activityTime(record),modifier=Modifier.weight(1f),style=MaterialTheme.typography.bodyMedium,color=EurosColors.Muted)
+   IconButton(onClick={move=true},modifier=Modifier.size(48.dp)){Icon(Icons.Outlined.EditCalendar,"Move activity",tint=EurosColors.Blue)}
   }
  }
+
  if(logging !in setOf(LoggingMode.STEPS,LoggingMode.WEIGHT,LoggingMode.UNSUPPORTED)) {
   Box(Modifier.fillMaxWidth(),contentAlignment=Alignment.Center) {
-   Row(Modifier.widthIn(max=360.dp).fillMaxWidth().padding(vertical=4.dp),horizontalArrangement=Arrangement.spacedBy(12.dp)) {
-    Button(enabled=!busy,onClick={if(logging==LoggingMode.FOOD)onFood() else finish("done")},modifier=Modifier.weight(1f).heightIn(min=52.dp),shape=RoundedCornerShape(14.dp)) {
+   @Composable fun controls(modifier:Modifier) {
+    Button(enabled=!busy,onClick={if(logging==LoggingMode.FOOD)onFood() else finish("done")},modifier=modifier.heightIn(min=52.dp),shape=RoundedCornerShape(14.dp)) {
      Text(if(kind in setOf("weights","rest","prep") || (kind=="recovery" && logging==LoggingMode.COMPLETION) || p.optString("recovery_step_type")=="hydration")"Done" else "Log")
     }
-    OutlinedButton(enabled=!busy,onClick={finish("skipped")},modifier=Modifier.weight(1f).heightIn(min=52.dp),shape=RoundedCornerShape(14.dp)) {
+    OutlinedButton(enabled=!busy,onClick={finish("skipped")},modifier=modifier.heightIn(min=52.dp),shape=RoundedCornerShape(14.dp)) {
      Text(if(kind=="weights")"Skipped" else "Skip")
     }
+   }
+   if(androidx.compose.ui.platform.LocalDensity.current.fontScale>1.5f) {
+    Column(Modifier.widthIn(max=360.dp).fillMaxWidth().padding(vertical=4.dp),verticalArrangement=Arrangement.spacedBy(8.dp)) {controls(Modifier.fillMaxWidth())}
+   } else {
+    Row(Modifier.widthIn(max=360.dp).fillMaxWidth().padding(vertical=4.dp),horizontalArrangement=Arrangement.spacedBy(12.dp)) {controls(Modifier.weight(1f))}
    }
   }
  }
@@ -235,7 +282,7 @@ object PlanDisplay {
  else {
   val snapshot=p.optJSONObject("plan_snapshot");val template=snapshot?.optJSONObject("template") ?: snapshot
   PlanDisplay.detail(record)?.let { instruction ->
-   Surface(modifier=Modifier.fillMaxWidth(),color=EurosColors.Soft,shape=RoundedCornerShape(18.dp),border=BorderStroke(1.dp,EurosColors.Line)) {
+   Surface(modifier=Modifier.fillMaxWidth(),color=EurosColors.Paper,shape=RoundedCornerShape(16.dp)) {
     Text(instruction,modifier=Modifier.padding(22.dp),style=MaterialTheme.typography.bodyLarge)
    }
   }
@@ -244,41 +291,52 @@ object PlanDisplay {
    Column(Modifier.fillMaxWidth().padding(vertical=10.dp),verticalArrangement=Arrangement.spacedBy(5.dp)){
     Text(ex.getString("name"),style=MaterialTheme.typography.titleMedium,fontWeight=FontWeight.SemiBold)
     PlanDisplay.exercise(ex).takeIf{it.isNotBlank()}?.let{Text(it,style=MaterialTheme.typography.bodyMedium,color=MaterialTheme.colorScheme.onSurfaceVariant)}
-   };HorizontalDivider(color=Color(0xFFDCE3EF))
+   };HorizontalDivider(color=Color(0xFFE5EAF1))
   }}
   if(logging==LoggingMode.INTAKE) {
    if(p.optString("recovery_step_type")=="supplement")OutlinedTextField(product,{product=it},label={Text("Product")})
    OutlinedTextField(amount,{amount=it},label={Text(if(p.optString("recovery_step_type")=="hydration")"Water · ml" else "Elemental dose · mg")},singleLine=true,keyboardOptions=KeyboardOptions(keyboardType=KeyboardType.Decimal))
   }
-  if(logging==LoggingMode.SESSION) TrackerRecap(record,repo)
+  if(kind in setOf("bjj","weights")) TrackerRecap(record,repo)
  }
 }
 @Composable fun TrackerRecap(record:Record,repo:Repository) {
  val context=LocalContext.current;val service=remember{HealthImport(context,repo.dao)};val scope=rememberCoroutineScope()
  var recap by remember(record.id){mutableStateOf<SessionRecap?>(null)};var candidates by remember(record.id){mutableStateOf<List<ImportedSession>>(emptyList())};var choosing by remember{mutableStateOf(false)};var error by remember{mutableStateOf<String?>(null)}
- LaunchedEffect(record.id){recap=service.recap(record.id)}
+ val healthState by repo.dao.observeMeta(HealthImport.KEY).collectAsState(initial=null)
+ LaunchedEffect(record.id,healthState){
+  try { recap=service.recap(record.id);error=null }
+  catch(e:kotlinx.coroutines.CancellationException){throw e}
+  catch(_:Exception){error="Couldn't read this workout. Refresh Health Connect in Settings."}
+ }
  recap?.let{r->
   if(r.session.deleted)Text("Linked workout removed from Health Connect",color=Color.Gray)
   else {
    SessionGraphic(r)
   }
-  TextButton(onClick={scope.launch{service.unlink(record.id);recap=null}}){Text("Unlink workout")}
+  TextButton(onClick={scope.launch{try{service.unlink(record.id);recap=null}catch(e:kotlinx.coroutines.CancellationException){throw e}catch(_:Exception){error="Couldn’t unlink workout. Try again."}}}){Text("Unlink workout")}
  } ?: Text("No linked workout",color=Color.Gray)
  TextButton(onClick={scope.launch{try{candidates=service.candidates(record);choosing=true}catch(e:Exception){error=e.message}}}){Text("Choose workout")}
- if(choosing){if(candidates.isEmpty())Text("No workouts found. Sync Health Connect from Today.") else candidates.forEach{candidate->OutlinedButton(onClick={scope.launch{try{service.link(record.id,candidate.sourceKey);recap=service.recap(record.id);choosing=false}catch(e:Exception){error=e.message}}}){Text("${candidate.start.atZone(PlanDomain.zone).format(DateTimeFormatter.ofPattern("EEE h:mm a"))} · ${Duration.between(candidate.start,candidate.end).toMinutes()} min · ${if(candidate.sourcePackage.contains("polar"))"Polar" else if(candidate.sourcePackage=="com.fitbit.FitbitMobile")"Fitbit" else candidate.sourcePackage}")}}}
+ if(choosing){if(candidates.isEmpty())Text("No workouts found. Refresh Health Connect in Settings.") else candidates.forEach{candidate->OutlinedButton(onClick={scope.launch{try{service.link(record.id,candidate.sourceKey);recap=service.recap(record.id);choosing=false}catch(e:Exception){error=e.message}}}){Text("${candidate.start.atZone(PlanDomain.zone).format(DateTimeFormatter.ofPattern("EEE h:mm a"))} · ${Duration.between(candidate.start,candidate.end).toMinutes()} min · ${if(candidate.sourcePackage.contains("polar"))"Polar" else if(candidate.sourcePackage=="com.fitbit.FitbitMobile")"Fitbit" else candidate.sourcePackage}")}}}
  error?.let{Text(it,color=MaterialTheme.colorScheme.error)}
 }
 
 @Composable fun ImportedWorkoutScreen(sourceKey:String,repo:Repository,onClose:()->Unit) {
  val context=LocalContext.current;var recap by remember(sourceKey){mutableStateOf<SessionRecap?>(null)}
- LaunchedEffect(sourceKey){recap=HealthImport(context,repo.dao).recapForKey(sourceKey)}
- Row(Modifier.fillMaxWidth(),horizontalArrangement=Arrangement.SpaceBetween){Text(PlanDisplay.trackerName(recap?.session?.sourcePackage.orEmpty(),recap?.session?.exerciseType),style=MaterialTheme.typography.headlineMedium);IconButton(onClick=onClose){Icon(Icons.Outlined.Close,"Close")}}
+ var error by remember(sourceKey){mutableStateOf<String?>(null)}
+ val healthState by repo.dao.observeMeta(HealthImport.KEY).collectAsState(initial=null)
+ LaunchedEffect(sourceKey,healthState){
+  try {recap=HealthImport(context,repo.dao).recapForKey(sourceKey);error=null}
+  catch(e:kotlinx.coroutines.CancellationException){throw e}
+  catch(_:Exception){error="Couldn't read this workout. Refresh Health Connect in Settings."}
+ }
+ Row(Modifier.fillMaxWidth(),horizontalArrangement=Arrangement.SpaceBetween){Text(PlanDisplay.trackerName(recap?.session?.sourcePackage.orEmpty(),recap?.session?.exerciseType),modifier=Modifier.weight(1f),style=MaterialTheme.typography.headlineMedium);IconButton(onClick=onClose){Icon(Icons.Outlined.Close,"Close")}}
  recap?.let{r->
   Text(r.session.start.atZone(PlanDomain.zone).format(DateTimeFormatter.ofPattern("EEEE, MMM d · h:mm a")))
   if(r.session.deleted)Text("Workout removed from Health Connect") else {
    SessionGraphic(r)
   }
- } ?: Text("Workout unavailable")
+ } ?: Text(error ?: "Workout unavailable")
 }
 @Composable private fun SessionGraphic(r:SessionRecap) {
  val clock=DateTimeFormatter.ofPattern("h:mm a")
@@ -287,9 +345,9 @@ object PlanDisplay {
   Column(Modifier.padding(20.dp),verticalArrangement=Arrangement.spacedBy(12.dp)) {
    Text("${Duration.between(r.session.start,r.session.end).toMinutes()} min",style=MaterialTheme.typography.headlineSmall,fontWeight=FontWeight.SemiBold)
    Text(interval,style=MaterialTheme.typography.bodySmall,color=MaterialTheme.colorScheme.onSurfaceVariant)
-   Row(Modifier.fillMaxWidth(),horizontalArrangement=Arrangement.spacedBy(40.dp)){
-    Column{Text(r.averageBpm?.let{"${it.toInt()}"} ?: "—",style=MaterialTheme.typography.headlineSmall);Text("Average bpm",style=MaterialTheme.typography.bodySmall)}
-    Column{Text(r.peakBpm?.toString() ?: "—",style=MaterialTheme.typography.headlineSmall);Text("Peak bpm",style=MaterialTheme.typography.bodySmall)}
+   Row(Modifier.fillMaxWidth(),horizontalArrangement=Arrangement.spacedBy(16.dp)){
+    Column(Modifier.weight(1f)){Text(r.averageBpm?.let{"${it.toInt()}"} ?: "—",style=MaterialTheme.typography.headlineSmall);Text("Average bpm",style=MaterialTheme.typography.bodySmall)}
+    Column(Modifier.weight(1f)){Text(r.peakBpm?.toString() ?: "—",style=MaterialTheme.typography.headlineSmall);Text("Peak bpm",style=MaterialTheme.typography.bodySmall)}
    }
   }
  }
@@ -314,7 +372,7 @@ object PlanDisplay {
  (1..5).forEach { i ->
   val label="Zone $i · ${HeartRateZones.boundaries[i-1]}–<${HeartRateZones.boundaries[i]} bpm"
   Column(verticalArrangement=Arrangement.spacedBy(4.dp)) {
-   Row(Modifier.fillMaxWidth(),horizontalArrangement=Arrangement.SpaceBetween){Text(label,style=MaterialTheme.typography.bodySmall);Text(if(r.coveredSeconds>0)minutes(r.zones[i]) else "—",style=MaterialTheme.typography.bodySmall)}
+   Row(Modifier.fillMaxWidth(),horizontalArrangement=Arrangement.SpaceBetween){Text(label,modifier=Modifier.weight(1f),style=MaterialTheme.typography.bodySmall);Text(if(r.coveredSeconds>0)minutes(r.zones[i]) else "—",style=MaterialTheme.typography.bodySmall)}
    LinearProgressIndicator(progress={if(duration>0)(r.zones[i]/duration).toFloat().coerceIn(0f,1f) else 0f},modifier=Modifier.fillMaxWidth(),color=Accent,trackColor=Color(0xFFE5EAF2))
   }
  }
@@ -324,6 +382,6 @@ object PlanDisplay {
 }
 @Composable fun MovementCard(repo:Repository,date:LocalDate) {
  val context=LocalContext.current;var movement by remember(date){mutableStateOf<MovementSummary?>(null)}
- LaunchedEffect(date){movement=HealthImport(context,repo.dao).movement(date)}
+ LaunchedEffect(date){try{movement=kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO){HealthImport(context,repo.dao).movement(date)}}catch(e:kotlinx.coroutines.CancellationException){throw e}catch(_:Exception){movement=null}}
  movement?.takeIf{it.walkCount>0}?.let{m->OutlinedCard(Modifier.fillMaxWidth()) {Row(Modifier.padding(16.dp),verticalAlignment=Alignment.CenterVertically){Icon(Icons.Outlined.DirectionsWalk,null,tint=Accent);Spacer(Modifier.width(12.dp));Column{Text("Daily movement",style=MaterialTheme.typography.titleMedium);Text("${m.walkCount} walks · ${m.workoutWalkMinutes ?: 0} min",style=MaterialTheme.typography.bodyMedium)}}}}
 }

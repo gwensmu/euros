@@ -25,39 +25,43 @@ fun weekTitle(start:LocalDate):String {
  return if(start.month==end.month) "${start.format(DateTimeFormatter.ofPattern("MMMM d"))}–${end.dayOfMonth}" else "${start.format(DateTimeFormatter.ofPattern("MMM d"))} – ${end.format(DateTimeFormatter.ofPattern("MMM d"))}"
 }
 @Composable internal fun EurosNavigation(tab:RootTab,onSelect:(RootTab)->Unit) {
- Column(Modifier.fillMaxWidth().background(EurosColors.Paper).navigationBarsPadding()) {
+ Column(Modifier.fillMaxWidth().background(Color.White)) {
   HorizontalDivider(color=EurosColors.Line)
-  Row(Modifier.fillMaxWidth().padding(horizontal=12.dp,vertical=8.dp),horizontalArrangement=Arrangement.spacedBy(6.dp)) {
+  NavigationBar(containerColor=Color.White,tonalElevation=0.dp) {
    RootTab.entries.forEach { name ->
-    val selected=tab==name
-    Surface(onClick={onSelect(name)},color=if(selected)EurosColors.Soft else Color.Transparent,shape=MaterialTheme.shapes.small,modifier=Modifier.weight(1f).semantics{this.selected=selected}) {
-     Column(Modifier.padding(vertical=10.dp),horizontalAlignment=Alignment.CenterHorizontally,verticalArrangement=Arrangement.spacedBy(4.dp)) {
-      Icon(when(name){RootTab.Today->Icons.Outlined.WbSunny;RootTab.Week->Icons.Outlined.CalendarMonth;else->Icons.Outlined.Restaurant},null,Modifier.size(20.dp),tint=if(selected)EurosColors.Blue else EurosColors.Ink)
-      Text(name.name,style=MaterialTheme.typography.labelMedium,color=if(selected)EurosColors.Blue else EurosColors.Ink)
-     }
-    }
+    NavigationBarItem(selected=tab==name,onClick={onSelect(name)},
+     icon={Icon(when(name){RootTab.Today->Icons.Outlined.WbSunny;RootTab.Week->Icons.Outlined.CalendarMonth;else->Icons.Outlined.Restaurant},null,Modifier.size(22.dp))},
+     label={Text(name.name,style=MaterialTheme.typography.labelMedium)},
+     colors=NavigationBarItemDefaults.colors(selectedIconColor=EurosColors.Blue,selectedTextColor=EurosColors.Blue,indicatorColor=EurosColors.Soft,unselectedIconColor=EurosColors.Muted,unselectedTextColor=EurosColors.Muted))
    }
   }
  }
 }
 
 @Composable internal fun EurosHeader(actions:@Composable ()->Unit={},onSettings:()->Unit) {
- Row(Modifier.fillMaxWidth().padding(horizontal=22.dp,vertical=8.dp),verticalAlignment=Alignment.CenterVertically,horizontalArrangement=Arrangement.SpaceBetween) {
-    Text("EUROS / 27",color=Color.White,letterSpacing=2.sp,style=MaterialTheme.typography.labelMedium,modifier=Modifier.background(EurosColors.Ink).padding(horizontal=10.dp,vertical=6.dp))
+ Row(Modifier.fillMaxWidth().padding(horizontal=24.dp,vertical=0.dp),verticalAlignment=Alignment.CenterVertically,horizontalArrangement=Arrangement.SpaceBetween) {
+    Spacer(Modifier.weight(1f))
     Row(verticalAlignment=Alignment.CenterVertically){
      actions()
      IconButton(onClick=onSettings){Icon(Icons.Outlined.Settings,"Settings",Modifier.size(20.dp))}
     }
    }
- HorizontalDivider(thickness=2.dp,color=Color(0xFF73A8FF))
+
 }
 
 @Composable internal fun PageTitle(tab:RootTab,today:LocalDate,week:LocalDate,foodDay:LocalDate,mascotPose:MascotPose=MascotPose.IDLE) {
- Row(Modifier.fillMaxWidth(),verticalAlignment=Alignment.CenterVertically,horizontalArrangement=Arrangement.spacedBy(12.dp)) {
-      Column(Modifier.weight(1f),verticalArrangement=Arrangement.spacedBy(6.dp)) {
-       if(tab==RootTab.Today) Text(today.format(DateTimeFormatter.ofPattern("EEEE, MMMM d")).uppercase(),style=MaterialTheme.typography.labelSmall,color=EurosColors.Muted,letterSpacing=1.sp)
-       Text(when(tab){RootTab.Today->"${ChronoUnit.DAYS.between(today,LocalDate.of(2027,1,13)).coerceAtLeast(0)} days to Euros";RootTab.Week->weekTitle(week);else->foodDay.format(DateTimeFormatter.ofPattern("EEEE, MMM d"))},style=if(tab==RootTab.Today) MaterialTheme.typography.headlineMedium else MaterialTheme.typography.headlineSmall)
-      }
-      if(tab==RootTab.Today) Weasel(mascotPose)
-     }
+ val largeText=androidx.compose.ui.platform.LocalDensity.current.fontScale>1.3f
+ @Composable fun counter(modifier:Modifier) {
+  Column(modifier,horizontalAlignment=Alignment.End,verticalArrangement=Arrangement.spacedBy((-7).dp)) {
+   Text("${ChronoUnit.DAYS.between(today,LocalDate.of(2027,1,13)).coerceAtLeast(0)}",fontSize=if(largeText)72.sp else 108.sp,lineHeight=if(largeText)80.sp else 114.sp,fontWeight=androidx.compose.ui.text.font.FontWeight.SemiBold,letterSpacing=(-3).sp,textAlign=androidx.compose.ui.text.style.TextAlign.End)
+   Text("days to Euros",fontSize=21.sp,lineHeight=30.sp,color=EurosColors.Muted,textAlign=androidx.compose.ui.text.style.TextAlign.End)
+  }
+ }
+ if(largeText) Column(Modifier.fillMaxWidth().padding(bottom=12.dp),horizontalAlignment=Alignment.CenterHorizontally) {
+  counter(Modifier.fillMaxWidth())
+  Weasel(mascotPose,Modifier.size(120.dp,141.dp))
+ } else Row(Modifier.fillMaxWidth().padding(bottom=12.dp),verticalAlignment=Alignment.CenterVertically) {
+  counter(Modifier.weight(1f))
+  Box(Modifier.weight(1f),contentAlignment=Alignment.Center) { Weasel(mascotPose,Modifier.size(120.dp,141.dp)) }
+ }
 }

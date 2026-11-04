@@ -87,10 +87,10 @@ class FoodScreenTest {
   open()
   compose.onNodeWithText("Add").assertExists()
   compose.onNodeWithText("Calories · kcal").assertDoesNotExist()
-  compose.onNodeWithText("Date · YYYY-MM-DD").assertDoesNotExist()
+  compose.onNodeWithContentDescription("Choose date").assertDoesNotExist()
   details()
   compose.onNodeWithText("Calories · kcal").assertExists()
-  compose.onNodeWithText("Date · YYYY-MM-DD").assertExists()
+  compose.onNodeWithContentDescription("Choose date").assertExists()
   compose.onNodeWithText("Details").performScrollTo().performClick()
   compose.onNodeWithText("Calories · kcal").assertDoesNotExist()
  }

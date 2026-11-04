@@ -11,7 +11,7 @@ An individual recreational BJJ athlete preparing for a specific competition, or 
 - **Android:** Kotlin, Jetpack Compose, Room and a durable offline write queue.
 - **Backend:** Python, Starlette/Uvicorn, SQLite and FastMCP. The phone API and MCP use the same revision-checked domain operations.
 - **AI:** server-side food interpretation, weekly reflection and constrained reminder-copy selection. Provider credentials never belong in the app.
-- **Trackers:** Android Health Connect imports, with source identity and missing values preserved.
+- **Trackers:** Android Health Connect imports, automatic unambiguous planned-workout linking, and optional food-log export; source identity and missing values are preserved.
 
 This is personal software, not a general coaching service. It contains opinionated example goals, dates, schedules, meal preferences and nutrition policies. Review and customize those before using it. Bundled plans are prescriptions, not records of actual workouts or food intake. The Android app seeds dated activities on first launch; the backend starts empty.
 

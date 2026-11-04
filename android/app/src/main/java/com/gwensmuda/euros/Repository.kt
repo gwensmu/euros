@@ -17,6 +17,7 @@ class Repository(private val db:EurosDatabase, llmClient:LlmClient?=null) {
  @Volatile internal var reminderApi:SyncApi?=null
  suspend fun interpretFood(text:String):JSONObject = requireInterpreter().interpretFood(text)
  suspend fun reviewWeek(weekStart:java.time.LocalDate,records:List<Record>):JSONObject = requireInterpreter().reviewWeek(weekStart,records)
+ suspend fun reviewWeekJob(requestId:String,weekStart:java.time.LocalDate,records:List<Record>):JSONObject = requireInterpreter().reviewWeekJob(requestId,weekStart,records)
  private fun requireInterpreter():LlmClient = interpreter ?: error("Connect to your server in Settings to continue")
  fun connectInterpretation(api:SyncApi) { interpreter=BackendLlmClient(api);reminderApi=api }
  fun disconnectInterpretation() { interpreter=null;reminderApi=null }
@@ -156,8 +157,9 @@ class Repository(private val db:EurosDatabase, llmClient:LlmClient?=null) {
      java.time.OffsetDateTime.parse(old).toInstant().plus(delta).atZone(zone).toOffsetDateTime().toString()
     }
     val moves=payload.optJSONArray("move_history") ?: org.json.JSONArray()
-    moves.put(JSONObject().put("from",old).put("to",next).put("changed_at",java.time.Instant.now().toString()))
+    moves.put(JSONObject().put("from",old).put("to",next).put("changed_at",java.time.Instant.now().toString()).put("adjust_nutrition",payload.optString("kind") in setOf("bjj","weights")))
     payload.put("move_history",moves).put("scheduled_at",next)
+    if(item.id==current.id)payload.put("time_zone",PlanDomain.zone.id)
     enqueue(item.type,item.id,payload)
    }
   }
@@ -200,7 +202,7 @@ class Repository(private val db:EurosDatabase, llmClient:LlmClient?=null) {
    if(health!=null) {
     if(dao.meta(HealthImport.KEY)==null) {
      for(id in health.getJSONObject("links").keys())require(dao.record("activities",id)?.deleted==false){"Missing linked activity"}
-     dao.meta(Metadata(HealthImport.KEY,HealthSnapshotStorage.encode(health)));restored++
+     dao.meta(Metadata(HealthImport.KEY,HealthSnapshotStorage.encodeHealth(health)));restored++
     }else skipped++
    }
    result.copy(localImported=restored,localSkipped=skipped)

@@ -26,7 +26,7 @@ data class FoodDraft(
  val baseRevision:Long=0,
  val dateInput:String=consumedAt.take(10),
  val timeInput:String=consumedAt.substringAfter('T').take(5),
- val timeZone:String="America/Chicago",
+ val timeZone:String=PlanDomain.zone.id,
  val interpretation:String?=null,
  val manualEntry:Boolean=false,
  val interpretationText:String?=null,
@@ -75,7 +75,7 @@ object FoodDomain {
    plannedActivityId=nullableString(json,"planned_activity_id"),
    originalPayload=record.payload,
    baseRevision=record.revision,
-   timeZone=json.optString("time_zone",PlanDomain.zone.id),
+   timeZone=json.optString("time_zone",PlanDomain.canonicalZone.id),
    interpretation=json.optJSONObject("interpretation")?.toString(),
    manualEntry=json.optBoolean("manual_entry",false),
    interpretationText=nullableString(json,"interpretation_text"),
@@ -107,7 +107,7 @@ object FoodDomain {
    baseRevision=json.optLong("base_revision",0),
    dateInput=json.optString("date_input",consumedAt.take(10)),
    timeInput=json.optString("time_input",consumedAt.substringAfter('T').take(5)),
-   timeZone=json.optString("time_zone",PlanDomain.zone.id),
+   timeZone=json.optString("time_zone",PlanDomain.canonicalZone.id),
    interpretation=json.optJSONObject("interpretation")?.toString(),
    manualEntry=json.optBoolean("manual_entry",false),
    interpretationText=nullableString(json,"interpretation_text"),
@@ -225,6 +225,10 @@ object FoodDomain {
   fun signature(id:String,p:JSONObject)=listOf(id,p.optString("scheduled_at"),p.optString("kind"),(p.optString("status")=="skipped").toString()).joinToString("|")
   val expected=(0 until snapshot.length()).map{val p=snapshot.getJSONObject(it);signature(p.getString("id"),p)}.toSet()
   val actual=PlanDomain.onDay(records,date).filter{JSONObject(it.payload).optString("kind") in setOf("bjj","weights")}.map{signature(it.id,JSONObject(it.payload))}.toSet()
+  if(NutritionPolicy.movedTier(records,date)!=null) {
+   val skipped=(0 until snapshot.length()).map{snapshot.getJSONObject(it)}.filter{it.optString("status")=="skipped"}.map{it.getString("id")}.toSet()
+   return PlanDomain.onDay(records,date).any{it.id !in skipped && JSONObject(it.payload).optString("kind") in setOf("bjj","weights") && JSONObject(it.payload).optString("status")=="skipped"}
+  }
   return expected!=actual
  }
  fun mealReferences(plan:JSONObject,date:LocalDate?=null,records:List<Record> = emptyList()):List<FoodMealReference> {

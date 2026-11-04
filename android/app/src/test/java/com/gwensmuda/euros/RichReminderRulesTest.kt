@@ -52,4 +52,24 @@ class RichReminderRulesTest {
   val child=activity("legs",kind="recovery"){it.put("parent_id","rest").put("title","Legs up")}
   assertTrue(plans(listOf(rest,child)).single{it.kind=="bedtime"}.facts.contains("Legs up"))
  }
+ @Test fun foodCheckInStopsAfterAnySavedEntryForThatLocalDay() {
+  val food=Record("food_entries","food",0,JSONObject().put("local_date",date.toString()).put("consumed_at","${date}T08:00:00-05:00").toString())
+  assertTrue(plans(emptyList()).any{it.kind=="food"})
+  assertFalse(plans(listOf(food)).any{it.kind=="food"})
+  assertTrue(plans(listOf(food),day=date.plusDays(1)).any{it.kind=="food"})
+  assertTrue(plans(listOf(food.copy(deleted=true))).any{it.kind=="food"})
+ }
+ @Test fun foodCheckInUsesLatestRevisionWhenEntryDeletedOrMoved() {
+  val food=Record("food_entries","food",1,JSONObject().put("local_date",date.toString()).toString())
+  assertTrue(plans(listOf(food,food.copy(revision=2,deleted=true))).any{it.kind=="food"})
+  val moved=food.copy(revision=2,payload=JSONObject(food.payload).put("local_date",date.minusDays(1).toString()).toString())
+  assertTrue(plans(listOf(food,moved)).any{it.kind=="food"})
+ }
+ @Test fun foodLoggingSuppressesCheckInButKeepsPlannedMealReminder() {
+  val food=Record("food_entries","food",0,JSONObject().put("local_date",date.toString()).toString())
+  val meals=listOf(FoodMealReference("dinner","Dinner",null,null,null,"19:30",foods=listOf("salmon")))
+  val reminders=RichReminderRules.plans(listOf(food),ReminderSettings(true),date,zone,meals,emptySet(),emptyMap())
+  assertFalse(reminders.any{it.kind=="food"})
+  assertTrue(reminders.any{it.kind=="water" && it.title=="Dinner"})
+ }
 }

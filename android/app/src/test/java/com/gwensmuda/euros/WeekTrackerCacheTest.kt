@@ -24,6 +24,14 @@ class WeekTrackerCacheTest {
   assertTrue(WeekTrackerCache.project(snapshot(deleted=true)).isEmpty())
   assertTrue(WeekTrackerCache.project(null).isEmpty())
  }
+ @Test fun linkedWorkoutAppearsOnceAndDeletedActivityDoesNotHideIt() {
+  val linked=WeekTrackerCache.projectAll(snapshot(linked=true),setOf("activity"))
+  assertTrue(linked.unlinked.isEmpty())
+  assertEquals("BJJ · Intense",linked.linked.getValue("activity").label)
+  val deleted=WeekTrackerCache.projectAll(snapshot(linked=true),emptySet())
+  assertEquals(1,deleted.unlinked.size)
+  assertTrue(deleted.linked.isEmpty())
+ }
  @Test fun tabCollectorsReuseWarmStateAndObserveLocalUpdates()=runBlocking {
   val scope=CoroutineScope(SupervisorJob()+Dispatchers.Default)
   try {

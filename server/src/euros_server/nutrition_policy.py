@@ -29,6 +29,24 @@ def maintenance_start(records, today):
             return max(end,EFFECTIVE_FROM)
     return None
 
+def moved_tier(records, local_date):
+    if local_date < EFFECTIVE_FROM:
+        return None
+    training = [r['payload'] for r in records if r.get('entity_type') == 'activities'
+                and not r.get('deleted') and r['payload'].get('kind') in {'bjj', 'weights'}]
+    def day(timestamp):
+        try:
+            return datetime.fromisoformat(timestamp).astimezone(ZoneInfo('America/Chicago')).date().isoformat()
+        except (TypeError, ValueError):
+            return None
+    touched = any(m.get('adjust_nutrition') and any(day(m.get(k)) == local_date for k in ('from', 'to'))
+                  for p in training for m in p.get('move_history', []))
+    if not touched:
+        return None
+    planned = [r['payload'] for r in records if r.get('entity_type') == 'activities' and not r.get('deleted')
+               and r['payload'].get('kind') in {'bjj', 'weights'} and day(r['payload']['scheduled_at']) == local_date]
+    return 'double' if len(planned) >= 2 else 'bjj' if any(p['kind'] == 'bjj' for p in planned) else 'lifting' if planned else 'recovery'
+
 def resolve(records, local_date, saved_targets=None, today=None):
     today = today or datetime.now(ZoneInfo('America/Chicago')).date().isoformat()
     if local_date<EFFECTIVE_FROM:
@@ -39,7 +57,8 @@ def resolve(records, local_date, saved_targets=None, today=None):
         return dict(mode='maintenance' if start else 'loss',maintenance_start=start,targets=MAINTENANCE if start else saved_targets or DAILY)
     start=maintenance_start(records,today)
     active=start is not None and local_date>=start and start<=today
-    targets=dict(saved_targets or TIERS['recovery'])
+    tier=moved_tier(records,local_date)
+    targets=dict(TIERS[tier] if tier else saved_targets or TIERS['recovery'])
     if active:
         targets['kcal']=Decimal(str(targets['kcal']))+200
         targets['carbohydrateG']=Decimal(str(targets['carbohydrateG']))+50

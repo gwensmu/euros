@@ -6,18 +6,25 @@ import java.time.LocalDate
 
 /** Cache only exact input snapshots; cached prose never stands in for changed records. */
 object WeeklyReviewCache {
- private const val VERSION=3
+ private const val VERSION=6
  fun canGenerate(week:LocalDate,today:LocalDate)=week<=today
  fun errorMessage(error:Exception):String {
-  val safe=setOf("Connect to your server in Settings to continue","Connection authorization failed. Reconnect in Settings","The model isn't configured on your server yet","Too many requests. Try again shortly","The model couldn't finish. Try again","The server is temporarily unavailable. Try again")
+  val safe=setOf("Daily model limit reached. Try again tomorrow","Connect to your server in Settings to continue","Connection authorization failed. Reconnect in Settings","The model isn't configured on your server yet","Too many requests. Try again shortly","The model couldn't finish. Try again","The server is temporarily unavailable. Try again")
   return error.message?.takeIf{it in safe} ?: "Couldn't generate the wrap-up. Try again."
  }
  fun key(week:LocalDate)="weekly_review:$week"
+ private fun canonicalJson(value:Any?):String=when(value) {
+  null,JSONObject.NULL -> "null"
+  is JSONObject -> value.keys().asSequence().toList().sorted().joinToString(",","{","}"){JSONObject.quote(it)+":"+canonicalJson(value.get(it))}
+  is org.json.JSONArray -> (0 until value.length()).joinToString(",","[","]"){canonicalJson(value.get(it))}
+  is String -> JSONObject.quote(value)
+  else -> value.toString()
+ }
  fun fingerprint(week:LocalDate,records:List<Record>,today:LocalDate):String {
   // Revisions alone do not change the evidence after an offline write is acknowledged.
   val data=org.json.JSONArray()
   BackendLlmClient.weeklySnapshot(week,records).forEach { record ->
-   data.put(org.json.JSONArray().put(record.type).put(record.id).put(record.deleted).put(record.payload))
+   data.put(org.json.JSONArray().put(record.type).put(record.id).put(record.deleted).put(canonicalJson(JSONObject(record.payload))))
   }
   val input=org.json.JSONArray().put(VERSION).put(week.toString())
    .put(minOf(today,week.plusDays(6)).toString()).put(data).toString()
@@ -28,6 +35,19 @@ object WeeklyReviewCache {
   require(response.getString("summary").isNotBlank()){"The review was empty. Try again."}
   val adjustments=response.getJSONArray("adjustments")
   for(i in 0 until adjustments.length()) require(adjustments.get(i) is String && adjustments.getString(i).isNotBlank())
+  if(response.optInt("schema_version")==2) {
+   require(response.getString("headline").isNotBlank() && response.getString("headline").length<=70)
+   require(response.getString("summary").length<=500 && adjustments.length()<=2)
+   for(i in 0 until adjustments.length())require(adjustments.getString(i).length<=350)
+   val insights=response.getJSONArray("insights")
+   require(insights.length()<=4)
+   for(i in 0 until insights.length()) {
+    val item=insights.getJSONObject(i)
+    require(item.getString("kind") in setOf("training","recovery","food","heart_rate"))
+    require(item.getString("title").isNotBlank() && item.getString("title").length<=50)
+    require(item.getString("body").isNotBlank() && item.getString("body").length<=700)
+   }
+  }
   val coverage=response.getJSONObject("coverage")
   LocalDate.parse(coverage.getString("through_date"))
   listOf("logged_activity_count","unlogged_activity_count","food_days","covered_days").forEach { name ->
