@@ -23,6 +23,7 @@ from .tracker import TrackerStore
 from .review_jobs import ReviewJobs
 from .security import BodyLimit, LimitedProvider
 from .reminder_copy import ReminderCopyService
+from .food_cache import FoodCache
 
 
 def load_token(name):
@@ -62,6 +63,7 @@ def create_app(store, api_token, mcp_token, public_hosts=(), model_service=None)
     models = model_service or ModelService.from_environment()
     models.provider = LimitedProvider(models.provider, store)
     reminder_copy_service = ReminderCopyService(models,store)
+    food_cache = FoodCache(store, models)
     trackers = TrackerStore(store)
     review_jobs = ReviewJobs(store, models, trackers)
     if len(api_token) < 32 or len(mcp_token) < 32 or api_token == mcp_token:
@@ -171,8 +173,8 @@ def create_app(store, api_token, mcp_token, public_hosts=(), model_service=None)
 
     @mcp.tool(name="interpret_food", annotations=proposal)
     async def interpret_food_tool(text: str) -> CallToolResult:
-        """Ask the configured model for an editable food draft. Sends text to OpenAI; never saves food."""
-        return await model_result(models.food({"text": text}))
+        """Reuse exact comma-separated food estimates; send only uncached items to the model. Returns an editable draft, never logs consumption."""
+        return await model_result(food_cache.food({"text": text}))
 
     @mcp.tool(name="review_week", annotations=proposal)
     async def review_week_tool(week_start: str, records: list[dict]) -> CallToolResult:
@@ -205,7 +207,7 @@ def create_app(store, api_token, mcp_token, public_hosts=(), model_service=None)
         return JSONResponse(trackers.list(request.query_params.get("date_from"), request.query_params.get("date_to")))
 
     async def interpret_food(request):
-        return JSONResponse(await models.food(await read_json(request, 40000)))
+        return JSONResponse(await food_cache.food(await read_json(request, 40000)))
 
     async def reminder_copy(request):
         return JSONResponse(await reminder_copy_service.copy(await read_json(request, 16384)))

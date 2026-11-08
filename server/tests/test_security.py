@@ -101,9 +101,9 @@ def test_api_and_mcp_share_inference_allowance(tmp_path):
     with TestClient(create_app(store,'a'*40,'b'*40,model_service=ModelService(provider)),base_url='http://localhost') as client:
         for i in range(6):
             if i%2:
-                r=client.post('/mcp',json={'jsonrpc':'2.0','id':i,'method':'tools/call','params':{'name':'interpret_food','arguments':{'text':'synthetic'}}},headers={'Authorization':'Bearer '+'b'*40,'Accept':'application/json, text/event-stream'})
+                r=client.post('/mcp',json={'jsonrpc':'2.0','id':i,'method':'tools/call','params':{'name':'interpret_food','arguments':{'text':f'synthetic {i}'}}},headers={'Authorization':'Bearer '+'b'*40,'Accept':'application/json, text/event-stream'})
                 assert not r.json()['result'].get('isError')
-            else:assert client.post('/v1/interpret/food',json={'text':'synthetic'},headers={'Authorization':'Bearer '+'a'*40}).status_code==200
-        r=client.post('/v1/interpret/food',json={'text':'synthetic'},headers={'Authorization':'Bearer '+'a'*40})
+            else:assert client.post('/v1/interpret/food',json={'text':f'synthetic {i}'},headers={'Authorization':'Bearer '+'a'*40}).status_code==200
+        r=client.post('/v1/interpret/food',json={'text':'synthetic new'},headers={'Authorization':'Bearer '+'a'*40})
         assert r.status_code==429 and r.json()['error']=='model_rate_limit'
     assert provider.calls==6
