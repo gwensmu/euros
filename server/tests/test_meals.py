@@ -66,4 +66,3 @@ def test_training_on_uses_the_local_date_and_ignores_bad_rows():
                act('lift', '2026-11-16T11:00:00-06:00', 'weights'), act('prep', '2026-11-16T16:30:00-06:00', 'prep'),
                act('gone', '2026-11-16T09:00:00-06:00', deleted=True), act('broken', 'not a time')]
     assert [r['entity_id'] for r in training_on(records, date(2026, 11, 16))] == ['lift', 'late']
-
