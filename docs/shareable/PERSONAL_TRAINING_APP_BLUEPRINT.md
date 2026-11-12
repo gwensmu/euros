@@ -614,3 +614,7 @@ Acceptance: exact repeat and mixed hits/misses; restart; duplicate occurrences; 
 Scheduled training remains the budget source even after an explicit skip; neither meal drafting nor move-derived budgets drop the skipped session. Confirmed rest days never inherit the provisional recurrence. Competition-day food may retain an explicitly provisional training tier while event timing remains unknown, without inventing a dated workout or a timed pre-training meal.
 
 Acceptance: from a Week workout row, open Move; changing the draft time then Cancel activity retains the original schedule and saves skipped. Closing with ×, outside tap or Back preserves the record and outbox. A successful cancellation synchronizes like detail Skip and removes the workout from unresolved tasks.
+
+## November 12 calendar progress
+
+The thin home bar beneath the countdown fills blue as calendar time passes from the earliest dated plan phase to the saved competition date. Grey represents the remaining interval. Clamp before-start to empty and competition-day/later to full; do not derive progress from logs or adherence. Keep the bar visible even when there are no unresolved activities. Announce its purpose and days remaining to screen readers, with no extra visible label. Read both endpoints from the authored plan; missing/nonpositive intervals stay finite. Acceptance: before/start, an intermediate date, competition day and later; empty agendas; larger text; no record, target, notification or sync changes.

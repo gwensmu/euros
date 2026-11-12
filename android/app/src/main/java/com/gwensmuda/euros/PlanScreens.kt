@@ -127,9 +127,6 @@ object PlanDisplay {
  val agenda=if(pending.isNotEmpty())pending else listOfNotNull(next)
  if(agenda.isNotEmpty()) {
   Column {
-   Box(Modifier.fillMaxWidth().height(3.dp).background(EurosColors.Line,RoundedCornerShape(2.dp))) {
-    Box(Modifier.width(36.dp).fillMaxHeight().background(EurosColors.Blue,RoundedCornerShape(2.dp)))
-   }
    if(PlanDomain.day(agenda.first())!=dayPlan.date) Text(PlanDisplay.dateHeading(PlanDomain.day(agenda.first()),dayPlan.date),modifier=Modifier.padding(top=12.dp),style=MaterialTheme.typography.titleLarge)
    agenda.flatMap { activity ->
     val children=PlanDomain.children(activity,records).filter{PlanDomain.status(it)=="pending"}
