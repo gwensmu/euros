@@ -69,7 +69,7 @@ class MascotRulesTest {
    assertEquals(MascotPose.JUDGY,result.pose);assertEquals(MascotDisposition.JUDGY,result.disposition)
    assertEquals(pose,MascotRules.evaluate(emptyList(),now,zone,action("next",kind=kind)).pose)
   }
-  assertEquals(MascotPose.IDLE,state(action("done","done")).pose)
+  assertEquals(MascotPose.SLEEP,state(action("done","done")).pose)
  }
  @Test fun invalidAndFutureTimestampsNeverInventFailures() {
   assertEquals(MascotDisposition.NORMAL,state(action("a","skipped",at="invalid"),action("b","skipped",at="2026-10-15T08:00:00-05:00")).disposition)
@@ -80,5 +80,22 @@ class MascotRulesTest {
   assertTrue(state(parent,skippedChild).qualifyingSkipIds.isEmpty())
   val skippedTraining=action("training","skipped","bjj")
   assertEquals(setOf("training"),state(skippedTraining,action("child","done","recovery",parent="training")).qualifyingSkipIds)
+ }
+ @Test fun sleepRequiresExplicitlyFinishedTodayNotEmptyUnknownOrSkipped() {
+  assertEquals(MascotPose.IDLE,state().pose)
+  assertEquals(MascotPose.IDLE,state(action("pending")).pose)
+  assertEquals(MascotPose.IDLE,state(action("skip","skipped")).pose)
+  assertEquals(MascotPose.IDLE,state(action("done","done"),action("remaining")).pose)
+  assertEquals(MascotPose.IDLE,state(action("old","done",at="2026-10-13T08:00:00-05:00")).pose)
+  assertEquals(MascotPose.SLEEP,state(action("done","done")).pose)
+  val future=action("done","done").let{it.copy(payload=JSONObject(it.payload).put("completed_at","2026-10-15T08:00:00-05:00").toString())}
+  assertEquals(MascotPose.IDLE,state(future).pose)
+ }
+ @Test fun bracketUsesEventWindowAndSleepStillWins() {
+  val event=now.atZone(zone).toLocalDate().plusDays(14)
+  assertEquals(MascotPose.BRACKET,MascotRules.evaluate(emptyList(),now,zone,eventDate=event).pose)
+  assertEquals(MascotPose.IDLE,MascotRules.evaluate(emptyList(),now,zone,eventDate=event.plusDays(1)).pose)
+  assertEquals(MascotPose.IDLE,MascotRules.evaluate(emptyList(),now,zone,eventDate=event.minusDays(15)).pose)
+  assertEquals(MascotPose.SLEEP,MascotRules.evaluate(listOf(action("done","done")),now,zone,eventDate=event).pose)
  }
 }

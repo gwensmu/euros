@@ -82,4 +82,23 @@ class MascotIntegrationTest {
   assertEquals(1537,cells[5].offset.x+cells[5].size.width)
   assertEquals(1025,cells[5].offset.y+cells[5].size.height)
  }
+ @Test fun savedActionsEmitTheirMatchingPoseOnlyAfterSuccessfulNewLogs()=runBlocking {
+  val db=database();val repo=Repository(db);val poses=mutableListOf<MascotPose>()
+  val watch=launch(start=CoroutineStart.UNDISPATCHED){repo.localCompletions.collect{poses.add(it)}}
+  fun fixture(id:String,kind:String,step:String?=null):Record {
+   val p=JSONObject(activity().payload).put("kind",kind)
+   if(step!=null)p.put("recovery_step_type",step)
+   return Record("activities",id,1,p.toString())
+  }
+  for((id,kind,step) in listOf(Triple("bjj","bjj",null),Triple("weights","weights",null),Triple("water","recovery","hydration"))) {
+   val record=fixture(id,kind,step);db.dao().put(record);repo.complete(record,"done");yield()
+   repo.complete(record,"done");yield()
+  }
+  repo.upsert("food_entries","snack",JSONObject("""{"consumed_at":"2026-10-14T12:00:00-05:00","local_date":"2026-10-14","raw_text":"snack","nutrients":{"kcal":null,"protein_g":null,"carbs_g":null,"fat_g":null}}"""));yield()
+  assertEquals(listOf(MascotPose.AFTER_BJJ,MascotPose.LIFT,MascotPose.WATER,MascotPose.SNACK),poses)
+  val newest=listOf(MascotPose.SNACK,MascotPose.AFTER_BJJ,MascotPose.LIFT,MascotPose.WATER,MascotPose.BRACKET,MascotPose.SLEEP)
+  val cells=newest.map{weaselAtlasCell(1537,1025,it)}
+  assertEquals(1537*1025,cells.sumOf{it.size.width*it.size.height})
+  watch.cancelAndJoin();db.close()
+ }
 }

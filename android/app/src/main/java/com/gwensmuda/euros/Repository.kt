@@ -11,8 +11,8 @@ import java.util.UUID
 // One mutex serializes local edits, authored bootstrap, restores and synchronization.
 // Each durable state transition keeps its Room transaction and immutable outbox command.
 class Repository(private val db:EurosDatabase, llmClient:LlmClient?=null) {
- private val completionEvents=kotlinx.coroutines.flow.MutableSharedFlow<Unit>(extraBufferCapacity=1,onBufferOverflow=kotlinx.coroutines.channels.BufferOverflow.DROP_OLDEST)
- val localCompletions:kotlinx.coroutines.flow.SharedFlow<Unit> = completionEvents
+ private val completionEvents=kotlinx.coroutines.flow.MutableSharedFlow<MascotPose>(extraBufferCapacity=1,onBufferOverflow=kotlinx.coroutines.channels.BufferOverflow.DROP_OLDEST)
+ val localCompletions:kotlinx.coroutines.flow.SharedFlow<MascotPose> = completionEvents
  @Volatile private var interpreter:LlmClient?=llmClient
  @Volatile internal var reminderApi:SyncApi?=null
  suspend fun interpretFood(text:String):JSONObject = requireInterpreter().interpretFood(text)
@@ -118,7 +118,7 @@ class Repository(private val db:EurosDatabase, llmClient:LlmClient?=null) {
    newlyCompleted=(type=="activities" && payload.optString("status")=="done" && current?.let{JSONObject(it.payload).optString("status")}!="done") ||
     (type in setOf("food_entries","weight_entries") && current==null)
   }
-  if(newlyCompleted)completionEvents.tryEmit(Unit)
+  if(newlyCompleted)completionEvents.tryEmit(MascotRules.completionPose(type,payload))
  }
  suspend fun delete(type:String,id:String,expectedRevision:Long?=null,expectedPayload:String?=null)=mutex.withLock {
   db.withTransaction {
@@ -129,7 +129,7 @@ class Repository(private val db:EurosDatabase, llmClient:LlmClient?=null) {
   }
  }
  suspend fun complete(record:Record,status:String)=mutex.withLock {
-  var newlyCompleted=false
+  var reaction:MascotPose?=null
   db.withTransaction {
    val current=dao.record(record.type,record.id) ?: error("Activity unavailable")
    if(JSONObject(current.payload).optString("status")==status) {
@@ -146,9 +146,9 @@ class Repository(private val db:EurosDatabase, llmClient:LlmClient?=null) {
    if(status=="skipped") { payload.remove("strength_feedback");payload.remove("recovery_intake");payload.remove("completed_at");payload.put("skipped_at",java.time.OffsetDateTime.now().toString()) }
    enqueue(current.type,current.id,payload)
    refreshStrengthProgression()
-   newlyCompleted=status=="done"
+   if(status=="done")reaction=MascotRules.completionPose(current.type,payload)
   }
-  if(newlyCompleted)completionEvents.tryEmit(Unit)
+  reaction?.let{completionEvents.tryEmit(it)}
  }
  suspend fun saveStrengthFeedback(record:Record,feeling:StrengthFeeling)=mutex.withLock {
   db.withTransaction {
@@ -221,7 +221,7 @@ class Repository(private val db:EurosDatabase, llmClient:LlmClient?=null) {
    newMeasurement=dao.record("weight_entries",targetId)==null
    enqueue("weight_entries",targetId,payload)
   }
-  if(newMeasurement)completionEvents.tryEmit(Unit)
+  if(newMeasurement)completionEvents.tryEmit(MascotPose.PLEASED)
  }
  suspend fun restoreRecords(records:org.json.JSONArray):RestoreResult=mutex.withLock { restoreRecordsLocked(records) }
  suspend fun restoreArchive(archive:JSONObject):RestoreResult=mutex.withLock {

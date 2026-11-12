@@ -137,8 +137,10 @@ class MainActivity:ComponentActivity() {
  var completionSequence by remember{mutableLongStateOf(0L)}
  var completionReceivedAt by remember{mutableLongStateOf(0L)}
  var shownCompletion by remember{mutableLongStateOf(0L)}
- var pleased by remember{mutableStateOf(false)}
- LaunchedEffect(repo){repo.localCompletions.collect {
+ var reactionPose by remember{mutableStateOf<MascotPose?>(null)}
+ var latestReaction by remember{mutableStateOf(MascotPose.PLEASED)}
+ LaunchedEffect(repo){repo.localCompletions.collect { pose ->
+  latestReaction=pose
   completionSequence++;completionReceivedAt=android.os.SystemClock.elapsedRealtime()
  }}
  val homeVisible=tab==RootTab.Today && !focused
@@ -146,13 +148,13 @@ class MainActivity:ComponentActivity() {
   if(homeVisible && completionSequence>shownCompletion) {
    shownCompletion=completionSequence
    if(android.os.SystemClock.elapsedRealtime()-completionReceivedAt<60_000L) {
-    pleased=true
-    try{kotlinx.coroutines.delay(3000)}finally{pleased=false}
+    reactionPose=latestReaction
+    try{kotlinx.coroutines.delay(6000)}finally{reactionPose=null}
    }
   }
  }
- val mascotState=MascotRules.evaluate(records,java.time.Instant.now(),nextItem=PlanDomain.next(records,today))
- val mascotPose=if(pleased)MascotPose.PLEASED else mascotState.pose
+ val mascotState=MascotRules.evaluate(records,java.time.Instant.now(),nextItem=PlanDomain.next(records,today),eventDate=LocalDate.parse(authoredPlan.json().getJSONObject("event").getString("date")))
+ val mascotPose=reactionPose ?: mascotState.pose
  val pageScroll=rememberScrollState()
  LaunchedEffect(tab,selected,settings,review,importedId,foodEditor,strengthFeedbackId){pageScroll.scrollTo(0)}
  val snackbar=remember{SnackbarHostState()}

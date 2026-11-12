@@ -24,7 +24,7 @@ internal data class AtlasCell(val offset:IntOffset,val size:IntSize)
 /** Integer boundaries include all pixels even when the atlas dimensions aren't divisible by 3/2. */
 internal fun weaselAtlasCell(width:Int,height:Int,pose:MascotPose):AtlasCell {
  require(width>=3 && height>=2)
- val index=when(pose){MascotPose.IDLE->0;MascotPose.PLEASED->1;MascotPose.JUDGY->2;MascotPose.TRAINING->3;MascotPose.RECOVERY->4;MascotPose.REST->5}
+ val index=when(pose){MascotPose.IDLE,MascotPose.SNACK->0;MascotPose.PLEASED,MascotPose.AFTER_BJJ->1;MascotPose.JUDGY,MascotPose.LIFT->2;MascotPose.TRAINING,MascotPose.WATER->3;MascotPose.RECOVERY,MascotPose.BRACKET->4;MascotPose.REST,MascotPose.SLEEP->5}
  val column=index%3;val row=index/3
  val left=width*column/3;val top=height*row/2
  return AtlasCell(IntOffset(left,top),IntSize(width*(column+1)/3-left,height*(row+1)/2-top))
@@ -45,7 +45,7 @@ internal fun weaselAtlasCell(width:Int,height:Int,pose:MascotPose):AtlasCell {
 }
 
 @Composable internal fun Weasel(pose:MascotPose=MascotPose.IDLE,modifier:Modifier=Modifier.size(96.dp,112.dp)) {
- val atlas=ImageBitmap.imageResource(R.drawable.weasel_poses)
+ val atlas=ImageBitmap.imageResource(if(pose in setOf(MascotPose.SNACK,MascotPose.AFTER_BJJ,MascotPose.LIFT,MascotPose.WATER,MascotPose.BRACKET,MascotPose.SLEEP))R.drawable.weasel_actions else R.drawable.weasel_poses)
  val cell=remember(atlas,pose){weaselAtlasCell(atlas.width,atlas.height,pose)}
  val painter=remember(atlas,cell){BitmapPainter(atlas,cell.offset,cell.size,FilterQuality.High)}
  val motion=animationsEnabled()
@@ -69,6 +69,12 @@ internal fun weaselAtlasCell(width:Int,height:Int,pose:MascotPose):AtlasCell {
   MascotPose.TRAINING->"Blue-belt weasel ready to train"
   MascotPose.RECOVERY->"Blue-belt weasel stretching"
   MascotPose.REST->"Blue-belt weasel resting"
+  MascotPose.SNACK->"Blue-belt weasel eating a snack"
+  MascotPose.AFTER_BJJ->"Blue-belt weasel wiping sweat after BJJ"
+  MascotPose.LIFT->"Blue-belt weasel lifting a dumbbell"
+  MascotPose.WATER->"Blue-belt weasel drinking water"
+  MascotPose.BRACKET->"Blue-belt weasel studying a competition bracket"
+  MascotPose.SLEEP->"Blue-belt weasel asleep with its tail curled around it"
  }
  Image(painter,description,modifier.graphicsLayer {
   scaleY=1f+breath*.012f

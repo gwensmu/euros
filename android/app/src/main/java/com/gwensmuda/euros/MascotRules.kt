@@ -4,13 +4,25 @@ import org.json.JSONObject
 import java.time.Instant
 import java.time.OffsetDateTime
 import java.time.ZoneId
+import java.time.LocalDate
+import java.time.temporal.ChronoUnit
 
 enum class MascotDisposition { NORMAL, JUDGY }
-enum class MascotPose { IDLE, PLEASED, JUDGY, TRAINING, RECOVERY, REST }
+enum class MascotPose { IDLE, PLEASED, JUDGY, TRAINING, RECOVERY, REST, SNACK, AFTER_BJJ, LIFT, WATER, BRACKET, SLEEP }
 data class MascotState(val disposition:MascotDisposition,val pose:MascotPose,val qualifyingSkipIds:Set<String>)
 
 /** Recomputed from current records; no calorie, weight, overdue-item or persisted judgment state. */
 object MascotRules {
+ fun completionPose(type:String,payload:JSONObject):MascotPose = when {
+  type=="food_entries" -> MascotPose.SNACK
+  type=="activities" -> when {
+   payload.optString("kind")=="bjj" -> MascotPose.AFTER_BJJ
+   payload.optString("kind")=="weights" -> MascotPose.LIFT
+   payload.optString("kind")=="recovery" && payload.optString("recovery_step_type")=="hydration" -> MascotPose.WATER
+   else -> MascotPose.PLEASED
+  }
+  else -> MascotPose.PLEASED
+ }
  private data class Action(val record:Record,val payload:JSONObject)
  private data class Outcome(val status:String,val at:Instant?)
  private fun actions(records:List<Record>):List<Action> = records.filter{it.type=="activities"}
@@ -22,7 +34,7 @@ object MascotRules {
   val raw=payload.optString(key).takeIf{it.isNotBlank() && it!="null"} ?: payload.optString("scheduled_at")
   return runCatching{OffsetDateTime.parse(raw).toInstant()}.getOrNull()
  }
- fun evaluate(records:List<Record>,now:Instant,zone:ZoneId=PlanDomain.zone,nextItem:Record?=null):MascotState {
+ fun evaluate(records:List<Record>,now:Instant,zone:ZoneId=PlanDomain.zone,nextItem:Record?=null,eventDate:LocalDate?=null):MascotState {
   val actions=actions(records)
   val children=actions.groupBy{it.payload.optString("parent_id")}
   fun recoveryRoutine(action:Action):Boolean = action.payload.optString("kind") in setOf("recovery","rest") &&
@@ -52,11 +64,22 @@ object MascotRules {
   }.map{it.first}.toSet()
   val disposition=if(skips.size>=2)MascotDisposition.JUDGY else MascotDisposition.NORMAL
   val context=nextItem?.takeUnless{it.deleted}?.let{runCatching{JSONObject(it.payload).optString("kind")}.getOrNull()}
-  val pose=if(disposition==MascotDisposition.JUDGY)MascotPose.JUDGY else when(context) {
+  val today=now.atZone(zone).toLocalDate()
+  val todaysActions=actions.filter { it.payload.optString("parent_id").isBlank() &&
+   runCatching{OffsetDateTime.parse(it.payload.getString("scheduled_at")).atZoneSameInstant(zone).toLocalDate()==today}.getOrDefault(false)
+  }
+  val allDone=todaysActions.isNotEmpty() && todaysActions.all{outcome(it).let{result->result.status=="done" && result.at!=null && result.at<=now}}
+  val nearEvent=eventDate?.let{ChronoUnit.DAYS.between(today,it) in 0L..14L} ?: false
+  val pose=when {
+   disposition==MascotDisposition.JUDGY -> MascotPose.JUDGY
+   allDone -> MascotPose.SLEEP
+   nearEvent -> MascotPose.BRACKET
+   else -> when(context) {
    "bjj","weights"->MascotPose.TRAINING
    "recovery","morning"->MascotPose.RECOVERY
    "rest"->MascotPose.REST
    else->MascotPose.IDLE
+   }
   }
   return MascotState(disposition,pose,skips)
  }
