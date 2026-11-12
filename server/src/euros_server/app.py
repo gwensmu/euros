@@ -24,6 +24,7 @@ from .review_jobs import ReviewJobs
 from .security import BodyLimit, LimitedProvider
 from .reminder_copy import ReminderCopyService
 from .food_cache import FoodCache
+from .meal_week import MealWeeks
 
 
 def load_token(name):
@@ -66,11 +67,12 @@ def create_app(store, api_token, mcp_token, public_hosts=(), model_service=None)
     food_cache = FoodCache(store, models)
     trackers = TrackerStore(store)
     review_jobs = ReviewJobs(store, models, trackers)
+    meal_weeks = MealWeeks(store)
     if len(api_token) < 32 or len(mcp_token) < 32 or api_token == mcp_token:
         raise ValueError("Separate app and MCP tokens of at least 32 characters are required")
     hosts = ["127.0.0.1", "localhost", *public_hosts]
     origins = [f"https://{h}" for h in public_hosts]
-    mcp = FastMCP("Euros", instructions="Before planning or changing meals, call meal_planning_context and read the dated plan and training. Proposals never log food. Use preview_meal_plan before revision-checked saves.", stateless_http=True, json_response=True,
+    mcp = FastMCP("Euros", instructions="Before planning or changing meals, call meal_planning_context. For a week of meals use draft_week, show the user, redraft for their changes and apply_week once accepted. For one-off edits read the dated plan, preview_meal_plan, then apply_command. Proposals never log food.", stateless_http=True, json_response=True,
                   transport_security=TransportSecuritySettings(
                       allowed_hosts=[h for host in hosts for h in (host, f"{host}:*")],
                       allowed_origins=origins))
@@ -80,13 +82,66 @@ def create_app(store, api_token, mcp_token, public_hosts=(), model_service=None)
     def meal_planning_context() -> dict:
         """Read nutrition policy, meal templates, provenance and safe planning workflow first."""
         from .meal_planning import context
-        return context()
+        return context(meal_weeks.catalog)
 
     @mcp.tool(annotations=read)
     def preview_meal_plan(payload: dict) -> dict:
         """Validate a dated meal proposal and calculate known planned totals; never save."""
         from .meal_planning import preview
         return preview(payload)
+
+    def tool_result(call):
+        try:
+            result = call()
+            return CallToolResult(content=[TextContent(type="text", text=json.dumps(result))], structuredContent=result)
+        except DomainError as exc:
+            result = {**exc.body, "status": exc.status}
+            return CallToolResult(isError=True, content=[TextContent(type="text", text=json.dumps(result))], structuredContent=result)
+
+    @mcp.tool(annotations=ToolAnnotations(readOnlyHint=True, destructiveHint=False, idempotentHint=False, openWorldHint=False))
+    def draft_week(week_start: str, dates: list[str] | None = None, swaps: list[dict] | None = None,
+                   avoid_foods: list[str] | None = None) -> CallToolResult:
+        """Draft a Mon–Sun meal week from planned training tiers and templates; saves nothing.
+
+        week_start is a Monday (YYYY-MM-DD). Optional dates limits the draft to those days.
+        Today and past days are skipped. Translate the user's requests:
+        swaps [{date, meal_id, template}] for "salmon Friday dinner"; avoid_foods [food_id]
+        for "no eggs this week". Valid meal_ids, templates and food_ids are in meal_planning_context.
+        Show the user the returned week, redraft for changes, then apply_week(draft_id) once accepted.
+        """
+        return tool_result(lambda: meal_weeks.draft(week_start, dates, swaps, avoid_foods))
+
+    @mcp.tool(annotations=ToolAnnotations(readOnlyHint=False, destructiveHint=True, idempotentHint=True, openWorldHint=False))
+    def apply_week(draft_id: str) -> CallToolResult:
+        """Save an accepted draft_week: all meal plans and prep activities atomically, or nothing.
+
+        Call only after the user accepts the draft. If anything changed since drafting it
+        returns draft_stale and saves nothing; draft again. Never logs food.
+        """
+        return tool_result(lambda: meal_weeks.apply(draft_id))
+
+    catalog_write = ToolAnnotations(readOnlyHint=False, destructiveHint=False, idempotentHint=True, openWorldHint=False)
+
+    @mcp.tool(annotations=catalog_write)
+    def upsert_food(food_id: str, food: dict, expected_revision: int) -> CallToolResult:
+        """Add or edit a planning food; expected_revision is 0 for new, else the revision from meal_planning_context.
+
+        food: name, per100g {kcal, proteinG, carbohydrateG, fatG}, role (protein/carb/fat/fixed),
+        optional basis (cooked/raw/dry/as_sold), step_g, batch_cook, purchase {form, cooked_yield},
+        source, active. Set active false to stop drafting it; true to switch it back on.
+        Prefer label values when the user has them and name the label in source. Saved plans keep their snapshots.
+        """
+        return tool_result(lambda: meal_weeks.catalog.upsert('food', food_id, food, expected_revision))
+
+    @mcp.tool(annotations=catalog_write)
+    def upsert_template(template_id: str, template: dict, expected_revision: int) -> CallToolResult:
+        """Add or edit a meal template; expected_revision is 0 for new, else the revision from meal_planning_context.
+
+        template: title, slots (breakfast/lunch/dinner/recovery-snack/pre-training), items
+        [{food_id, grams, min_g?, max_g?}], optional batch (covered by prep), use_up (swap only,
+        never rotated or replenished), active. Grams are starting amounts that daily balancing scales.
+        """
+        return tool_result(lambda: meal_weeks.catalog.upsert('template', template_id, template, expected_revision))
 
     @mcp.tool(annotations=read)
     def read_records(entity_type: str | None = None) -> dict:
