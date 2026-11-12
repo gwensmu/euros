@@ -29,6 +29,27 @@ class StrengthFeedbackTest {
  private fun record()=runBlocking{repo.dao.record("activities",id)!!}
  private fun feedback()=JSONObject(record().payload).getJSONObject("strength_feedback")
  private fun complete()=runBlocking{repo.complete(record(),"done")}
+ @Test fun moveDialogCancelActivitySkipsWithoutSavingDraftTime() {
+  val before=record();var closed=false
+  compose.setContent{EurosTheme{MoveDialog(before,repo){closed=true}}}
+  compose.onNodeWithText("Tomorrow").performClick()
+  compose.onNodeWithText("Cancel activity").performClick()
+  compose.waitUntil(5_000){closed}
+  val saved=JSONObject(record().payload)
+  assertEquals("skipped",saved.getString("status"))
+  assertEquals(JSONObject(before.payload).getString("scheduled_at"),saved.getString("scheduled_at"))
+  assertTrue(saved.has("skipped_at"))
+  assertFalse(saved.has("strength_feedback"))
+ }
+ @Test fun moveDialogCloseDoesNotChangeActivity() {
+  val before=record();val queued=runBlocking{repo.dao.pending().size};var closed=false
+  compose.setContent{EurosTheme{MoveDialog(before,repo){closed=true}}}
+  compose.onNodeWithText("Tomorrow").performClick()
+  compose.onNodeWithContentDescription("Close").performClick()
+  compose.runOnIdle{assertTrue(closed)}
+  assertEquals(before,record())
+  assertEquals(queued,runBlocking{repo.dao.pending().size})
+ }
  @Test fun backRetainsDurableDefaultWithoutAnotherWrite() {
   complete();val count=runBlocking{repo.dao.pending().size};var closed=false
   compose.setContent{EurosTheme{Column{StrengthFeedbackScreen(record(),repo){closed=true}}}}

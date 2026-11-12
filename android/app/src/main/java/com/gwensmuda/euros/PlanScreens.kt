@@ -217,7 +217,10 @@ object PlanDisplay {
  var date by rememberSaveable{mutableStateOf(current.toLocalDate().toString())}
  var time by rememberSaveable{mutableStateOf(current.toLocalTime().format(DateTimeFormatter.ofPattern("HH:mm")))}
  var error by remember{mutableStateOf<String?>(null)};var busy by remember{mutableStateOf(false)};val scope=rememberCoroutineScope()
- AlertDialog(onDismissRequest={if(!busy)onClose()},title={Text("Move activity")},text={Column(verticalArrangement=Arrangement.spacedBy(12.dp)){
+ AlertDialog(onDismissRequest={if(!busy)onClose()},title={Row(Modifier.fillMaxWidth(),verticalAlignment=Alignment.CenterVertically){
+  Text("Move activity",modifier=Modifier.weight(1f))
+  IconButton(enabled=!busy,onClick=onClose){Icon(Icons.Outlined.Close,"Close")}
+ }},text={Column(verticalArrangement=Arrangement.spacedBy(12.dp)){
   Text(PlanDomain.payload(record).getString("title"),style=MaterialTheme.typography.bodyMedium)
   FlowRow(horizontalArrangement=Arrangement.spacedBy(8.dp)){
    listOf("Today" to LocalDate.now(PlanDomain.zone),"Tomorrow" to LocalDate.now(PlanDomain.zone).plusDays(1)).forEach{(label,day)->FilterChip(selected=date==day.toString(),enabled=!busy,onClick={date=day.toString()},label={Text(label)})}
@@ -225,7 +228,14 @@ object PlanDisplay {
   DatePickerField(date,{date=it},enabled=!busy)
   TimePickerField(time,{time=it},enabled=!busy)
   error?.let{Text(it,color=MaterialTheme.colorScheme.error)}
- }},confirmButton={TextButton(enabled=!busy,onClick={scope.launch{busy=true;try{repo.move(record,PlanDomain.moveTimestamp(date,time));onClose()}catch(e:Exception){error=e.message}finally{busy=false}}}){Text("Move")}},dismissButton={TextButton(onClick=onClose){Text("Cancel")}})
+ }},confirmButton={TextButton(enabled=!busy,onClick={scope.launch{busy=true;try{repo.move(record,PlanDomain.moveTimestamp(date,time));onClose()}catch(e:Exception){error=e.message}finally{busy=false}}}){Text("Move")}},dismissButton={
+  Column {
+   if(PlanDomain.payload(record).optString("kind") in setOf("bjj","weights"))TextButton(enabled=!busy,onClick={scope.launch{
+    busy=true
+    try{repo.complete(record,"skipped");onClose()}catch(e:Exception){error=e.message}finally{busy=false}
+   }}){Text("Cancel activity")}
+  }
+ })
 }
 @Composable fun ActivityDetail(record:Record,records:List<Record>,repo:Repository,onClose:()->Unit,onOpen:(Record)->Unit,onFood:()->Unit) {
  val p=PlanDomain.payload(record);val item=DayPlanComposer.item(record,records);val kind=item.kind.wireName;val children=item.steps;val logging=item.logging
