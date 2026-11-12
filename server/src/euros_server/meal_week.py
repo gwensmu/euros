@@ -22,9 +22,9 @@ POLICY_VERSION = '2026-11-11-v3'
 # Rotation stays continuous with the accepted nutrition-v2 plans.
 ROTATION_EPOCH = date(2026, 10, 22)
 # Last date covered by the saved training schedule; later days fall back to the weekly pattern.
-# Includes the accepted recurring extension and January 3–12 taper. An empty
+# Includes the accepted recurring extension and January 3–13 taper. An empty
 # date inside this horizon is a rest day, not a gap to fill from a recurrence.
-CONFIRMED_THROUGH = date(2027, 1, 12)
+CONFIRMED_THROUGH = date(2027, 1, 13)
 PROVISIONAL_SESSIONS = {1: [('bjj', '18:30')], 3: [('bjj', '18:30')],
                         5: [('bjj', '10:00')], 6: [('weights', '11:00')]}
 PREP_WEEKDAYS = (2, 6)
@@ -85,7 +85,8 @@ def _day(timestamp):
 
 def _training(records, day):
     saved = sorted((r for r in records if r['entity_type'] == 'activities' and not r['deleted']
-                    and r['payload'].get('kind') in ('bjj', 'weights') and _day(r['payload']['scheduled_at']) == day),
+                    and r['payload'].get('kind') in ('bjj', 'weights')
+                    and _day(r['payload']['scheduled_at']) == day),
                    key=lambda r: r['payload']['scheduled_at'])
     sessions = [(r['payload']['kind'], datetime.fromisoformat(r['payload']['scheduled_at']).astimezone(ZONE).strftime('%H:%M')) for r in saved]
     snapshot = [dict(id=r['entity_id'], scheduled_at=r['payload']['scheduled_at'], kind=r['payload']['kind'],
@@ -135,6 +136,10 @@ def _build_day(day, records, old, swaps, avoid, catalog):
     offset = (day - ROTATION_EPOCH).days
     sessions, basis, snapshot = _training(records, day)
     tier = 'double' if len(sessions) >= 2 else 'bjj' if any(k == 'bjj' for k, _ in sessions) else 'lifting' if sessions else 'recovery'
+    # Countdown anchor: food uses a training tier while the assigned event day/time
+    # is still unknown. This is a meal assumption, never an authored workout.
+    if day == date(2027, 1, 13) and not sessions:
+        tier, basis = 'bjj', 'provisional-competition-day'
     target = TIERS[tier]
     warnings = []
     clocks = {'breakfast': '08:00', 'lunch': '12:30', 'dinner': '18:30', 'recovery-snack': '20:30'}

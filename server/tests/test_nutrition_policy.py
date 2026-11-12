@@ -43,7 +43,7 @@ def test_maintenance_adds_to_saved_tier_without_mutation():
     for name,t in TIERS.items():
         actual=resolve(records,'2026-11-01',t,today='2026-10-29')['targets']
         assert actual['kcal']==t['kcal']+200
-        assert actual['proteinG']==135
+        assert actual['proteinG']==120
         assert actual['carbohydrateG']==t['carbohydrateG']+50
 
 
@@ -54,6 +54,7 @@ def test_move_updates_both_days_and_preserves_skip_budget_and_maintenance():
     lifting = dict(entity_type='activities', entity_id='b', payload=dict(kind='weights',status='skipped',scheduled_at='2026-10-31T10:00:00-05:00'))
     assert resolve([moved], '2026-10-30', TIERS['bjj'])['targets'] == TIERS['recovery']
     assert resolve([moved], '2026-10-31')['targets'] == TIERS['bjj']
+    # An explicit skip alone never lowers the scheduled tier.
     assert resolve([moved,lifting], '2026-10-31')['targets'] == TIERS['double']
     weights=[weight(f'2026-10-{d}', '155') for d in range(22,29)]
     assert resolve([moved]+weights,'2026-10-31',today='2026-10-31')['targets']['kcal'] == 2500

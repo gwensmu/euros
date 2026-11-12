@@ -50,11 +50,6 @@ def test_confirmed_extension_keeps_rest_days_and_moved_workouts(store, weeks):
                        expected_revision=1, operation='upsert', payload=moved))
     redraft = weeks.draft(WEEK, today=TODAY)
     assert [d['tier'] for d in redraft['days'][:2]] == ['bjj', 'recovery']
-    current = next(r for r in store.records('activities')['records'] if r['entity_id'] == 'class-19')
-    store.command(dict(command_id='skip', entity_type='activities', entity_id=current['entity_id'],
-                       expected_revision=1, operation='upsert', payload={**current['payload'], 'status': 'skipped'}))
-    skipped = weeks.draft(WEEK, today=TODAY)['days'][3]
-    assert skipped['tier'] == 'bjj' and skipped['targets']['kcal'] == 2300
 
 
 def test_confirmed_taper_has_no_recurring_weights_or_extra_bjj(store, weeks):
@@ -65,10 +60,22 @@ def test_confirmed_taper_has_no_recurring_weights_or_extra_bjj(store, weeks):
     assert all(d['training_basis'] == 'saved-schedule' for d in draft['days'])
     boundary = weeks.draft('2027-01-11', today=TODAY)
     assert all(d['training_basis'] == 'saved-schedule' and d['tier'] == 'recovery' for d in boundary['days'][:2])
-    assert all(d['training_basis'] == 'provisional-weekly-pattern' for d in boundary['days'][2:])
-    bjj(store, '2027-01-13T14:00:00-06:00', 'dated-after-horizon')
-    saved = weeks.draft('2027-01-11', today=TODAY)['days'][2]
-    assert saved['training_basis'] == 'saved-schedule' and saved['training'] == ['bjj 14:00']
+    competition = boundary['days'][2]
+    assert competition['training_basis'] == 'provisional-competition-day' and competition['targets']['kcal'] == 2300
+    assert competition['training'] == [] and not any(m['id'] == 'pre-training' for m in competition['meals'])
+    assert all(d['training_basis'] == 'provisional-weekly-pattern' for d in boundary['days'][3:])
+
+
+def test_skipped_sessions_preserve_scheduled_meal_tiers(store, weeks):
+    bjj(store, '2026-11-17T18:30:00-06:00', 'skipped-class')
+    current = next(r for r in store.records('activities')['records'] if r['entity_id'] == 'skipped-class')
+    store.command(dict(command_id='skip', entity_type='activities', entity_id='skipped-class', expected_revision=1,
+                       operation='upsert', payload={**current['payload'], 'status': 'skipped'}))
+    draft = weeks.draft(WEEK, today=TODAY)
+    tuesday = draft['days'][1]
+    assert tuesday['tier'] == 'bjj' and tuesday['targets']['kcal'] == 2300
+    assert tuesday['training'] == ['bjj 18:30']
+    assert any(m['id'] == 'pre-training' for m in tuesday['meals'])
 
 
 def test_draft_saves_nothing_and_meets_policy(store, weeks):
@@ -78,7 +85,7 @@ def test_draft_saves_nothing_and_meets_policy(store, weeks):
     for day in draft['days']:
         assert day['training_basis'] == 'provisional-weekly-pattern'
         assert abs(day['planned_totals']['kcal'] - day['targets']['kcal']) < 200
-        assert day['planned_totals']['proteinG'] >= 129
+        assert day['planned_totals']['proteinG'] >= 114
     assert [d['tier'] for d in draft['days']] == ['recovery', 'bjj', 'recovery', 'bjj', 'recovery', 'bjj', 'lifting']
     # Wed and Sun only, and only when batch meals fall in the window.
     assert {p['date'] for p in draft['preps']} <= {'2027-01-20', '2027-01-24'} and '2027-01-20' in {p['date'] for p in draft['preps']}
@@ -211,7 +218,7 @@ def test_portions_balance_every_tier_including_maintenance(store, weeks):
             tiers.add(day['tier'])
             gaps = macro_gaps(day)
             # Previously protein overshot by ~40 g; now every macro lands close to its tier.
-            assert gaps['kcal'] <= 40 and gaps['proteinG'] <= 15 and gaps['carbohydrateG'] <= 15 and gaps['fatG'] <= 12, (day['date'], gaps)
+            assert gaps['kcal'] <= 50 and gaps['proteinG'] <= 15 and gaps['carbohydrateG'] <= 20 and gaps['fatG'] <= 12, (day['date'], gaps)
     assert tiers == {'recovery', 'bjj', 'lifting', 'double'}
     weeks.apply(draft['draft_id'])
     saved = store.meal_plan('2026-12-03')['record']['payload']

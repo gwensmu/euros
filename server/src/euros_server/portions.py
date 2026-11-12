@@ -7,7 +7,7 @@ since the accepted tiers are internally consistent. Results are rounded to cooka
 ROLE_MACRO = {'protein': 'proteinG', 'carb': 'carbohydrateG', 'fat': 'fatG'}
 # Bounds as multiples of the template amount, unless the template item sets min_g/max_g.
 ROLE_BOUNDS = {'protein': (.6, 1.6), 'carb': (.4, 2.5), 'fat': (0, 3), 'fixed': (1, 1)}
-# Squared error per macro; protein weighs extra because ~135 g is the firm daily target.
+# Squared error per macro; protein weighs extra because ~120 g is the firm daily target.
 WEIGHT = {'proteinG': 6, 'carbohydrateG': 4, 'fatG': 9}
 # Calories matter too: when fat cannot reach its target, carbohydrate makes up the energy.
 KCAL_WEIGHT = 1

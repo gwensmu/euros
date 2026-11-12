@@ -120,6 +120,21 @@ def create_app(store, api_token, mcp_token, public_hosts=(), model_service=None)
         """
         return tool_result(lambda: meal_weeks.apply(draft_id))
 
+    @mcp.tool(annotations=read)
+    def grocery_list(week_start: str) -> CallToolResult:
+        """Aggregate the saved Mon–Sun meal plans into a purchase-form grocery list; buys and saves nothing.
+
+        week_start is a Monday (YYYY-MM-DD). Only applied plans count — draft first, apply_week,
+        then list. Days without a saved plan appear in missing_dates, never filled in. Cooked/dry
+        planning grams use the effective loss/maintenance portions and convert to the catalog's
+        purchase form via cooked_yield. Text-only meals, missing maintenance variants and foods
+        that cannot be converted are listed under unresolved, never guessed. Meals from
+        use_up templates consume existing inventory and are excluded. No pantry subtraction yet:
+        tell the user to strike items they already have.
+        """
+        from .grocery import grocery_list as build
+        return tool_result(lambda: build(store, meal_weeks.catalog, week_start))
+
     catalog_write = ToolAnnotations(readOnlyHint=False, destructiveHint=False, idempotentHint=True, openWorldHint=False)
 
     @mcp.tool(annotations=catalog_write)

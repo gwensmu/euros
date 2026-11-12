@@ -9,10 +9,10 @@ EFFECTIVE_FROM = '2026-10-22'
 DAILY = dict(kcal=1900, proteinG=130, carbohydrateG=225, fatG=dict(min=50,max=53))
 MAINTENANCE = dict(kcal=2050, proteinG=130, carbohydrateG=250, fatG=59)
 TIERS = {
-    'recovery': dict(kcal=1850, proteinG=135, carbohydrateG=165, fatG=72),
-    'lifting': dict(kcal=2050, proteinG=135, carbohydrateG=220, fatG=70),
-    'bjj': dict(kcal=2300, proteinG=135, carbohydrateG=305, fatG=60),
-    'double': dict(kcal=2550, proteinG=135, carbohydrateG=370, fatG=59),
+    'recovery': dict(kcal=1850, proteinG=120, carbohydrateG=165, fatG=72),
+    'lifting': dict(kcal=2050, proteinG=120, carbohydrateG=220, fatG=70),
+    'bjj': dict(kcal=2300, proteinG=120, carbohydrateG=305, fatG=60),
+    'double': dict(kcal=2550, proteinG=120, carbohydrateG=370, fatG=59),
 }
 
 def maintenance_start(records, today):
@@ -44,7 +44,8 @@ def moved_tier(records, local_date):
     if not touched:
         return None
     planned = [r['payload'] for r in records if r.get('entity_type') == 'activities' and not r.get('deleted')
-               and r['payload'].get('kind') in {'bjj', 'weights'} and day(r['payload']['scheduled_at']) == local_date]
+               and r['payload'].get('kind') in {'bjj', 'weights'}
+               and day(r['payload']['scheduled_at']) == local_date]
     return 'double' if len(planned) >= 2 else 'bjj' if any(p['kind'] == 'bjj' for p in planned) else 'lifting' if planned else 'recovery'
 
 def resolve(records, local_date, saved_targets=None, today=None):
