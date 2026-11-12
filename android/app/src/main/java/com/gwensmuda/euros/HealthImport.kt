@@ -9,6 +9,8 @@ import androidx.health.connect.client.records.HeartRateRecord
 import androidx.health.connect.client.records.Record as HealthRecord
 import androidx.health.connect.client.request.ReadRecordsRequest
 import androidx.health.connect.client.time.TimeRangeFilter
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import org.json.JSONArray
@@ -29,12 +31,13 @@ data class MovementSummary(val workoutWalkMinutes:Long?,val walkCount:Int,val so
 data class HealthImportSummary(val sessions:Int,val heartRateRecords:Int,val messages:List<String>,val weightRecords:Int=0)
 class HealthImport(private val context:Context,private val dao:EurosDao) {
  companion object { const val KEY="health_import_v1";private val mutex=Mutex() }
- private suspend fun state(samples:HealthSnapshotStorage.Samples=HealthSnapshotStorage.Samples.ALL)=dao.meta(KEY)?.let{HealthSnapshotStorage.decode(it,samples)} ?: JSONObject().put("schema",1).put("records",JSONObject()).put("links",JSONObject())
+ private val reads=(context.applicationContext as? EurosApplication)?.takeIf{it.repository.dao===dao}?.healthReads ?: HealthReadCache(dao)
+ private suspend fun state(samples:HealthSnapshotStorage.Samples=HealthSnapshotStorage.Samples.ALL)=withContext(Dispatchers.Default){dao.meta(KEY)?.let{HealthSnapshotStorage.decode(it,samples)} ?: JSONObject().put("schema",1).put("records",JSONObject()).put("links",JSONObject())}
  suspend fun refresh(days:Int=7):HealthImportSummary {
   require(days in 1..30)
   val end=Instant.now();return refreshFrom(end.minus(Duration.ofDays(days.toLong())),end)
  }
- suspend fun refreshFrom(start:Instant,now:Instant=Instant.now()):HealthImportSummary=mutex.withLock {
+ suspend fun refreshFrom(start:Instant,now:Instant=Instant.now()):HealthImportSummary=withContext(Dispatchers.Default){mutex.withLock {
   val end=now;require(start<end){"Import start must precede now"}
   require(Duration.between(start,end)<=Duration.ofDays(30)){"This import supports the last 30 days"}
   check(HealthConnectClient.getSdkStatus(context)==HealthConnectClient.SDK_AVAILABLE){"Health Connect unavailable"}
@@ -81,7 +84,7 @@ class HealthImport(private val context:Context,private val dao:EurosDao) {
   requestPublish()
   val records=current.getJSONObject("records");val live=records.keys().asSequence().map{records.getJSONObject(it)}.filter{!it.optBoolean("deleted")}.toList()
   HealthImportSummary(live.count{it.getString("kind")=="exercise"},live.count{it.getString("kind")=="heart_rate"},messages,live.count{it.getString("kind")=="weight"})
- }
+ }}
  private suspend fun applyMatches(s:JSONObject):Boolean {
   val activities=dao.recordsIncludingDeleted()
   val deleted=activities.filter{it.type=="activities" && it.deleted}.map{it.id}.toSet()
@@ -92,17 +95,12 @@ class HealthImport(private val context:Context,private val dao:EurosDao) {
   additions.forEach{(id,key)->HealthSnapshots.link(links,id,key);markLinkObservation(s,key)}
   return additions.isNotEmpty() || removed.isNotEmpty()
  }
- suspend fun reconcileLinks()=mutex.withLock {
+ suspend fun reconcileLinks()=withContext(Dispatchers.Default){mutex.withLock {
   val s=state()
   if(applyMatches(s)){dao.meta(Metadata(KEY,HealthSnapshotStorage.encodeHealth(s)));requestPublish()}
- }
- suspend fun candidates(activity:Record):List<ImportedSession> = mutex.withLock {
-  val payload=JSONObject(activity.payload);val at=OffsetDateTime.parse(payload.getString("scheduled_at")).toInstant()
-  val s=state(HealthSnapshotStorage.Samples.NONE);val records=s.getJSONObject("records");val links=s.getJSONObject("links")
-  val used=links.keys().asSequence().filter{it!=activity.id}.map{links.getString(it)}.toSet()
-  records.keys().asSequence().filter{it !in used}.mapNotNull{key->val r=records.getJSONObject(key);if(HealthSources.isTraining(r)) session(key,r) else null}.filter{HealthSnapshots.isCandidate(at,it.start,it.end)}.sortedBy{Duration.between(at,it.start).abs()}.toList()
- }
- suspend fun link(activityId:String,sourceKey:String)=mutex.withLock {
+ }}
+ suspend fun candidates(activity:Record)=reads.candidates(activity)
+ suspend fun link(activityId:String,sourceKey:String)=withContext(Dispatchers.Default){mutex.withLock {
   val activity=dao.record("activities",activityId);check(activity!=null && !activity.deleted && JSONObject(activity.payload).optString("kind") in setOf("bjj","weights")){"Training activity unavailable"}
   val s=state();val record=s.getJSONObject("records").optJSONObject(sourceKey)
   check(record!=null && HealthSources.isTraining(record)){"Imported session unavailable"}
@@ -110,41 +108,22 @@ class HealthImport(private val context:Context,private val dao:EurosDao) {
   HealthSnapshots.link(s.getJSONObject("links"),activityId,sourceKey)
   markLinkObservation(s,sourceKey);previous?.takeIf{it!=sourceKey}?.let{SessionLinking.exclude(s,activityId,it);markLinkObservation(s,it)}
   dao.meta(Metadata(KEY,HealthSnapshotStorage.encodeHealth(s)));requestPublish()
- }
- suspend fun unlink(activityId:String)=mutex.withLock { val s=state();s.getJSONObject("links").optString(activityId).takeIf{it.isNotBlank()}?.let{SessionLinking.exclude(s,activityId,it);markLinkObservation(s,it)};s.getJSONObject("links").remove(activityId);dao.meta(Metadata(KEY,HealthSnapshotStorage.encodeHealth(s)));requestPublish() }
- suspend fun recap(activityId:String):SessionRecap?=mutex.withLock {
-  val s=state(HealthSnapshotStorage.Samples.POLAR);val key=s.getJSONObject("links").optString(activityId).takeIf{it.isNotBlank()} ?: return@withLock null
-  buildRecap(s,key)
- }
- suspend fun recapForKey(sourceKey:String):SessionRecap?=mutex.withLock {buildRecap(state(HealthSnapshotStorage.Samples.POLAR),sourceKey)}
- private fun buildRecap(s:JSONObject,key:String)=HealthRecaps.buildRecap(s,key)
- suspend fun sessions(startDate:LocalDate,endDate:LocalDate):List<ImportedSession> = mutex.withLock {
-  require(!endDate.isBefore(startDate))
-  val records=state(HealthSnapshotStorage.Samples.NONE).getJSONObject("records")
-  records.keys().asSequence().mapNotNull{key->val r=records.getJSONObject(key);if(HealthSources.isTraining(r)) session(key,r) else null}.filter{val day=it.start.atZone(HealthSources.ZONE).toLocalDate();!day.isBefore(startDate) && !day.isAfter(endDate)}.sortedBy{it.start}.toList()
- }
- suspend fun linkedActivities():Map<String,String> = mutex.withLock {
-  val links=state(HealthSnapshotStorage.Samples.NONE).getJSONObject("links");links.keys().asSequence().associateWith{links.getString(it)}
- }
- suspend fun sourceCounts():Map<String,Map<String,Int>> = mutex.withLock {
-  val records=state(HealthSnapshotStorage.Samples.NONE).getJSONObject("records")
-  records.keys().asSequence().map{records.getJSONObject(it)}.filter{!it.optBoolean("deleted")}.toList().groupBy{it.getString("source")}.mapValues{(_,items)->items.groupingBy{it.getString("kind")}.eachCount()}
- }
- suspend fun movement(date:LocalDate):MovementSummary = mutex.withLock {
-  val records=state(HealthSnapshotStorage.Samples.NONE).getJSONObject("records");val from=date.atStartOfDay(HealthSources.ZONE).toInstant();val to=date.plusDays(1).atStartOfDay(HealthSources.ZONE).toInstant()
-  val walks=records.keys().asSequence().map{records.getJSONObject(it)}.filter{HealthSources.isWalk(it)}.map{Instant.parse(it.getString("start")) to Instant.parse(it.getString("end"))}.filter{it.first<to && it.second>from}.toList()
-  MovementSummary(if(walks.isEmpty()) null else HealthSources.unionSeconds(walks.map{maxOf(from,it.first) to minOf(to,it.second)})/60,walks.size)
- }
- suspend fun weightCandidates():List<ImportedWeight> = mutex.withLock {
-  val records=state(HealthSnapshotStorage.Samples.NONE).getJSONObject("records")
-  records.keys().asSequence().mapNotNull{key->val r=records.getJSONObject(key);if(HealthSources.isObservedWeight(r)) ImportedWeight(key,r.getString("source"),Instant.parse(r.getString("start")),r.getDouble("weight_lb")) else null}.sortedByDescending{it.recordedAt}.toList()
- }
+ }}
+ suspend fun unlink(activityId:String)=withContext(Dispatchers.Default){mutex.withLock { val s=state();s.getJSONObject("links").optString(activityId).takeIf{it.isNotBlank()}?.let{SessionLinking.exclude(s,activityId,it);markLinkObservation(s,it)};s.getJSONObject("links").remove(activityId);dao.meta(Metadata(KEY,HealthSnapshotStorage.encodeHealth(s)));requestPublish() }}
+ suspend fun recap(activityId:String)=reads.recap(activityId)
+ suspend fun recapForKey(sourceKey:String)=reads.recapForKey(sourceKey)
+ suspend fun sessions(startDate:LocalDate,endDate:LocalDate)=reads.sessions(startDate,endDate)
+ suspend fun refreshedAt()=reads.refreshedAt()
+ suspend fun linkedActivities()=reads.linkedActivities()
+ suspend fun sourceCounts()=reads.sourceCounts()
+ suspend fun movement(date:LocalDate)=reads.movement(date)
+ suspend fun weightCandidates()=reads.weightCandidates()
  private fun markLinkObservation(state:JSONObject,key:String) {
   val times=state.optJSONObject("publication_observed_at") ?: JSONObject().also{state.put("publication_observed_at",it)}
   times.put(key,Instant.now().toString())
  }
  private fun requestPublish(){(context.applicationContext as? EurosApplication)?.connection?.request()}
- suspend fun clearImports()=mutex.withLock { dao.removeMeta(KEY) }
+ suspend fun clearImports()=withContext(Dispatchers.Default){mutex.withLock { dao.removeMeta(KEY) }}
  private fun session(key:String,r:JSONObject)=HealthRecaps.session(key,r)
 }
 object HealthSnapshots {
@@ -215,11 +194,16 @@ object HealthSnapshotStorage {
   * Read-only projections skip sample arrays before allocating their objects. */
  fun decode(raw:String,samples:Samples=Samples.ALL):JSONObject {
   // The compressed envelope is small. Legacy JSON is streamed directly.
-  val envelope=if(raw.contains("\"encoding\"") && raw.contains("\"gzip-base64\"")) JSONObject(raw) else null
   val sampleKeys=if(samples==Samples.POLAR) {
    val records=decode(raw,Samples.NONE).optJSONObject("records") ?: JSONObject()
    records.keys().asSequence().filter{records.getJSONObject(it).optString("source")==HealthSources.POLAR}.toSet()
   } else emptySet()
+  return decodeWithKeys(raw,samples,sampleKeys)
+ }
+ fun decodeSelected(raw:String,sampleKeys:Set<String>):JSONObject=decodeWithKeys(raw,Samples.POLAR,sampleKeys)
+ fun decodeRecords(raw:String,recordKeys:Set<String>):JSONObject=decodeWithKeys(raw,Samples.POLAR,recordKeys,recordKeys)
+ private fun decodeWithKeys(raw:String,samples:Samples,sampleKeys:Set<String>,recordKeys:Set<String>?=null):JSONObject {
+  val envelope=if(raw.contains("\"encoding\"") && raw.contains("\"gzip-base64\"")) JSONObject(raw) else null
   val input=if(envelope!=null) java.util.zip.GZIPInputStream(java.util.Base64.getDecoder().decode(envelope.getString("data")).inputStream()) else raw.byteInputStream()
   val bounded=object:java.io.FilterInputStream(input) {
    var count=0L
@@ -227,20 +211,21 @@ object HealthSnapshotStorage {
    override fun read():Int {val n=super.read();if(n>=0)checked(1);return n}
    override fun read(b:ByteArray,off:Int,len:Int)=checked(`in`.read(b,off,len))
   }
-  return com.google.gson.stream.JsonReader(java.io.InputStreamReader(bounded,Charsets.UTF_8)).use { read(it,samples,sampleKeys) as JSONObject }
+  return com.google.gson.stream.JsonReader(java.io.InputStreamReader(bounded,Charsets.UTF_8)).use { read(it,samples,sampleKeys,recordKeys=recordKeys) as JSONObject }
  }
- private fun read(reader:com.google.gson.stream.JsonReader,samples:Samples,sampleKeys:Set<String> = emptySet(),recordMap:Boolean=false):Any {
+ private fun read(reader:com.google.gson.stream.JsonReader,samples:Samples,sampleKeys:Set<String> = emptySet(),recordMap:Boolean=false,recordKeys:Set<String>?=null):Any {
   return when(reader.peek()) {
    com.google.gson.stream.JsonToken.BEGIN_OBJECT->{
     val result=JSONObject();reader.beginObject()
     while(reader.hasNext()) {
      val name=reader.nextName()
-     if(name=="samples" && samples==Samples.NONE) reader.skipValue()
-     else if(recordMap) result.put(name,read(reader,if(name in sampleKeys) Samples.ALL else Samples.NONE))
-     else result.put(name,read(reader,samples,sampleKeys,name=="records" && samples==Samples.POLAR))
+     if(recordMap && recordKeys!=null && name !in recordKeys)reader.skipValue()
+     else if(name=="samples" && samples==Samples.NONE) reader.skipValue()
+     else if(recordMap) result.put(name,read(reader,if(name in sampleKeys) Samples.ALL else Samples.NONE,recordKeys=recordKeys))
+     else result.put(name,read(reader,samples,sampleKeys,name=="records" && samples==Samples.POLAR,recordKeys))
     };reader.endObject();result
    }
-   com.google.gson.stream.JsonToken.BEGIN_ARRAY->{val result=JSONArray();reader.beginArray();while(reader.hasNext())result.put(read(reader,samples,sampleKeys));reader.endArray();result}
+   com.google.gson.stream.JsonToken.BEGIN_ARRAY->{val result=JSONArray();reader.beginArray();while(reader.hasNext())result.put(read(reader,samples,sampleKeys,recordKeys=recordKeys));reader.endArray();result}
    com.google.gson.stream.JsonToken.STRING->reader.nextString()
    com.google.gson.stream.JsonToken.NUMBER->{val n=reader.nextString();n.toLongOrNull() ?: java.math.BigDecimal(n)}
    com.google.gson.stream.JsonToken.BOOLEAN->reader.nextBoolean()
@@ -259,7 +244,7 @@ object HealthRecaps {
   val samples=mutableListOf<HeartSample>()
   if(!session.deleted) records.keys().asSequence().toList().sortedWith(compareBy<String>{records.getJSONObject(it).optString("modified_at")}.thenBy{it}).forEach { id -> val r=records.getJSONObject(id)
    if(r.optString("kind")=="heart_rate" && r.optString("source")==session.sourcePackage && !r.optBoolean("deleted")) {
-    val values=r.getJSONArray("samples");for(i in 0 until values.length()) { val item=values.getJSONObject(i);val at=Instant.parse(item.getString("time"));if(at>=session.start && at<=session.end) samples.add(HeartSample(at,item.getLong("bpm"))) }
+    val values=r.optJSONArray("samples") ?: return@forEach;for(i in 0 until values.length()) { val item=values.getJSONObject(i);val at=Instant.parse(item.getString("time"));if(at>=session.start && at<=session.end) samples.add(HeartSample(at,item.getLong("bpm"))) }
    }
   }
   return HeartRateZones.recap(session,samples)

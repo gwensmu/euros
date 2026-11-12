@@ -122,7 +122,7 @@ object PlanDisplay {
 @Composable fun TodayContent(records:List<Record>,dayPlan:DayPlan,onOpen:(Record)->Unit,onFood:()->Unit,repo:Repository,onMealLog:()->Unit=onFood) {
  val app=LocalContext.current.applicationContext as EurosApplication
  val linked by app.weekTracker.linked.collectAsState()
- val items=dayPlan.activities.map{it.record};val next=dayPlan.next?.record ?: PlanDisplay.nextHomeActivity(records,dayPlan.date)
+ val items=dayPlan.activities.map{it.record};val next=remember(records,dayPlan){dayPlan.next?.record ?: PlanDisplay.nextHomeActivity(records,dayPlan.date)}
  val pending=items.filter{!PlanDomain.resolved(it,records)}
  val agenda=if(pending.isNotEmpty())pending else listOfNotNull(next)
  if(agenda.isNotEmpty()) {
@@ -313,12 +313,15 @@ object PlanDisplay {
 }
 @Composable fun TrackerRecap(record:Record,repo:Repository) {
  val context=LocalContext.current;val service=remember{HealthImport(context,repo.dao)};val scope=rememberCoroutineScope()
+ var loading by remember(record.id){mutableStateOf(true)}
  var recap by remember(record.id){mutableStateOf<SessionRecap?>(null)};var candidates by remember(record.id){mutableStateOf<List<ImportedSession>>(emptyList())};var choosing by remember{mutableStateOf(false)};var error by remember{mutableStateOf<String?>(null)}
  val healthState by repo.dao.observeMeta(HealthImport.KEY).collectAsState(initial=null)
  LaunchedEffect(record.id,healthState){
+  loading=true
   try { recap=service.recap(record.id);error=null }
   catch(e:kotlinx.coroutines.CancellationException){throw e}
   catch(_:Exception){error="Couldn't read this workout. Refresh Health Connect in Settings."}
+  finally{loading=false}
  }
  recap?.let{r->
   if(r.session.deleted)Text("Linked workout removed from Health Connect",color=Color.Gray)
@@ -326,20 +329,22 @@ object PlanDisplay {
    SessionGraphic(r)
   }
   TextButton(onClick={scope.launch{try{service.unlink(record.id);recap=null}catch(e:kotlinx.coroutines.CancellationException){throw e}catch(_:Exception){error="Couldn’t unlink workout. Try again."}}}){Text("Unlink workout")}
- } ?: Text("No linked workout",color=Color.Gray)
+ } ?: Text(if(loading)"Loading workout…" else "No linked workout",color=Color.Gray)
  TextButton(onClick={scope.launch{try{candidates=service.candidates(record);choosing=true}catch(e:Exception){error=e.message}}}){Text("Choose workout")}
  if(choosing){if(candidates.isEmpty())Text("No workouts found. Refresh Health Connect in Settings.") else candidates.forEach{candidate->OutlinedButton(onClick={scope.launch{try{service.link(record.id,candidate.sourceKey);recap=service.recap(record.id);choosing=false}catch(e:Exception){error=e.message}}}){Text("${candidate.start.atZone(PlanDomain.zone).format(DateTimeFormatter.ofPattern("EEE h:mm a"))} · ${Duration.between(candidate.start,candidate.end).toMinutes()} min · ${if(candidate.sourcePackage.contains("polar"))"Polar" else if(candidate.sourcePackage=="com.fitbit.FitbitMobile")"Fitbit" else candidate.sourcePackage}")}}}
  error?.let{Text(it,color=MaterialTheme.colorScheme.error)}
 }
 
 @Composable fun ImportedWorkoutScreen(sourceKey:String,repo:Repository,onClose:()->Unit) {
- val context=LocalContext.current;var recap by remember(sourceKey){mutableStateOf<SessionRecap?>(null)}
+ val context=LocalContext.current;var loading by remember(sourceKey){mutableStateOf(true)};var recap by remember(sourceKey){mutableStateOf<SessionRecap?>(null)}
  var error by remember(sourceKey){mutableStateOf<String?>(null)}
  val healthState by repo.dao.observeMeta(HealthImport.KEY).collectAsState(initial=null)
  LaunchedEffect(sourceKey,healthState){
+  loading=true
   try {recap=HealthImport(context,repo.dao).recapForKey(sourceKey);error=null}
   catch(e:kotlinx.coroutines.CancellationException){throw e}
   catch(_:Exception){error="Couldn't read this workout. Refresh Health Connect in Settings."}
+  finally{loading=false}
  }
  Row(Modifier.fillMaxWidth(),horizontalArrangement=Arrangement.SpaceBetween){Text(PlanDisplay.trackerName(recap?.session?.sourcePackage.orEmpty(),recap?.session?.exerciseType),modifier=Modifier.weight(1f),style=MaterialTheme.typography.headlineMedium);IconButton(onClick=onClose){Icon(Icons.Outlined.Close,"Close")}}
  recap?.let{r->
@@ -347,7 +352,7 @@ object PlanDisplay {
   if(r.session.deleted)Text("Workout removed from Health Connect") else {
    SessionGraphic(r)
   }
- } ?: Text(error ?: "Workout unavailable")
+ } ?: Text(error ?: if(loading)"Loading workout…" else "Workout unavailable")
 }
 @Composable private fun SessionGraphic(r:SessionRecap) {
  val clock=DateTimeFormatter.ofPattern("h:mm a")

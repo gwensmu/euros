@@ -30,6 +30,7 @@ import java.time.LocalDate
 
 class EurosApplication:android.app.Application() {
  val repository by lazy { Repository(EurosDatabase.open(this)) }
+ val healthReads by lazy { HealthReadCache(repository.dao) }
  val connection by lazy { SyncConnection(repository,SecureEnrollmentStore(this),BackgroundSync(this),reconcile={
   ReminderScheduler(this,repository.dao).reconcile(repository.dao.recordsIncludingDeleted().filter{!it.deleted})
  }) }
@@ -153,8 +154,11 @@ class MainActivity:ComponentActivity() {
    }
   }
  }
- val mascotState=MascotRules.evaluate(records,java.time.Instant.now(),nextItem=PlanDomain.next(records,today),eventDate=LocalDate.parse(authoredPlan.json().getJSONObject("event").getString("date")))
- val mascotPose=reactionPose ?: mascotState.pose
+ val displayZone=PlanDomain.zone
+ val mascotState=remember(homeVisible,records,today,displayZone,java.time.Instant.now().epochSecond/30){
+  if(homeVisible)MascotRules.homeState(records,java.time.Instant.now(),today,displayZone,authoredPlan.eventDate) else null
+ }
+ val mascotPose=reactionPose ?: mascotState?.pose ?: MascotPose.IDLE
  val pageScroll=rememberScrollState()
  LaunchedEffect(tab,selected,settings,review,importedId,foodEditor,strengthFeedbackId){pageScroll.scrollTo(0)}
  val snackbar=remember{SnackbarHostState()}
@@ -199,15 +203,15 @@ class MainActivity:ComponentActivity() {
     else -> {
      if(!foodEditor && tab==RootTab.Today) PageTitle(tab,today,LocalDate.parse(week),foodDay,mascotPose)
      when(tab) {
-      RootTab.Today -> {SundayWrapUp(today){week=today.with(java.time.DayOfWeek.MONDAY).toString();review=true};TodayContent(records,authoredPlan.day(today,records),::open,{foodDate=today.toString();foodActivity=null;openFoodEntry=false;tab=RootTab.Food},repo,onMealLog={food()});MovementCard(repo,today)}
+      RootTab.Today -> {SundayWrapUp(today){week=today.with(java.time.DayOfWeek.MONDAY).toString();review=true};TodayContent(records,remember(authoredPlan,records,today,displayZone){authoredPlan.day(today,records,includeNutrition=false)},::open,{foodDate=today.toString();foodActivity=null;openFoodEntry=false;tab=RootTab.Food},repo,onMealLog={food()});MovementCard(repo,today)}
       RootTab.Week -> {
        Row(Modifier.fillMaxWidth(),horizontalArrangement=Arrangement.SpaceBetween){IconButton(onClick={week=LocalDate.parse(week).minusWeeks(1).toString()}){Icon(Icons.Outlined.ChevronLeft,"Previous week")};TextButton(modifier=Modifier.weight(1f).semantics{contentDescription="Open wrap-up for ${weekTitle(LocalDate.parse(week))}"},onClick={review=true}){Icon(Icons.Outlined.Insights,null,Modifier.size(20.dp));Spacer(Modifier.width(8.dp));Text(weekTitle(LocalDate.parse(week)),style=MaterialTheme.typography.titleMedium)};IconButton(onClick={week=LocalDate.parse(week).plusWeeks(1).toString()}){Icon(Icons.Outlined.ChevronRight,"Next week")}}
        WeekContent(records,LocalDate.parse(week),::open,repo,{importedId=it})
       }
       RootTab.Food -> {
        if(!foodEditor)Row(Modifier.fillMaxWidth(),horizontalArrangement=Arrangement.SpaceBetween){IconButton(onClick={foodDate=foodDay.minusDays(1).toString()}){Icon(Icons.Outlined.ChevronLeft,"Previous day")};TextButton(modifier=Modifier.weight(1f).semantics{contentDescription="${foodDay.format(java.time.format.DateTimeFormatter.ofPattern("EEEE, MMMM d"))}. Go to today"},onClick={foodDate=today.toString()}){Text(foodDay.format(java.time.format.DateTimeFormatter.ofPattern("EEE, MMM d")),style=MaterialTheme.typography.titleMedium)};IconButton(onClick={foodDate=foodDay.plusDays(1).toString()}){Icon(Icons.Outlined.ChevronRight,"Next day")}}
-       val dayPlan=authoredPlan.day(foodDay,records)
-       FoodScreen(repo,records,foodDay,dayPlan.nutrition,dayPlan.meals,mealChoices=FoodDomain.mealReferences(authoredPlan.json(),foodDay,records),mealChoicesForDate={date->FoodDomain.mealReferences(authoredPlan.json(),date,records)},openEntry=openFoodEntry,plannedActivityId=foodActivity,onEntryOpened={openFoodEntry=false},onEditorVisibility={foodEditor=it})
+       val dayPlan=remember(authoredPlan,records,foodDay,displayZone,LocalDate.now(PlanDomain.canonicalZone)){authoredPlan.foodDay(foodDay,records)}
+       FoodScreen(repo,records,foodDay,dayPlan.nutrition,dayPlan.meals,mealChoices=dayPlan.choices,mealChoicesForDate={date->authoredPlan.mealReferences(date,records)},openEntry=openFoodEntry,plannedActivityId=foodActivity,onEntryOpened={openFoodEntry=false},onEditorVisibility={foodEditor=it})
       }
      }
     }

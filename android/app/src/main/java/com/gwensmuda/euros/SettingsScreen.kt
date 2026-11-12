@@ -36,10 +36,8 @@ import java.time.LocalTime
    if(settings.quietStart!=null && settings.quietEnd!=null) "On · quiet ${settings.quietStart}–${settings.quietEnd}" else "On"
   } else "Off"
   healthSummary=withContext(Dispatchers.IO){runCatching {
-   repo.dao.meta(HealthImport.KEY)?.let { raw ->
-    val timestamp=HealthSnapshotStorage.decode(raw,HealthSnapshotStorage.Samples.NONE).optString("refreshed_at")
-    if(timestamp.isBlank()) "No imported records" else "Updated "+java.time.Instant.parse(timestamp).atZone(java.time.ZoneId.systemDefault()).format(java.time.format.DateTimeFormatter.ofPattern("MMM d · h:mm a"))
-   } ?: "No imported records"
+   val timestamp=HealthImport(context,repo.dao).refreshedAt()
+   if(timestamp.isBlank()) "No imported records" else "Updated "+java.time.Instant.parse(timestamp).atZone(java.time.ZoneId.systemDefault()).format(java.time.format.DateTimeFormatter.ofPattern("MMM d · h:mm a"))
   }.getOrDefault("Check connection")}
  }
  BackHandler(enabled=section!="Settings") { section="Settings" }
@@ -54,7 +52,8 @@ import java.time.LocalTime
    SettingsRow("Notifications",reminderSummary){section="Notifications"}
    val goal=plan.getJSONObject("goal")
    SettingsRow("Weight goal",if(goal.isNull("selectedGoalLb"))"Not set" else "${goal.get("selectedGoalLb")} lb"){section="Weight goal"}
-   val target=NutritionPolicy.targets(plan,records,java.time.LocalDate.now(PlanDomain.zone)) ?: org.json.JSONObject()
+   val targetDate=java.time.LocalDate.now(PlanDomain.zone)
+   val target=remember(plan,records,targetDate,java.time.LocalDate.now(PlanDomain.canonicalZone)){NutritionPolicy.targets(plan,records,targetDate)} ?: org.json.JSONObject()
    SettingsRow("Nutrition targets",if(target.isNull("kcal"))"Not set" else "Daily · ${target.get("kcal")} kcal"){section="Nutrition targets"}
    SettingsRow("Data","Export and restore"){section="Data"}
   }

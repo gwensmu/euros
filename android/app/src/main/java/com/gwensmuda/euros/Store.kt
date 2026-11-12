@@ -13,6 +13,7 @@ data class Record(val type:String, val id:String, val revision:Long, val payload
 data class Pending(@PrimaryKey val commandId:String, val type:String, val id:String, val expectedRevision:Long, val payload:String, val createdAt:Long=System.currentTimeMillis(), val error:String?=null, @ColumnInfo(defaultValue="'upsert'") val operation:String="upsert")
 @Entity(tableName="metadata")
 data class Metadata(@PrimaryKey val key:String, val value:String)
+data class HealthReadSource(val token:String?,val raw:String?,val unchanged:Boolean)
 data class RestoreResult(val imported:Int,val skipped:Int,val localImported:Int=0,val localSkipped:Int=0)
 data class ExportSnapshot(val records:List<Record>,val pending:List<Pending>,val metadata:List<Metadata>)
 @Dao interface EurosDao {
@@ -56,6 +57,11 @@ data class ExportSnapshot(val records:List<Record>,val pending:List<Pending>,val
   if(key!=HealthImport.KEY)return raw
   return HealthMetadataChunks.assemble(raw){rawMeta(it)}
  }
+ @Transaction suspend fun healthReadSource(knownToken:String?):HealthReadSource {
+  val token=rawMeta(HealthImport.KEY)
+  if(token==knownToken && HealthMetadataChunks.reusableToken(token))return HealthReadSource(token,null,true)
+  return HealthReadSource(token,token?.let{HealthMetadataChunks.assemble(it){key->rawMeta(key)}},false)
+ }
  fun observeMeta(key:String):Flow<String?> = observeRawMeta(key).map { raw ->
   if(key==HealthImport.KEY && raw!=null && HealthMetadataChunks.isManifest(raw))meta(key) else raw
  }
@@ -79,11 +85,13 @@ object HealthMetadataChunks {
  const val SIZE=500_000
  private const val ENCODING="metadata-chunks-v1"
  fun isManifest(raw:String)=raw.length<200 && runCatching{JSONObject(raw).optString("encoding")==ENCODING}.getOrDefault(false)
+ fun reusableToken(raw:String?):Boolean=raw==null || !isManifest(raw) || JSONObject(raw).optString("sha256").matches(Regex("[0-9a-f]{64}"))
+ private fun digest(raw:String)=java.security.MessageDigest.getInstance("SHA-256").digest(raw.toByteArray(Charsets.UTF_8)).joinToString(""){"%02x".format(it)}
  fun split(raw:String):List<Metadata> {
   if(raw.length<=SIZE)return listOf(Metadata(HealthImport.KEY,raw))
   val parts=raw.chunked(SIZE)
   require(parts.size<=32){"Imported history exceeds local storage limit"}
-  val header=JSONObject().put("encoding",ENCODING).put("count",parts.size).put("length",raw.length).toString()
+  val header=JSONObject().put("encoding",ENCODING).put("count",parts.size).put("length",raw.length).put("sha256",digest(raw)).toString()
   return listOf(Metadata(HealthImport.KEY,header))+parts.mapIndexed{i,part->Metadata(PREFIX+i,part)}
  }
  suspend fun assemble(raw:String,read:suspend (String)->String?):String {

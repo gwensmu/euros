@@ -46,8 +46,10 @@ import kotlinx.coroutines.launch
  }
  if(section=="Nutrition targets") {
   val today=java.time.LocalDate.now(PlanDomain.zone)
-  val target=NutritionPolicy.targets(plan,records,today) ?: org.json.JSONObject()
-  val maintenance=NutritionPolicy.maintenanceStart(plan,records)?.let{it<=today}==true
+  val display=remember(plan,records,today,java.time.LocalDate.now(PlanDomain.canonicalZone)){
+   (NutritionPolicy.targets(plan,records,today) ?: org.json.JSONObject()) to (NutritionPolicy.maintenanceStart(plan,records)?.let{it<=today}==true)
+  }
+  val target=display.first;val maintenance=display.second
   Text(if(maintenance) "Maintenance" else "Daily",style=MaterialTheme.typography.titleMedium)
   Text("${if(target.isNull("kcal")) "—" else target.get("kcal")} kcal",style=MaterialTheme.typography.headlineMedium)
   Row(Modifier.fillMaxWidth(),horizontalArrangement=Arrangement.SpaceBetween) {

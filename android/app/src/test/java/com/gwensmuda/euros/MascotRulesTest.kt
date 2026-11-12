@@ -98,4 +98,10 @@ class MascotRulesTest {
   assertEquals(MascotPose.IDLE,MascotRules.evaluate(emptyList(),now,zone,eventDate=event.minusDays(15)).pose)
   assertEquals(MascotPose.SLEEP,MascotRules.evaluate(listOf(action("done","done")),now,zone,eventDate=event).pose)
  }
+ @Test fun homeProjectionPreservesDispositionAndContext() {
+  val records=listOf(action("first","skipped"),action("next",kind="weights"),action("old","done",at="2026-10-13T08:00:00-05:00"))
+  val day=now.atZone(zone).toLocalDate()
+  val next=records.first{it.id=="next"}
+  assertEquals(MascotRules.evaluate(records,now,zone,next),MascotRules.homeState(records,now,day,zone))
+ }
 }

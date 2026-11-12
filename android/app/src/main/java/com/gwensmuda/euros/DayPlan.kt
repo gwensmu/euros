@@ -17,6 +17,8 @@ data class DayPlan(val date:LocalDate,val activities:List<PlannedItem>,val meals
  }
 }
 
+data class FoodDayPlan(val meals:List<FoodMealReference>,val choices:List<FoodMealReference>,val nutrition:JSONObject?)
+
 object DayPlanComposer {
  fun item(record:Record,records:List<Record>):PlannedItem {
   val payload=PlanDomain.payload(record)
@@ -42,15 +44,24 @@ object DayPlanComposer {
    it.getString("id")==phaseId && !date.isBefore(LocalDate.parse(it.getString("start"))) && !date.isAfter(LocalDate.parse(it.getString("end")))
   }
  }
- fun compose(plan:JSONObject,records:List<Record>,date:LocalDate):DayPlan {
-  val activities=PlanDomain.onDay(records,date).map{item(it,records)}
+ fun compose(plan:JSONObject,records:List<Record>,date:LocalDate,includeNutrition:Boolean=true):DayPlan {
+  val agenda=WeekAgenda.project(records,date)
+  val activities=agenda.onDay(date).map{item(it,agenda.rowRecords(it))}
   val applies=inPhase(plan,date)
   val savedMeals=FoodDomain.savedMealPlan(records,date)
   val hasBjj=activities.any{it.kind==PlanItemKind.BJJ}
   val meals=if(applies || savedMeals!=null) FoodDomain.mealReferences(plan,date,records).filter { meal ->
    when(meal.appliesWhen) {"every_day"->true;"bjj_day"->hasBjj;else->false}
   } else emptyList()
-  val nutrition=NutritionPolicy.targets(plan,records,date)
+  val nutrition=if(includeNutrition)NutritionPolicy.targets(plan,records,date) else null
   return DayPlan(date,activities,meals,nutrition)
+ }
+ fun food(plan:JSONObject,records:List<Record>,date:LocalDate):FoodDayPlan {
+  val hasBjj=records.any { r ->
+   r.type=="activities" && !r.deleted && JSONObject(r.payload).let{p->p.optString("parent_id").isBlank() && p.optString("kind")=="bjj" && PlanDomain.day(r)==date}
+  }
+  val choices=FoodDomain.mealReferences(plan,date,records)
+  val meals=if(inPhase(plan,date) || FoodDomain.savedMealPlan(records,date)!=null)choices.filter{it.appliesWhen=="every_day" || it.appliesWhen=="bjj_day" && hasBjj} else emptyList()
+  return FoodDayPlan(meals,choices,NutritionPolicy.targets(plan,records,date))
  }
 }

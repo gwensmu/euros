@@ -112,13 +112,19 @@ object WeightDisplay {
  val healthSnapshot by repo.dao.observeMeta(HealthImport.KEY).collectAsState(initial=null)
  var chartRecords by remember{mutableStateOf(records)}
  LaunchedEffect(records,healthSnapshot){
-  try { chartRecords=WeightDisplay.merge(repo.dao.recordsIncludingDeleted(),HealthImport(chartContext,repo.dao).weightCandidates()) }
+  try { chartRecords=kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.Default){WeightDisplay.merge(repo.dao.recordsIncludingDeleted(),HealthImport(chartContext,repo.dao).weightCandidates())} }
   catch(e:kotlinx.coroutines.CancellationException){throw e}
   catch(_:Exception){chartRecords=records}
  }
  var weighing by rememberSaveable(week.toString()){mutableStateOf(false)}
  val canGenerate=WeeklyReviewCache.canGenerate(week,LocalDate.now(PlanDomain.zone))
- val fingerprint=WeeklyReviewCache.fingerprint(week,records,LocalDate.now(PlanDomain.zone))
+ val coverageDate=LocalDate.now(PlanDomain.zone)
+ val fingerprintState=remember(week){mutableStateOf<String?>(null)}
+ LaunchedEffect(week,records,coverageDate){
+  fingerprintState.value=null
+  fingerprintState.value=kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.Default){WeeklyReviewCache.fingerprint(week,records,coverageDate)}
+ }
+ val fingerprint=fingerprintState.value
  val cached by repo.dao.observeMeta(WeeklyReviewCache.key(week)).collectAsState(initial=null)
  val jobRaw by repo.dao.observeMeta(WeeklyReviewWork.key(week)).collectAsState(initial=null)
  val job=remember(jobRaw){jobRaw?.let{runCatching{JSONObject(it)}.getOrNull()}}
@@ -169,7 +175,7 @@ object WeightDisplay {
    }
   }
  }
- if(response!=null && responseFingerprint!=fingerprint && !generating) Text("Logs updated since this recap. Refresh for the latest.",style=MaterialTheme.typography.bodySmall,color=EurosColors.Muted)
+ if(response!=null && fingerprint!=null && responseFingerprint!=fingerprint && !generating) Text("Logs updated since this recap. Refresh for the latest.",style=MaterialTheme.typography.bodySmall,color=EurosColors.Muted)
  response?.let { review ->
   SelectionContainer {
    Column(verticalArrangement=Arrangement.spacedBy(18.dp)) {

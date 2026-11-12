@@ -70,7 +70,8 @@ import java.time.format.DateTimeFormatter
  val editing=creating || editingId!=null
  LaunchedEffect(editing) {onEditorVisibility(editing)}
  DisposableEffect(Unit) {onDispose {onEditorVisibility(false)}}
- val entries=FoodDomain.entries(records,date)
+ val entries=remember(records,date){FoodDomain.entries(records,date)}
+ val totals=remember(entries){FoodDomain.summaryFromEntries(entries)}
  if(editing) {
   val existing=editingId?.let{id->records.find{it.type=="food_entries" && it.id==id && !it.deleted}}
   if(!creating && existing==null) {
@@ -83,8 +84,8 @@ import java.time.format.DateTimeFormatter
   return
  }
  Column(verticalArrangement=Arrangement.spacedBy(12.dp)) {
-  NutritionWidget(FoodDomain.summary(records,date),targets){creating=true;editingId=null;entryActivityId=null}
-  key(date) { RemainingMeals(repo,records,date,mealReferences) }
+  NutritionWidget(totals,targets){creating=true;editingId=null;entryActivityId=null}
+  key(date) { RemainingMeals(repo,entries,date,mealReferences) }
   if(entries.isNotEmpty()) {
    TextButton(onClick={expanded=!expanded},contentPadding=PaddingValues(0.dp)) {
     Text("Entries · ${entries.size}");Spacer(Modifier.width(8.dp));Icon(if(expanded) Icons.Outlined.ExpandLess else Icons.Outlined.ExpandMore,null)
@@ -276,7 +277,7 @@ import java.time.format.DateTimeFormatter
 }
 
 @OptIn(ExperimentalMaterial3Api::class)
-@Composable private fun RemainingMeals(repo:Repository,records:List<Record>,date:LocalDate,meals:List<FoodMealReference>) {
+@Composable private fun RemainingMeals(repo:Repository,entries:List<Record>,date:LocalDate,meals:List<FoodMealReference>) {
  val dismissed by remember(repo,date){repo.observeDismissedMeals(date)}.collectAsState(initial=emptySet())
  val scope=rememberCoroutineScope();val snackbar=remember{SnackbarHostState()}
  fun dismiss(meal:FoodMealReference) {scope.launch {
@@ -290,7 +291,7 @@ import java.time.format.DateTimeFormatter
   IconButton(onClick={scope.launch{try{repo.restoreDismissedMeals(date)}catch(e:CancellationException){throw e}catch(_:Exception){snackbar.showSnackbar("Couldn't restore meals")}}}){Icon(Icons.Outlined.Undo,"Restore dismissed meals")}
  }
  SnackbarHost(snackbar)
- val remaining=FoodDomain.remainingReferences(meals,records,date,dismissed)
+ val remaining=remember(meals,entries,dismissed){FoodDomain.remainingReferencesFromEntries(meals,entries,dismissed)}
  if(remaining.isEmpty())Text("No remaining meals planned",color=MaterialTheme.colorScheme.onSurfaceVariant)
  remaining.forEach { meal -> key(meal.id) {
   val swipe=rememberSwipeToDismissBoxState(confirmValueChange={value->if(value!=SwipeToDismissBoxValue.Settled)dismiss(meal);false})

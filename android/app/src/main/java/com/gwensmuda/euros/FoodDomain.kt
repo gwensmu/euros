@@ -194,8 +194,9 @@ object FoodDomain {
  fun entries(records:List<Record>,date:LocalDate):List<Record> = records.filter{it.type=="food_entries"}
   .groupBy{it.id}.values.map{duplicates->duplicates.maxWith(compareBy<Record>{it.revision}.thenBy{it.deleted})}
   .filter{!it.deleted && JSONObject(it.payload).optString("local_date")==date.toString()}.sortedByDescending{JSONObject(it.payload).optString("consumed_at")}
- fun summary(records:List<Record>,date:LocalDate):NutritionTotals {
-  val nutrients=entries(records,date).map { JSONObject(it.payload).optJSONObject("nutrients") }
+ fun summary(records:List<Record>,date:LocalDate):NutritionTotals=summaryFromEntries(entries(records,date))
+ fun summaryFromEntries(entries:List<Record>):NutritionTotals {
+  val nutrients=entries.map { JSONObject(it.payload).optJSONObject("nutrients") }
   fun sum(key:String):NutrientTotal {
    val known=nutrients.map { it?.let { numeric(it,key) } }
    val numbers=known.filterNotNull()
@@ -204,7 +205,10 @@ object FoodDomain {
   return NutritionTotals(sum("kcal"),sum("protein_g"),sum("carbs_g"),sum("fat_g"),nutrients.size)
  }
  fun remainingReferences(references:List<FoodMealReference>,records:List<Record>,date:LocalDate,dismissed:Set<String> = emptySet()):List<FoodMealReference> {
-  val fulfilled=entries(records,date).mapNotNull{nullableString(JSONObject(it.payload),"meal_reference_id")}.toSet()
+  return remainingReferencesFromEntries(references,entries(records,date),dismissed)
+ }
+ fun remainingReferencesFromEntries(references:List<FoodMealReference>,entries:List<Record>,dismissed:Set<String>):List<FoodMealReference> {
+  val fulfilled=entries.mapNotNull{nullableString(JSONObject(it.payload),"meal_reference_id")}.toSet()
   return references.filter{it.id !in fulfilled && it.id !in dismissed}
  }
  fun nextMeal(references:List<FoodMealReference>,records:List<Record>,date:LocalDate,dismissed:Set<String>,now:java.time.LocalTime):FoodMealReference? {

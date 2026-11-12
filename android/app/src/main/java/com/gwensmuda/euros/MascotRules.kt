@@ -13,6 +13,12 @@ data class MascotState(val disposition:MascotDisposition,val pose:MascotPose,val
 
 /** Recomputed from current records; no calorie, weight, overdue-item or persisted judgment state. */
 object MascotRules {
+ fun homeState(records:List<Record>,now:Instant,today:LocalDate,zone:ZoneId=PlanDomain.zone,eventDate:LocalDate?=null):MascotState {
+  val agenda=WeekAgenda.project(records,today,zone)
+  val next=agenda.onDay(today).firstOrNull{!PlanDomain.resolved(it,agenda.rowRecords(it))}
+  return evaluate(records,now,zone,next,eventDate)
+ }
+
  fun completionPose(type:String,payload:JSONObject):MascotPose = when {
   type=="food_entries" -> MascotPose.SNACK
   type=="activities" -> when {
