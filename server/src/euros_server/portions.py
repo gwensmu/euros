@@ -4,6 +4,8 @@ Protein, carb and fat items scale by role within per-item bounds; fixed items (f
 vegetables, milk) keep their template amounts. Hitting the three macros hits calories,
 since the accepted tiers are internally consistent. Results are rounded to cookable steps.
 """
+from .domain import MACROS
+
 ROLE_MACRO = {'protein': 'proteinG', 'carb': 'carbohydrateG', 'fat': 'fatG'}
 # Bounds as multiples of the template amount, unless the template item sets min_g/max_g.
 ROLE_BOUNDS = {'protein': (.6, 1.6), 'carb': (.4, 2.5), 'fat': (0, 3), 'fixed': (1, 1)}
@@ -27,7 +29,7 @@ def _bounds(item, food):
 
 
 def _totals(items, foods):
-    return {m: sum(foods[i['food_id']]['per100g'][m] * i['grams'] / 100 for i in items) for m in ('kcal', *WEIGHT)}
+    return {m: sum(foods[i['food_id']]['per100g'][m] * i['grams'] / 100 for i in items) for m in MACROS}
 
 
 def _error(items, foods, targets):
@@ -41,7 +43,7 @@ def _error(items, foods, targets):
 
 def balance(meals, foods, targets):
     """Mutates item grams in place. meals: [{'items': [{'food_id', 'grams', min_g?, max_g?}]}]."""
-    targets = {m: target_value(targets[m]) for m in ('kcal', *WEIGHT)}
+    targets = {m: target_value(targets[m]) for m in MACROS}
     items = [i for m in meals for i in m['items']]
     for i in items:
         i.setdefault('base', i['grams'])

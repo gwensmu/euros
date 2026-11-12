@@ -35,4 +35,14 @@ class MealPlanTest {
   val badRange=payload();badRange.getJSONObject("nutrition_targets").put("fatG",JSONObject().put("min",60).put("max",50))
   assertThrows(IllegalArgumentException::class.java){RecordValidation.validate("meal_plans",badRange)}
  }
+ @Test fun retiredMaintenanceMealsNeverReplaceThePlansMeals() {
+  // Maintenance only changes targets. Even with qualifying weigh-ins, the plan's one set of meals shows.
+  val p=payload().put("date","2026-11-19").put("maintenance_meals",JSONArray().put(JSONObject().put("id","bigger").put("title","Bigger").put("foods",JSONArray())))
+  val plan=Record("meal_plans","meal-plan-2026-11-19",1,p.toString())
+  val weights=(2..8).map{d->val date="2026-11-%02d".format(d)
+   Record("weight_entries",date,1,JSONObject().put("local_date",date).put("weight_lb","150").put("measured_at","${date}T08:00:00-06:00").toString())}
+  val meals=FoodDomain.mealReferences(fallback(),LocalDate.parse("2026-11-19"),weights+plan)
+  assertEquals(listOf("breakfast","lunch","dinner","recovery-snack"),meals.map{it.id})
+ }
+
 }

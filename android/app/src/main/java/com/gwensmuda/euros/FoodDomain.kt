@@ -232,12 +232,8 @@ object FoodDomain {
   return expected!=actual
  }
  fun mealReferences(plan:JSONObject,date:LocalDate?=null,records:List<Record> = emptyList()):List<FoodMealReference> {
-  val dated=date?.let { day ->
-   val saved=savedMealPlan(records,day)
-   val start=NutritionPolicy.maintenanceStart(plan,records)
-   val maintenance=start!=null && start<=LocalDate.now(PlanDomain.zone) && day>=start && day>=NutritionPolicy.effective
-   (if(maintenance)saved?.optJSONArray("maintenance_meals") else null) ?: saved?.optJSONArray("meals")
-  }
+  // One set of meals per dated plan; the weight phase only changes targets, never which meals show.
+  val dated=date?.let { day -> savedMealPlan(records,day)?.optJSONArray("meals") }
   val references=dated ?: plan.optJSONArray("mealTargets") ?: JSONArray()
   return (0 until references.length()).map { index -> val item=references.getJSONObject(index)
    val foods=item.optJSONArray("foods")

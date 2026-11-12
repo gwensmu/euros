@@ -7,14 +7,15 @@ import json
 import re
 from datetime import datetime, timezone
 
-from .domain import DomainError, canonical, number
+from .domain import MACROS, DomainError, canonical, number
 from . import catalog_seed
 
 KINDS = ('food', 'template')
 ROLES = ('protein', 'carb', 'fat', 'fixed')
 BASES = ('cooked', 'raw', 'dry', 'as_sold')
 SLOTS = ('breakfast', 'lunch', 'dinner', 'recovery-snack', 'pre-training')
-MACROS = ('kcal', 'proteinG', 'carbohydrateG', 'fatG')
+# Purchase fields added after the first seeding; see Catalog._backfill_purchase_units.
+BACKFILLED = {'unit', 'staple'}
 IDENTIFIER = re.compile(r'^[a-z][a-z0-9_]{0,59}$')
 
 
@@ -30,6 +31,41 @@ def _flag(value, field):
     return value
 
 
+def _pack(value):
+    """How a countable unit is sold in bulk: a dozen eggs, an 8-pack of tortillas.
+
+    count is how many units one pack holds, so the grocery list can round a count up to
+    something a shelf actually offers while still naming the units the user recognises.
+    """
+    if not isinstance(value, dict) or not {'name', 'count'} <= set(value) <= {'name', 'plural', 'count'}:
+        raise DomainError('invalid_catalog_field', field='purchase.unit.pack',
+                          required=['name', 'count'], optional=['plural'])
+    count = number(value['count'], 'purchase.unit.pack.count', positive=True)
+    if int(count) != count or not 2 <= count <= 60:
+        raise DomainError('invalid_catalog_field', field='purchase.unit.pack.count')
+    name = _text(value['name'], 'purchase.unit.pack.name', 60)
+    return dict(name=name, plural=_text(value.get('plural', name + 's'), 'purchase.unit.pack.plural', 60), count=int(count))
+
+
+def _unit(value):
+    """A countable purchase unit: one egg, one banana, one bag/can/tub of a given size.
+
+    grams is the bought grams one unit contributes, in the same form as purchase.form,
+    so the grocery list can report counts instead of raw gram totals. An optional pack says
+    the unit is only sold in multiples (eggs by the dozen).
+    """
+    allowed = {'name', 'plural', 'grams', 'pack'}
+    if not isinstance(value, dict) or not {'name', 'grams'} <= set(value) <= allowed:
+        raise DomainError('invalid_catalog_field', field='purchase.unit', required=['name', 'grams'],
+                          optional=['plural', 'pack'])
+    grams = number(value['grams'], 'purchase.unit.grams', positive=True)
+    if not 1 <= grams <= 5000:
+        raise DomainError('invalid_catalog_field', field='purchase.unit.grams')
+    name = _text(value['name'], 'purchase.unit.name', 60)
+    return dict(name=name, plural=_text(value.get('plural', name + 's'), 'purchase.unit.plural', 60), grams=float(grams),
+                **({'pack': _pack(value['pack'])} if 'pack' in value else {}))
+
+
 def validate_food(p):
     allowed = {'name', 'per100g', 'role', 'basis', 'step_g', 'batch_cook', 'purchase', 'source', 'active'}
     if not isinstance(p, dict) or not {'name', 'per100g', 'role'} <= set(p) <= allowed:
@@ -43,14 +79,16 @@ def validate_food(p):
     if p['role'] not in ROLES:
         raise DomainError('invalid_catalog_field', field='role', allowed=list(ROLES))
     purchase = p.get('purchase', {})
-    if not isinstance(purchase, dict) or not set(purchase) <= {'form', 'cooked_yield'}:
+    if not isinstance(purchase, dict) or not set(purchase) <= {'form', 'cooked_yield', 'unit', 'staple'}:
         raise DomainError('invalid_catalog_field', field='purchase')
     if 'cooked_yield' in purchase and not 0 < number(purchase['cooked_yield'], 'cooked_yield') <= 5:
         raise DomainError('invalid_catalog_field', field='purchase.cooked_yield')
     out = dict(name=_text(p['name'], 'name'), per100g={k: float(per[k]) for k in MACROS}, role=p['role'],
                basis=p.get('basis', 'cooked'), step_g=p.get('step_g', 5), batch_cook=_flag(p.get('batch_cook', False), 'batch_cook'),
                purchase={**({'form': _text(purchase['form'], 'purchase.form')} if 'form' in purchase else {}),
-                         **({'cooked_yield': float(purchase['cooked_yield'])} if 'cooked_yield' in purchase else {})},
+                         **({'cooked_yield': float(purchase['cooked_yield'])} if 'cooked_yield' in purchase else {}),
+                         **({'unit': _unit(purchase['unit'])} if 'unit' in purchase else {}),
+                         **({'staple': _flag(purchase['staple'], 'purchase.staple')} if 'staple' in purchase else {})},
                source=_text(p.get('source', 'agent-entered estimate'), 'source'), active=_flag(p.get('active', True), 'active'))
     if out['basis'] not in BASES:
         raise DomainError('invalid_catalog_field', field='basis', allowed=list(BASES))
@@ -88,6 +126,26 @@ def validate_template(p, foods):
                 use_up=_flag(p.get('use_up', False), 'use_up'), active=_flag(p.get('active', True), 'active'))
 
 
+def _seeds():
+    """Built-ins in stored form: validated exactly like an agent edit, so stored built-ins and
+    edits have one shape (defaults such as unit plurals filled in) and a bad seed fails startup."""
+    for identity, raw in catalog_seed.FOODS.items():
+        yield 'food', identity, validate_food(raw)
+    for identity, raw in catalog_seed.TEMPLATES.items():
+        yield 'template', identity, validate_template(raw, catalog_seed.FOODS)
+
+
+def _write(db, kind, identity, revision, payload, now, only_if_missing=False):
+    """Store a catalog revision and its history entry together.
+
+    only_if_missing inserts atomically or not at all, so concurrent startups seed once.
+    """
+    verb = 'INSERT OR IGNORE' if only_if_missing else 'INSERT OR REPLACE'
+    if db.execute(f'{verb} INTO catalog_items VALUES (?,?,?,?,?)', (kind, identity, revision, canonical(payload), now)).rowcount:
+        db.execute('INSERT INTO catalog_history(kind,id,revision,payload,updated_at) VALUES (?,?,?,?,?)',
+                   (kind, identity, revision, canonical(payload), now))
+
+
 class Catalog:
     def __init__(self, store):
         self.store = store
@@ -102,12 +160,29 @@ class Catalog:
             ''')
             now = datetime.now(timezone.utc).isoformat()
             # Insert built-ins only when missing; never overwrite a stored edit.
-            for kind, seed in (('food', catalog_seed.FOODS), ('template', catalog_seed.TEMPLATES)):
-                for identity, payload in seed.items():
-                    if db.execute('INSERT OR IGNORE INTO catalog_items VALUES (?,?,1,?,?)',
-                                  (kind, identity, canonical(payload), now)).rowcount:
-                        db.execute('INSERT INTO catalog_history(kind,id,revision,payload,updated_at) VALUES (?,?,1,?,?)',
-                                   (kind, identity, canonical(payload), now))
+            for kind, identity, payload in _seeds():
+                _write(db, kind, identity, 1, payload, now, only_if_missing=True)
+            self._backfill_purchase_fields(db, now)
+
+    @staticmethod
+    def _backfill_purchase_fields(db, now):
+        """Give already-seeded built-in foods the purchase unit/staple flag they predate, and only that.
+
+        Databases seeded before these fields existed hold the old built-in at revision 1, and
+        built-ins are never reinserted, so the fields would never arrive. Only a food still
+        identical to its old built-in is updated, as a normal revisioned edit; any food the
+        owner has touched keeps their version untouched.
+        """
+        for identity, raw in catalog_seed.FOODS.items():
+            if not set(raw.get('purchase', {})) & BACKFILLED:
+                continue
+            row = db.execute("SELECT revision, payload FROM catalog_items WHERE kind='food' AND id=?", (identity,)).fetchone()
+            if not row:
+                continue
+            old = {**raw, 'purchase': {k: v for k, v in raw['purchase'].items() if k not in BACKFILLED}}
+            # Older servers stored built-ins as written; newer ones store them validated.
+            if json.loads(row['payload']) in (old, validate_food(old)):
+                _write(db, 'food', identity, row['revision'] + 1, validate_food(raw), now)
 
     def snapshot(self):
         with self.store.connect() as db:
@@ -138,8 +213,5 @@ class Catalog:
                                                                      'payload': json.loads(row['payload']) if row else None})
             if row and json.loads(row['payload']) == clean:
                 return {'kind': kind, 'id': identity, 'revision': current, 'payload': clean, 'changed': False}
-            now = datetime.now(timezone.utc).isoformat()
-            db.execute('INSERT OR REPLACE INTO catalog_items VALUES (?,?,?,?,?)', (kind, identity, current + 1, canonical(clean), now))
-            db.execute('INSERT INTO catalog_history(kind,id,revision,payload,updated_at) VALUES (?,?,?,?,?)',
-                       (kind, identity, current + 1, canonical(clean), now))
+            _write(db, kind, identity, current + 1, clean, datetime.now(timezone.utc).isoformat())
             return {'kind': kind, 'id': identity, 'revision': current + 1, 'payload': clean, 'changed': True}

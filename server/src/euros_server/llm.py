@@ -5,13 +5,12 @@ import os
 from datetime import date, datetime, timedelta
 from decimal import Decimal
 from pathlib import Path
-from zoneinfo import ZoneInfo
 
 import httpx
 
 from .domain import DomainError, NUTRIENTS, TYPES, canonical, instant, number, validate_payload
+from .localtime import ZONE
 
-ZONE = ZoneInfo("America/Chicago")
 PROMPT_VERSION = "euros-2026-11-02-v11"
 
 

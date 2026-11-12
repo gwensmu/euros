@@ -3,7 +3,7 @@ import hashlib
 import json
 import sqlite3
 from contextlib import contextmanager, nullcontext
-from datetime import date, datetime, timezone, timedelta
+from datetime import date, datetime, time, timezone, timedelta
 from decimal import Decimal, InvalidOperation
 from pathlib import Path
 from .nutrition_policy import resolve as resolve_nutrition
@@ -62,49 +62,99 @@ def plan_quantity(value, field):
         raise DomainError("invalid_plan_quantity", field=field)
 
 
-def validate_meal_plan(payload):
+MACROS = ("kcal", "proteinG", "carbohydrateG", "fatG")
+# A planned portion; larger values are authoring mistakes, not meals.
+MAX_ITEM_GRAMS = 5000
+
+
+def parse_local_date(value, error):
+    """A strict YYYY-MM-DD local date, or DomainError(error)."""
     try:
-        day = date.fromisoformat(payload["date"])
-        if day.isoformat() != payload["date"]:
+        day = date.fromisoformat(value)
+        if day.isoformat() != value:
             raise ValueError()
-    except (KeyError, TypeError, ValueError):
-        raise DomainError("invalid_plan_date") from None
+    except (TypeError, ValueError):
+        raise DomainError(error) from None
+    return day
+
+
+def _validate_item(item):
+    """A structured ingredient: what grocery lists and prep aggregate, so it must be usable.
+
+    Extra fields are preserved (agents may annotate); the fields others compute from are checked.
+    """
+    if not isinstance(item, dict):
+        raise DomainError("invalid_plan_item")
+    food_id = item.get("food_id")
+    if not isinstance(food_id, str) or not 1 <= len(food_id) <= 60:
+        raise DomainError("invalid_plan_item", field="food_id")
+    if "grams" not in item or number(item["grams"], "grams", positive=True) > MAX_ITEM_GRAMS:
+        raise DomainError("invalid_plan_item", field="grams", food_id=food_id)
+    if "food_revision" in item and (type(item["food_revision"]) is not int or item["food_revision"] < 1):
+        raise DomainError("invalid_plan_item", field="food_revision", food_id=food_id)
+    if "per100g" in item:
+        per = item["per100g"]
+        if not isinstance(per, dict) or set(per) != set(MACROS):
+            raise DomainError("invalid_plan_item", field="per100g", food_id=food_id)
+        for key in MACROS:
+            number(per[key], key)
+
+
+def _validate_meal(meal):
+    if not isinstance(meal, dict):
+        raise DomainError("invalid_plan_meal")
+    for key, maximum in (("id", 100), ("title", 200)):
+        if not isinstance(meal.get(key), str) or not 1 <= len(meal[key].strip()) <= maximum:
+            raise DomainError("invalid_plan_meal", field=key)
+    foods = meal.get("foods")
+    if not isinstance(foods, list) or len(foods) > 30 or any(not isinstance(food, str) or not 1 <= len(food.strip()) <= 1000 for food in foods):
+        raise DomainError("invalid_plan_foods")
+    for key in MACROS:
+        plan_quantity(meal.get(key), key)
+    local_time = meal.get("localTime")
+    if local_time is not None:
+        try:
+            if not isinstance(local_time, str) or time.fromisoformat(local_time).strftime("%H:%M") != local_time:
+                raise ValueError()
+        except ValueError:
+            raise DomainError("invalid_meal_time") from None
+    if meal.get("appliesWhen") not in ("every_day", "bjj_day"):
+        raise DomainError("invalid_meal_applicability")
+    items = meal.get("items")
+    if items is not None:
+        if not isinstance(items, list) or len(items) > 30:
+            raise DomainError("invalid_plan_items", meal_id=meal["id"])
+        for item in items:
+            _validate_item(item)
+    for flag in ("batch", "use_up"):
+        if flag in meal and not isinstance(meal[flag], bool):
+            raise DomainError("invalid_plan_meal", field=flag)
+
+
+def _validate_meals(meals, error):
+    if not isinstance(meals, list) or not 1 <= len(meals) <= 30:
+        raise DomainError(error)
+    identities = set()
+    for meal in meals:
+        _validate_meal(meal)
+        if meal["id"] in identities:
+            raise DomainError("duplicate_plan_meal")
+        identities.add(meal["id"])
+
+
+def validate_meal_plan(payload):
+    if not isinstance(payload, dict):
+        raise DomainError("invalid_plan_date")
+    parse_local_date(payload.get("date"), "invalid_plan_date")
     reference = payload.get("reference_day")
     if not isinstance(reference, str) or not 1 <= len(reference.strip()) <= 80:
         raise DomainError("invalid_reference_day")
     targets = payload.get("nutrition_targets")
-    if not isinstance(targets, dict) or set(targets) != {"kcal", "proteinG", "carbohydrateG", "fatG"}:
+    if not isinstance(targets, dict) or set(targets) != set(MACROS):
         raise DomainError("invalid_nutrition_targets")
     for key, value in targets.items():
         plan_quantity(value, key)
-    meals = payload.get("meals")
-    if not isinstance(meals, list) or not 1 <= len(meals) <= 30:
-        raise DomainError("invalid_plan_meals")
-    identities = set()
-    for meal in meals:
-        if not isinstance(meal, dict):
-            raise DomainError("invalid_plan_meal")
-        for key, maximum in (("id", 100), ("title", 200)):
-            if not isinstance(meal.get(key), str) or not 1 <= len(meal[key].strip()) <= maximum:
-                raise DomainError("invalid_plan_meal", field=key)
-        if meal["id"] in identities:
-            raise DomainError("duplicate_plan_meal")
-        identities.add(meal["id"])
-        foods = meal.get("foods")
-        if not isinstance(foods, list) or len(foods) > 30 or any(not isinstance(food, str) or not 1 <= len(food.strip()) <= 1000 for food in foods):
-            raise DomainError("invalid_plan_foods")
-        for key in ("kcal", "proteinG", "carbohydrateG", "fatG"):
-            plan_quantity(meal.get(key), key)
-        local_time = meal.get("localTime")
-        if local_time is not None:
-            from datetime import time
-            try:
-                if not isinstance(local_time, str) or time.fromisoformat(local_time).strftime("%H:%M") != local_time:
-                    raise ValueError()
-            except ValueError:
-                raise DomainError("invalid_meal_time") from None
-        if meal.get("appliesWhen") not in ("every_day", "bjj_day"):
-            raise DomainError("invalid_meal_applicability")
+    _validate_meals(payload.get("meals"), "invalid_plan_meals")
 
 
 def validate_payload(kind, p):
@@ -306,33 +356,22 @@ class Store:
         return {"records": [self.record(r) for r in rows]}
 
     def meal_plan(self, local_date):
-        try:
-            if date.fromisoformat(local_date).isoformat() != local_date:
-                raise ValueError()
-        except (TypeError, ValueError):
-            raise DomainError("invalid_local_date") from None
+        parse_local_date(local_date, "invalid_local_date")
         with self.connect() as db:
             row = db.execute("SELECT * FROM records WHERE entity_type='meal_plans' AND entity_id=? AND deleted=0",
                              ("meal-plan-" + local_date,)).fetchone()
         return {"local_date": local_date, "record": self.record(row)}
 
     def meal_plans(self, date_from, date_to):
-        try:
-            start, end = date.fromisoformat(date_from), date.fromisoformat(date_to)
-            if start.isoformat() != date_from or end.isoformat() != date_to or not 0 <= (end - start).days <= 30:
-                raise ValueError()
-        except (TypeError, ValueError):
-            raise DomainError("invalid_plan_date_range") from None
+        start, end = parse_local_date(date_from, "invalid_plan_date_range"), parse_local_date(date_to, "invalid_plan_date_range")
+        if not 0 <= (end - start).days <= 30:
+            raise DomainError("invalid_plan_date_range")
         records = self.records("meal_plans")["records"]
         return {"date_from": date_from, "date_to": date_to,
                 "records": [record for record in records if date_from <= record["payload"]["date"] <= date_to]}
 
     def nutrition(self, local_date):
-        try:
-            if date.fromisoformat(local_date).isoformat() != local_date:
-                raise ValueError()
-        except (TypeError, ValueError):
-            raise DomainError("invalid_local_date")
+        parse_local_date(local_date, "invalid_local_date")
         entries = [r for r in self.records("food_entries")["records"] if r["payload"]["local_date"] == local_date]
         totals = {}
         for k in NUTRIENTS:

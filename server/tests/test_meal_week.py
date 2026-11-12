@@ -9,6 +9,7 @@ from euros_server.app import create_app
 from euros_server.domain import DomainError, Store
 from euros_server.meal_planning import preview
 from euros_server.meal_week import MealWeeks
+from euros_server.nutrition_policy import TIERS
 
 TODAY = date(2026, 11, 9)
 WEEK = '2026-11-16'
@@ -103,7 +104,7 @@ def test_apply_week_atomic_idempotent_and_never_logs_food(store, weeks):
     assert store.records('food_entries')['records'] == []
     saved = store.meal_plan('2026-11-19')['record']['payload']
     preview(saved)
-    assert saved['maintenance_meals'] and saved['training_basis'] == 'saved-schedule'
+    assert 'maintenance_meals' not in saved and saved['training_basis'] == 'saved-schedule'
     preps = [r for r in store.records('activities')['records'] if r['payload']['kind'] == 'prep']
     assert {r['entity_id'] for r in preps} == {f"prep-{p['date']}" for p in draft['preps']}
     assert all(r['payload']['status'] == 'pending' and r['payload']['covered_meals'] for r in preps)
@@ -222,9 +223,6 @@ def test_portions_balance_every_tier_including_maintenance(store, weeks):
     assert tiers == {'recovery', 'bjj', 'lifting', 'double'}
     weeks.apply(draft['draft_id'])
     saved = store.meal_plan('2026-12-03')['record']['payload']
-    target, maintenance = saved['nutrition_targets'], saved['maintenance_planned_totals']
-    assert abs(maintenance['kcal'] - target['kcal'] - 200) <= 50
-    assert abs(maintenance['proteinG'] - saved['planned_totals']['proteinG']) <= 15
     item = saved['meals'][0]['items'][0]
     assert {'food_id', 'grams', 'food_revision', 'per100g'} <= set(item) and 'min_g' not in item
 
@@ -268,6 +266,18 @@ def test_switched_off_entries_leave_rotation_but_stay_stored(weeks):
     ('food', dict(name='x', per100g=dict(kcal=100, proteinG=1, carbohydrateG=1), role='protein'), 'invalid_catalog_field'),
     ('food', dict(name='x', per100g=dict(kcal=100, proteinG=1, carbohydrateG=1, fatG=1), role='dessert'), 'invalid_catalog_field'),
     ('food', dict(name='x', per100g=dict(kcal=100, proteinG=101, carbohydrateG=1, fatG=1), role='protein'), 'invalid_catalog_field'),
+    ('food', dict(name='x', per100g=dict(kcal=100, proteinG=1, carbohydrateG=1, fatG=1), role='protein',
+                  purchase=dict(unit=dict(name='can'))), 'invalid_catalog_field'),
+    ('food', dict(name='x', per100g=dict(kcal=100, proteinG=1, carbohydrateG=1, fatG=1), role='protein',
+                  purchase=dict(unit=dict(name='can', grams=0))), 'invalid_quantity'),
+    ('food', dict(name='x', per100g=dict(kcal=100, proteinG=1, carbohydrateG=1, fatG=1), role='protein',
+                  purchase=dict(unit=dict(name='can', grams=200, size='big'))), 'invalid_catalog_field'),
+    ('food', dict(name='x', per100g=dict(kcal=100, proteinG=1, carbohydrateG=1, fatG=1), role='protein',
+                  purchase=dict(staple='yes')), 'invalid_catalog_field'),
+    ('food', dict(name='x', per100g=dict(kcal=100, proteinG=1, carbohydrateG=1, fatG=1), role='protein',
+                  purchase=dict(unit=dict(name='egg', grams=50, pack=dict(name='dozen', count=12.5)))), 'invalid_catalog_field'),
+    ('food', dict(name='x', per100g=dict(kcal=100, proteinG=1, carbohydrateG=1, fatG=1), role='protein',
+                  purchase=dict(unit=dict(name='egg', grams=50, pack=dict(count=12)))), 'invalid_catalog_field'),
     ('template', dict(title='x', slots=['brunch'], items=[dict(food_id='oats', grams=50)]), 'invalid_catalog_field'),
     ('template', dict(title='x', slots=['breakfast'], items=[dict(food_id='tofu', grams=50)]), 'unknown_food'),
     ('template', dict(title='x', slots=['breakfast'], items=[dict(food_id='oats', grams=50, max_g=40)]), 'invalid_template_item'),
@@ -296,3 +306,40 @@ def test_mcp_catalog_edit(store):
         template = dict(title='Skyr + berries', slots=['recovery-snack'], items=[dict(food_id='skyr', grams=200), dict(food_id='berries', grams=100)])
         result, saved = call('upsert_template', {'template_id': 'skyr_berries', 'template': template, 'expected_revision': 0}, 4)
         assert not result.get('isError') and saved['payload']['active'] is True
+
+
+def qualify_for_maintenance(store, through=8):
+    for d in range(through - 6, through + 1):
+        day = f'2026-11-{d:02d}'
+        store.command(dict(command_id=day, entity_type='weight_entries', entity_id=day, expected_revision=0,
+                           operation='upsert', payload=dict(local_date=day, weight_lb=150, measured_at=day + 'T08:00:00-06:00')))
+
+
+def test_drafts_balance_to_the_days_target_whatever_its_reason(store, weeks):
+    loss = weeks.draft(WEEK, today=TODAY)
+    qualify_for_maintenance(store)
+    maintained = weeks.draft(WEEK, today=TODAY)
+    for before, after in zip(loss['days'], maintained['days']):
+        tier = TIERS[after['tier']]
+        # The target is the policy's answer for the date; drafting only balances to it.
+        assert after['targets']['kcal'] == tier['kcal'] + 200 and before['targets'] == tier
+        # Public example catalog keeps extra active recipes; allow 5 kcal for its portion rounding.
+        assert abs(after['planned_totals']['kcal'] - after['targets']['kcal']) <= 55
+        assert after['planned_totals']['kcal'] > before['planned_totals']['kcal']
+    weeks.apply(maintained['draft_id'])
+    saved = store.meal_plan('2026-11-19')['record']['payload']
+    # One set of meals; the plan keeps its tier as the base the policy adjusts.
+    assert 'maintenance_meals' not in saved and saved['nutrition_targets'] == TIERS[saved['reference_day']]
+    assert store.nutrition('2026-11-19')['targets'] == maintained['days'][3]['targets']
+
+
+def test_redraft_drops_retired_maintenance_fields(store, weeks):
+    applied = weeks.apply(weeks.draft(WEEK, today=TODAY)['draft_id'])
+    record = store.meal_plan('2026-11-19')['record']
+    legacy = {**record['payload'], 'maintenance_meals': record['payload']['meals'],
+              'maintenance_planned_totals': record['payload']['planned_totals'], 'note': 'keep me'}
+    store.command(dict(command_id='legacy', entity_type='meal_plans', entity_id=record['entity_id'],
+                       expected_revision=record['revision'], operation='upsert', payload=legacy))
+    weeks.apply(weeks.draft(WEEK, dates=['2026-11-19'], today=TODAY)['draft_id'])
+    saved = store.meal_plan('2026-11-19')['record']['payload']
+    assert 'maintenance_meals' not in saved and 'maintenance_planned_totals' not in saved and saved['note'] == 'keep me'

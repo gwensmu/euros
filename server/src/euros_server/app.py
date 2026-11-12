@@ -101,7 +101,7 @@ def create_app(store, api_token, mcp_token, public_hosts=(), model_service=None)
     @mcp.tool(annotations=ToolAnnotations(readOnlyHint=True, destructiveHint=False, idempotentHint=False, openWorldHint=False))
     def draft_week(week_start: str, dates: list[str] | None = None, swaps: list[dict] | None = None,
                    avoid_foods: list[str] | None = None) -> CallToolResult:
-        """Draft a Mon–Sun meal week from planned training tiers and templates; saves nothing.
+        """Draft a Mon–Sun meal week balanced to each day's nutrition targets; saves nothing.
 
         week_start is a Monday (YYYY-MM-DD). Optional dates limits the draft to those days.
         Today and past days are skipped. Translate the user's requests:
@@ -126,8 +126,12 @@ def create_app(store, api_token, mcp_token, public_hosts=(), model_service=None)
 
         week_start is a Monday (YYYY-MM-DD). Only applied plans count — draft first, apply_week,
         then list. Days without a saved plan appear in missing_dates, never filled in. Cooked/dry
-        planning grams use the effective loss/maintenance portions and convert to the catalog's
-        purchase form via cooked_yield. Text-only meals, missing maintenance variants and foods
+        planning grams come from each saved plan's meals and convert to the catalog's
+        purchase form via cooked_yield, then to whole store units via the catalog's purchase.unit
+        (buy_count/buy_unit, e.g. 12 eggs or 2 cans of black beans), rounded up to whole packs where a food is sold in multiples; read buy_text to
+        the user rather than bare grams. Foods with no known pack size are sold loose by weight and
+        say so. Pantry staples (oil, rice, pasta, oats...) are not quantified: present check_stock
+        as one "check stock — may need replenishment" line. Text-only meals and foods
         that cannot be converted are listed under unresolved, never guessed. Meals from
         use_up templates consume existing inventory and are excluded. No pantry subtraction yet:
         tell the user to strike items they already have.
@@ -142,8 +146,13 @@ def create_app(store, api_token, mcp_token, public_hosts=(), model_service=None)
         """Add or edit a planning food; expected_revision is 0 for new, else the revision from meal_planning_context.
 
         food: name, per100g {kcal, proteinG, carbohydrateG, fatG}, role (protein/carb/fat/fixed),
-        optional basis (cooked/raw/dry/as_sold), step_g, batch_cook, purchase {form, cooked_yield},
-        source, active. Set active false to stop drafting it; true to switch it back on.
+        optional basis (cooked/raw/dry/as_sold), step_g, batch_cook,
+        purchase {form, cooked_yield, unit {name, plural?, grams, pack? {name, plural?, count}}, staple}, source, active.
+        purchase.unit is how it is bought — {'name': 'egg', 'grams': 50} or
+        {'name': '1 kg bag of dry rice', 'grams': 1000} — and makes grocery lists count units
+        instead of grams; omit it for foods weighed loose at the counter. Add unit.pack when the
+        unit is only sold in multiples, e.g. {'name': 'dozen', 'plural': 'dozen', 'count': 12} for eggs. staple true marks a
+        shelf-stable pantry item that grocery lists only flag to check stock. Set active false to stop drafting it; true to switch it back on.
         Prefer label values when the user has them and name the label in source. Saved plans keep their snapshots.
         """
         return tool_result(lambda: meal_weeks.catalog.upsert('food', food_id, food, expected_revision))

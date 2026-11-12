@@ -2,11 +2,10 @@
 import hashlib
 import json
 from datetime import date, datetime, timezone, timedelta
-from zoneinfo import ZoneInfo
 from .domain import DomainError, canonical, instant, MAX_SQLITE_INTEGER
+from .localtime import ZONE
 
 POLAR = 'fi.polar.polarflow'
-ZONE = ZoneInfo('America/Chicago')
 MAX_SAMPLES = 20000
 PERSONAL_ZONE_PROFILE = {
     'id': 'personal-polar-2026-10-14',

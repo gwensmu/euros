@@ -2,9 +2,9 @@
 import threading
 import time
 from datetime import datetime
-from zoneinfo import ZoneInfo
 from starlette.responses import JSONResponse
 from .domain import DomainError
+from .localtime import ZONE
 
 
 class BodyLimit:
@@ -55,7 +55,7 @@ class LimitedProvider:
 
     def reserve(self, kind):
         now = self.clock()
-        day = datetime.fromtimestamp(now, ZoneInfo('America/Chicago')).date().isoformat()
+        day = datetime.fromtimestamp(now, ZONE).date().isoformat()
         with self.store.connect() as db:
             db.execute('BEGIN IMMEDIATE')
             if kind not in self.limits:
