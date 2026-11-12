@@ -173,16 +173,18 @@ object PlanDisplay {
   }
  }
 }
-@Composable fun WeekContent(records:List<Record>,authoredPlan:AuthoredPlan,week:LocalDate,onOpen:(Record)->Unit,repo:Repository,onImported:(String)->Unit) {
+@Composable fun WeekContent(records:List<Record>,week:LocalDate,onOpen:(Record)->Unit,repo:Repository,onImported:(String)->Unit) {
  val app=LocalContext.current.applicationContext as EurosApplication
  val tracker by app.weekTracker.state.collectAsState()
  val linked by app.weekTracker.linked.collectAsState()
- val imported=remember(tracker,week){tracker.filter{val date=it.session.start.atZone(PlanDomain.zone).toLocalDate();date>=week && date<week.plusWeeks(1)}}
+ val zone=PlanDomain.zone
+ val agenda=remember(records,week,zone){WeekAgenda.project(records,week,zone)}
+ val imported=remember(tracker,week,zone){tracker.filter{val date=it.session.start.atZone(zone).toLocalDate();date>=week && date<week.plusWeeks(1)}}
  var expanded by rememberSaveable(week.toString()){mutableStateOf<String?>(PlanDisplay.initialExpanded(week,LocalDate.now(PlanDomain.zone)))}
  Column {
   for(offset in 0L..6L) {
    val date=week.plusDays(offset);val open=expanded==date.toString()
-   val activities=authoredPlan.day(date,records).activities.map{it.record}
+   val activities=agenda.onDay(date)
    val sessions=imported.filter{it.session.start.atZone(PlanDomain.zone).toLocalDate()==date}
    Row(Modifier.fillMaxWidth().semantics{stateDescription=if(open)"Expanded" else "Collapsed"}.clickable{expanded=if(open)null else date.toString()}.padding(vertical=12.dp),verticalAlignment=Alignment.CenterVertically){
     Surface(color=if(date==LocalDate.now(PlanDomain.zone))MaterialTheme.colorScheme.primaryContainer else Color(0xFFF3F5F7),shape=RoundedCornerShape(12.dp)) {
@@ -198,7 +200,7 @@ object PlanDisplay {
     Icon(if(open)Icons.Outlined.ExpandLess else Icons.Outlined.ExpandMore,if(open)"Collapse ${date.dayOfWeek}" else "Expand ${date.dayOfWeek}",modifier=Modifier.size(20.dp))
    }
    if(open) Column(Modifier.padding(bottom=8.dp)) {
-    activities.forEach{activity->PlanRow(activity,records,onOpen,repo,linkedWorkout=linked[activity.id]);PlanDomain.children(activity,records).forEach{step->PlanRow(step,records,onOpen,repo)}}
+    activities.forEach{activity->PlanRow(activity,agenda.rowRecords(activity),onOpen,repo,linkedWorkout=linked[activity.id]);agenda.childrenOf(activity).forEach{step->PlanRow(step,agenda.rowRecords(step),onOpen,repo)}}
     sessions.forEach{item->val session=item.session;Row(Modifier.fillMaxWidth().clickable{onImported(session.sourceKey)}.padding(vertical=14.dp),verticalAlignment=Alignment.CenterVertically){
      ActivityGlyph("bjj");Spacer(Modifier.width(12.dp));Column(Modifier.weight(1f)){Text(PlanDisplay.trackerName(session.sourcePackage,session.exerciseType),style=MaterialTheme.typography.titleSmall);Text("${session.start.atZone(PlanDomain.zone).format(DateTimeFormatter.ofPattern("h:mm a"))} · ${Duration.between(session.start,session.end).toMinutes()} min",style=MaterialTheme.typography.bodySmall)};Icon(Icons.Filled.CheckCircle,"Imported workout",tint=Accent)
     }}
