@@ -5,6 +5,7 @@ import androidx.health.connect.client.HealthConnectClient
 import androidx.health.connect.client.permission.HealthPermission
 import androidx.health.connect.client.records.ExerciseSessionRecord
 import androidx.health.connect.client.records.WeightRecord
+import androidx.health.connect.client.records.metadata.DataOrigin
 import androidx.health.connect.client.records.HeartRateRecord
 import androidx.health.connect.client.records.Record as HealthRecord
 import androidx.health.connect.client.request.ReadRecordsRequest
@@ -32,7 +33,7 @@ data class HealthImportSummary(val sessions:Int,val heartRateRecords:Int,val mes
 class HealthImport(private val context:Context,private val dao:EurosDao) {
  companion object { const val KEY="health_import_v1";private val mutex=Mutex() }
  private val reads=(context.applicationContext as? EurosApplication)?.takeIf{it.repository.dao===dao}?.healthReads ?: HealthReadCache(dao)
- private suspend fun state(samples:HealthSnapshotStorage.Samples=HealthSnapshotStorage.Samples.ALL)=withContext(Dispatchers.Default){dao.meta(KEY)?.let{HealthSnapshotStorage.decode(it,samples)} ?: JSONObject().put("schema",1).put("records",JSONObject()).put("links",JSONObject())}
+ private suspend fun state(samples:HealthSnapshotStorage.Samples=HealthSnapshotStorage.Samples.PACKED)=withContext(Dispatchers.Default){dao.meta(KEY)?.let{HealthSnapshotStorage.decode(it,samples)} ?: JSONObject().put("schema",1).put("records",JSONObject()).put("links",JSONObject())}
  suspend fun refresh(days:Int=7):HealthImportSummary {
   require(days in 1..30)
   val end=Instant.now();return refreshFrom(end.minus(Duration.ofDays(days.toLong())),end)
@@ -43,20 +44,20 @@ class HealthImport(private val context:Context,private val dao:EurosDao) {
   check(HealthConnectClient.getSdkStatus(context)==HealthConnectClient.SDK_AVAILABLE){"Health Connect unavailable"}
   val client=HealthConnectClient.getOrCreate(context);val granted=client.permissionController.getGrantedPermissions()
   val current=state();val messages=mutableListOf<String>()
-  suspend fun <T:HealthRecord> read(type:KClass<T>,kind:String,readStart:Instant=start,encode:(T)->JSONObject) {
+  suspend fun <T:HealthRecord> read(type:KClass<T>,kind:String,readStart:Instant=start,sourcePackage:String?=null,encode:(T)->JSONObject) {
    if(HealthPermission.getReadPermission(type) !in granted) { messages.add("$kind access not granted");return }
    val snapshot=mutableListOf<JSONObject>();var token:String?=null;var pages=0
    do {
-    val page=client.readRecords(ReadRecordsRequest(type,TimeRangeFilter.between(readStart,end),pageSize=1000,pageToken=token))
+    val page=client.readRecords(ReadRecordsRequest(type,TimeRangeFilter.between(readStart,end),pageSize=100,pageToken=token,dataOriginFilter=sourcePackage?.let{setOf(DataOrigin(it))} ?: emptySet()))
     page.records.forEach{snapshot.add(encode(it).put("kind",kind).put("source",it.metadata.dataOrigin.packageName).put("source_id",it.metadata.id).put("modified_at",it.metadata.lastModifiedTime.toString()).put("deleted",false))}
     token=page.pageToken;pages++
-   } while(token!=null && pages<20)
+   } while(token!=null && pages<200)
    // Never reconcile a truncated snapshot: absence would not prove deletion.
    check(token==null){"Too many $kind records; use a smaller import window"}
-   HealthSnapshots.reconcile(current.getJSONObject("records"),kind,readStart,end,snapshot)
+   HealthSnapshots.reconcile(current.getJSONObject("records"),kind,readStart,end,snapshot,sourcePackage)
   }
   read(ExerciseSessionRecord::class,"exercise") { r -> JSONObject().put("start",r.startTime.toString()).put("end",r.endTime.toString()).put("start_offset",r.startZoneOffset?.toString() ?: JSONObject.NULL).put("end_offset",r.endZoneOffset?.toString() ?: JSONObject.NULL).put("exercise_type",r.exerciseType).put("title",r.title ?: JSONObject.NULL) }
-  read(HeartRateRecord::class,"heart_rate") { r -> JSONObject().put("start",r.startTime.toString()).put("end",r.endTime.toString()).put("samples",JSONArray().apply{r.samples.forEach{put(JSONObject().put("time",it.time.toString()).put("bpm",it.beatsPerMinute))}}) }
+  read(HeartRateRecord::class,"heart_rate",sourcePackage=HealthSources.POLAR) { r -> JSONObject().put("start",r.startTime.toString()).put("end",r.endTime.toString()).put("samples",HealthSnapshotStorage.packSamples { writer -> r.samples.forEach{writer.beginObject().name("time").value(it.time.toString()).name("bpm").value(it.beatsPerMinute).endObject()} }) }
   read(WeightRecord::class,"weight",end.minus(Duration.ofDays(30))) { r -> JSONObject().put("start",r.time.toString()).put("end",r.time.toString()).put("weight_lb",r.weight.inPounds).put("original_kg",r.weight.inKilograms).put("zone_offset",r.zoneOffset?.toString() ?: JSONObject.NULL) }
   applyMatches(current)
   current.put("refreshed_at",end.toString());dao.meta(Metadata(KEY,HealthSnapshotStorage.encodeHealth(current)))
@@ -130,11 +131,11 @@ object HealthSnapshots {
  // Caller orders records oldest correction first. A newer same-source sample replaces its timestamp.
  fun deduplicateSamples(samples:List<HeartSample>)=samples.asReversed().distinctBy{it.time}.sortedBy{it.time}
  fun key(record:JSONObject)=record.getString("kind")+":"+record.getString("source")+":"+record.getString("source_id")
- fun reconcile(records:JSONObject,kind:String,start:Instant,end:Instant,snapshot:List<JSONObject>) {
+ fun reconcile(records:JSONObject,kind:String,start:Instant,end:Instant,snapshot:List<JSONObject>,sourcePackage:String?=null) {
   val incoming=snapshot.associateBy{key(it)}
   records.keys().asSequence().toList().forEach { id -> val r=records.getJSONObject(id)
    // Only fully covered intervals can be tombstoned by a bounded snapshot. Preserve older history.
-   if(r.getString("kind")==kind && Instant.parse(r.getString("start"))>=start && Instant.parse(r.getString("start"))<end && Instant.parse(r.getString("end"))<=end && id !in incoming) r.put("deleted",true)
+   if(r.getString("kind")==kind && (sourcePackage==null || r.optString("source")==sourcePackage) && Instant.parse(r.getString("start"))>=start && Instant.parse(r.getString("start"))<end && Instant.parse(r.getString("end"))<=end && id !in incoming) r.put("deleted",true)
   }
   incoming.forEach{(id,r)->records.put(id,r)}
  }
@@ -164,7 +165,15 @@ object HealthSources {
 
 /** Compact snapshots keep large HR series below Android's per-row CursorWindow bound. */
 object HealthSnapshotStorage {
- enum class Samples { ALL, POLAR, NONE }
+ enum class Samples { ALL, POLAR, NONE, PACKED }
+ // Mutation paths change record metadata/links, never individual historical HR samples.
+ // Keep their arrays as validated JSON text instead of hundreds of thousands of JSON objects.
+ internal class PackedSamples internal constructor(internal val json:String)
+ internal fun packSamples(writeItems:(com.google.gson.stream.JsonWriter)->Unit):PackedSamples {
+  val buffer=java.io.StringWriter()
+  com.google.gson.stream.JsonWriter(buffer).use{writer->writer.beginArray();writeItems(writer);writer.endArray()}
+  return PackedSamples(buffer.toString())
+ }
  fun encodeHealth(state:JSONObject)=encode(state,16_000_000)
  fun encode(state:JSONObject,maxEncodedSize:Int=1_500_000,maxDecodedBytes:Long=50_000_000):String {
   val buffer=java.io.ByteArrayOutputStream()
@@ -182,6 +191,7 @@ object HealthSnapshotStorage {
  }
  private fun write(writer:com.google.gson.stream.JsonWriter,value:Any?) {
   when(value) {
+   is PackedSamples->writer.jsonValue(value.json)
    is JSONObject->{writer.beginObject();value.keys().forEach{writer.name(it);write(writer,value.get(it))};writer.endObject()}
    is JSONArray->{writer.beginArray();for(i in 0 until value.length())write(writer,value.get(i));writer.endArray()}
    is Number->writer.value(value)
@@ -213,6 +223,18 @@ object HealthSnapshotStorage {
   }
   return com.google.gson.stream.JsonReader(java.io.InputStreamReader(bounded,Charsets.UTF_8)).use { read(it,samples,sampleKeys,recordKeys=recordKeys) as JSONObject }
  }
+ // Preserve sample JSON without allocating a JSONObject for each observation.
+ private fun copyJson(reader:com.google.gson.stream.JsonReader,writer:com.google.gson.stream.JsonWriter) {
+  when(reader.peek()) {
+   com.google.gson.stream.JsonToken.BEGIN_OBJECT->{reader.beginObject();writer.beginObject();while(reader.hasNext()){writer.name(reader.nextName());copyJson(reader,writer)};reader.endObject();writer.endObject()}
+   com.google.gson.stream.JsonToken.BEGIN_ARRAY->{reader.beginArray();writer.beginArray();while(reader.hasNext())copyJson(reader,writer);reader.endArray();writer.endArray()}
+   com.google.gson.stream.JsonToken.STRING->writer.value(reader.nextString())
+   com.google.gson.stream.JsonToken.NUMBER->writer.jsonValue(reader.nextString())
+   com.google.gson.stream.JsonToken.BOOLEAN->writer.value(reader.nextBoolean())
+   com.google.gson.stream.JsonToken.NULL->{reader.nextNull();writer.nullValue()}
+   else->error("Invalid tracker sample")
+  }
+ }
  private fun read(reader:com.google.gson.stream.JsonReader,samples:Samples,sampleKeys:Set<String> = emptySet(),recordMap:Boolean=false,recordKeys:Set<String>?=null):Any {
   return when(reader.peek()) {
    com.google.gson.stream.JsonToken.BEGIN_OBJECT->{
@@ -221,6 +243,10 @@ object HealthSnapshotStorage {
      val name=reader.nextName()
      if(recordMap && recordKeys!=null && name !in recordKeys)reader.skipValue()
      else if(name=="samples" && samples==Samples.NONE) reader.skipValue()
+     else if(name=="samples" && samples==Samples.PACKED) {
+      // Copy one item at a time; preserve arbitrary sample fields, nulls and numeric precision.
+      result.put(name,packSamples{writer->reader.beginArray();while(reader.hasNext())copyJson(reader,writer);reader.endArray()})
+     }
      else if(recordMap) result.put(name,read(reader,if(name in sampleKeys) Samples.ALL else Samples.NONE,recordKeys=recordKeys))
      else result.put(name,read(reader,samples,sampleKeys,name=="records" && samples==Samples.POLAR,recordKeys))
     };reader.endObject();result

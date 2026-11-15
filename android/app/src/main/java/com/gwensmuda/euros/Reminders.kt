@@ -67,9 +67,8 @@ class ReminderScheduler(private val context:Context,private val dao:EurosDao,pri
   val zone=PlanDomain.zone;val date=now.atZone(zone).toLocalDate();val settings=settings()
   if(!settings.enabled)return emptyList()
   val plan=AuthoredPlan(context).json()
-  val snapshot=dao.meta(HealthImport.KEY)?.let{HealthSnapshotStorage.decode(it,HealthSnapshotStorage.Samples.NONE)}
-  val links=snapshot?.optJSONObject("links");val imported=snapshot?.optJSONObject("records")
-  val ends=links?.keys()?.asSequence()?.mapNotNull{id->val r=imported?.optJSONObject(links.getString(id));if(r!=null && !r.optBoolean("deleted") && r.optString("kind")=="exercise") id to Instant.parse(r.getString("end")) else null}?.toMap() ?: emptyMap()
+  val reads=(context.applicationContext as? EurosApplication)?.takeIf{it.repository.dao===dao}?.healthReads ?: HealthReadCache(dao)
+  val ends=reads.linkedEnds()
   return (-1L..7L).flatMap{offset->val day=date.plusDays(offset)
    RichReminderRules.plans(records,settings,day,zone,FoodDomain.mealReferences(plan,day,records),MealDismissals.decode(dao.meta("dismissed_meals:$day")),ends)
   }

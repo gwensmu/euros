@@ -19,6 +19,8 @@ data class ExportSnapshot(val records:List<Record>,val pending:List<Pending>,val
 @Dao interface EurosDao {
  @Query("SELECT * FROM records") suspend fun recordsIncludingDeleted():List<Record>
  @Query("SELECT * FROM metadata") suspend fun rawMetadata():List<Metadata>
+ // Select before loading: unrelated tracker chunks must never enter small cache/job scans.
+ @Query("SELECT * FROM metadata WHERE substr(`key`,1,length(:prefix))=:prefix") suspend fun metadataWithPrefix(prefix:String):List<Metadata>
  @Transaction suspend fun allMetadata():List<Metadata> {
   val rows=rawMetadata()
   val index=rows.associate{it.key to it.value}
@@ -97,7 +99,8 @@ object HealthMetadataChunks {
  suspend fun assemble(raw:String,read:suspend (String)->String?):String {
   if(!isManifest(raw))return raw
   val header=JSONObject(raw);val count=header.getInt("count");require(count in 1..32)
-  return buildString { repeat(count){append(read(PREFIX+it) ?: error("Tracker history chunk missing"))} }
+  require(header.getInt("length") in 1..16_000_000){"Imported history exceeds local storage limit"}
+  return buildString(header.getInt("length")) { repeat(count){append(read(PREFIX+it) ?: error("Tracker history chunk missing"))} }
    .also{check(it.length==header.getInt("length")){"Tracker history length mismatch"}}
  }
 }

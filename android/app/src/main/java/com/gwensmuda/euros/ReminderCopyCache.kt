@@ -26,7 +26,7 @@ class ReminderCopyCache(private val context:Context,private val dao:EurosDao) {
     val api=app.repository.reminderApi ?: break
     try {
      dao.meta(Metadata(RETRY+plan.contextKey,(System.currentTimeMillis()+3_600_000).toString()))
-     val recent=dao.allMetadata().filter{it.key.startsWith(PREFIX)}.mapNotNull{runCatching{JSONObject(it.value)}.getOrNull()}.sortedByDescending{it.optLong("cached_at")}.take(8).map{it.optString("joke_id")}.filter{it.isNotBlank()}.distinct()
+     val recent=dao.metadataWithPrefix(PREFIX).mapNotNull{runCatching{JSONObject(it.value)}.getOrNull()}.sortedByDescending{it.optLong("cached_at")}.take(8).map{it.optString("joke_id")}.filter{it.isNotBlank()}.distinct()
      val response=api.request("/v1/reminders/copy",JSONObject().put("kind",plan.kind).put("context_key",plan.contextKey).put("allow_skip_joke",plan.allowSkipJoke).put("facts",plan.facts).put("recent_joke_ids",JSONArray(recent)))
      require(response.getString("context_key")==plan.contextKey && response.getString("prompt_version")=="weasel-reminders-v1")
      require(response.getString("joke").length<=250)
@@ -37,7 +37,7 @@ class ReminderCopyCache(private val context:Context,private val dao:EurosDao) {
    }
    // Regenerable cache only; never export it or touch domain records.
    val cutoff=System.currentTimeMillis()-7*86_400_000L
-   dao.allMetadata().filter{it.key.startsWith(PREFIX) || it.key.startsWith(RETRY)}.forEach { item ->
+   (dao.metadataWithPrefix(PREFIX)+dao.metadataWithPrefix(RETRY)).forEach { item ->
     val timestamp=if(item.key.startsWith(PREFIX))runCatching{JSONObject(item.value).optLong("cached_at")}.getOrDefault(0) else item.value.toLongOrNull() ?: 0
     if(timestamp<cutoff)dao.removeMeta(item.key)
    }

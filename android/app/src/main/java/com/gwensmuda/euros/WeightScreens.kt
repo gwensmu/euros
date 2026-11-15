@@ -109,7 +109,7 @@ object WeightDisplay {
 }
 @Composable fun WeeklyReview(repo:Repository,records:List<Record>,week:LocalDate,onGenerate:((LocalDate,List<Record>)->Unit)?=null,onClose:()->Unit) {
  val chartContext=LocalContext.current
- val healthSnapshot by repo.dao.observeMeta(HealthImport.KEY).collectAsState(initial=null)
+ val healthSnapshot by repo.dao.observeRawMeta(HealthImport.KEY).collectAsState(initial=null)
  var chartRecords by remember{mutableStateOf(records)}
  LaunchedEffect(records,healthSnapshot){
   try { chartRecords=kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.Default){WeightDisplay.merge(repo.dao.recordsIncludingDeleted(),HealthImport(chartContext,repo.dao).weightCandidates())} }

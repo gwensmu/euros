@@ -29,4 +29,29 @@ class HealthSnapshotProjectionTest {
    assertEquals(12.5,result.getDouble("decimal"),0.0);assertEquals("a\n\"b",result.getString("text"))
   }
  }
+ @Test fun mutationProjectionPreservesOpaqueSamplesThroughLinkAndRecordChanges() {
+  val sample=JSONObject().put("time","2026-10-30T12:00:00Z").put("bpm",70).put("annotation","a\n\"b").put("missing",JSONObject.NULL).put("precision",java.math.BigDecimal("0.123456789123456789"))
+  val original=JSONObject().put("schema",1).put("records",JSONObject()
+   .put("old",JSONObject().put("samples",JSONArray().apply{repeat(40000){put(sample)}}).put("kind","heart_rate").put("source",HealthSources.FITBIT)))
+   .put("links",JSONObject()).put("auto_link_exclusions",JSONObject().put("activity",JSONObject().put("other",true)))
+  for(raw in listOf(original.toString(),HealthSnapshotStorage.encode(original))) {
+   val mutable=HealthSnapshotStorage.decode(raw,HealthSnapshotStorage.Samples.PACKED)
+   assertTrue(mutable.getJSONObject("records").getJSONObject("old").get("samples") is HealthSnapshotStorage.PackedSamples)
+   mutable.getJSONObject("links").put("activity","workout")
+   mutable.getJSONObject("records").put("new",JSONObject().put("samples",HealthSnapshotStorage.packSamples{w->w.beginObject().name("bpm").value(140).endObject()}))
+   val restored=HealthSnapshotStorage.decode(HealthSnapshotStorage.encode(mutable))
+   assertEquals(original.getJSONObject("records").getJSONObject("old").toString(),restored.getJSONObject("records").getJSONObject("old").toString())
+   assertEquals(140,restored.getJSONObject("records").getJSONObject("new").getJSONArray("samples").getJSONObject(0).getInt("bpm"))
+   assertEquals("workout",restored.getJSONObject("links").getString("activity"))
+   assertEquals(original.getJSONObject("auto_link_exclusions").toString(),restored.getJSONObject("auto_link_exclusions").toString())
+  }
+ }
+ @Test fun filteredHeartRateReconciliationCannotDeleteAnotherSourcesHistory() {
+  fun hr(source:String,id:String)=JSONObject().put("kind","heart_rate").put("source",source).put("source_id",id).put("start","2026-10-30T12:00:00Z").put("end","2026-10-30T13:00:00Z").put("samples",JSONArray()).put("deleted",false)
+  val fitbit=hr(HealthSources.FITBIT,"f");val polar=hr(HealthSources.POLAR,"p")
+  val records=JSONObject().put(HealthSnapshots.key(fitbit),fitbit).put(HealthSnapshots.key(polar),polar)
+  HealthSnapshots.reconcile(records,"heart_rate",java.time.Instant.parse("2026-10-30T00:00:00Z"),java.time.Instant.parse("2026-10-31T00:00:00Z"),emptyList(),HealthSources.POLAR)
+  assertFalse(fitbit.getBoolean("deleted"));assertTrue(polar.getBoolean("deleted"))
+ }
+
 }

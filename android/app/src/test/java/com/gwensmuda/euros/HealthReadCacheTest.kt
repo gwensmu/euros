@@ -29,11 +29,12 @@ class HealthReadCacheTest {
    val result=cache.recap("activity")!!
    assertEquals(HealthRecaps.buildRecap(first,"exercise"),result)
    assertSame(result,cache.recapForKey("exercise"))
+   assertEquals(mapOf("activity" to result.session.end),cache.linkedEnds())
    val stored=dao.meta(HealthImport.KEY);cache.weightCandidates();cache.sourceCounts();assertEquals(stored,dao.meta(HealthImport.KEY));assertTrue(dao.pending().isEmpty())
    save(snapshot(bpm=165));val corrected=cache.recap("activity")!!
    assertNotSame(result,corrected);assertEquals(165.0,corrected.averageBpm!!,0.0)
    save(snapshot(linked=false));assertNull(cache.recap("activity"));assertNotNull(cache.recapForKey("exercise"))
-   save(snapshot(deleted=true));assertTrue(cache.recap("activity")!!.session.deleted);assertTrue(cache.recap("activity")!!.samples.isEmpty())
+   save(snapshot(deleted=true));assertTrue(cache.recap("activity")!!.session.deleted);assertTrue(cache.recap("activity")!!.samples.isEmpty());assertTrue(cache.linkedEnds().isEmpty())
    dao.removeMeta(HealthImport.KEY);assertNull(cache.recap("activity"));assertTrue(cache.weightCandidates().isEmpty())
   } finally {db.close()}
  }

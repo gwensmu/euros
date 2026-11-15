@@ -116,7 +116,7 @@ class MainActivity:ComponentActivity() {
   catch(e:kotlinx.coroutines.CancellationException){throw e}
   catch(_:Exception){error="Couldn't load the plan. Reopen Euros to retry."}
  }
- val localReminderInputs by repo.dao.observeMeta(HealthImport.KEY).collectAsState(initial=null)
+ val localReminderInputs by repo.dao.observeRawMeta(HealthImport.KEY).collectAsState(initial=null)
  val dismissedReminderMeals by repo.dao.observeMeta("dismissed_meals:$today").collectAsState(initial=null)
  LaunchedEffect(records,localReminderInputs,dismissedReminderMeals,today){try{withContext(Dispatchers.IO){reminders.reconcile(records)}}catch(e:kotlinx.coroutines.CancellationException){throw e}catch(_:Exception){error="Couldn't update reminders"}}
  LaunchedEffect(notificationId){if(notificationId!=null){selected=null;strengthFeedbackId=null;settings=false;review=false;weighing=false;importedId=null;openFoodEntry=false;foodEditor=false;snoozeId=null;when(notificationId){"@weight"->{weighing=true;tab=RootTab.Today};"@today"->tab=RootTab.Today;"@food-overview"->{tab=RootTab.Food;foodDate=today.toString();openFoodEntry=false};"@food"->{tab=RootTab.Food;foodDate=today.toString();openFoodEntry=true};"@review"->{tab=RootTab.Week;week=today.with(java.time.DayOfWeek.MONDAY).toString();review=true};else->if(notificationId.startsWith("@snooze:"))snoozeId=notificationId.removePrefix("@snooze:") else selected=notificationId};onNotificationHandled()}}

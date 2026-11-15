@@ -35,7 +35,7 @@ object WeeklyReviewWork {
   true
  }
  suspend fun resume(context:Context,repo:Repository) {
-  repo.dao.allMetadata().filter{it.key.startsWith("weekly_review_job:")}.forEach {
+  repo.dao.metadataWithPrefix("weekly_review_job:").forEach {
    if(JSONObject(it.value).optString("status") in setOf("queued","running"))schedule(context,LocalDate.parse(it.key.substringAfter(':')))
   }
  }

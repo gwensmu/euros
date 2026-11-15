@@ -59,6 +59,13 @@ class HealthReadCache(private val dao:EurosDao) {
   records.keys().asSequence().mapNotNull{key->val r=records.getJSONObject(key);if(HealthSources.isTraining(r))HealthRecaps.session(key,r) else null}.filter{val day=it.start.atZone(HealthSources.ZONE).toLocalDate();day>=start && day<=end}.sortedBy{it.start}.toList()
  }
  suspend fun refreshedAt():String=read {_,s->s.optString("refreshed_at")}
+ suspend fun linkedEnds():Map<String,Instant> = read {_,s->
+  val links=s.getJSONObject("links");val records=s.getJSONObject("records")
+  links.keys().asSequence().mapNotNull{id->
+   val record=records.optJSONObject(links.getString(id))
+   if(record!=null && !record.optBoolean("deleted") && record.optString("kind")=="exercise") id to Instant.parse(record.getString("end")) else null
+  }.toMap()
+ }
  suspend fun linkedActivities():Map<String,String> = read {_,s->val links=s.getJSONObject("links");links.keys().asSequence().associateWith{links.getString(it)}}
  suspend fun sourceCounts():Map<String,Map<String,Int>> = read {_,s->val records=s.getJSONObject("records");records.keys().asSequence().map{records.getJSONObject(it)}.filter{!it.optBoolean("deleted")}.toList().groupBy{it.getString("source")}.mapValues{(_,items)->items.groupingBy{it.getString("kind")}.eachCount()}}
  suspend fun movement(date:LocalDate):MovementSummary = read {_,s->

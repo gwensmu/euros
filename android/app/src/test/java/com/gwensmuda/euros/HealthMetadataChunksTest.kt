@@ -47,4 +47,19 @@ class HealthMetadataChunksTest {
    assertTrue(runCatching{HealthMetadataChunks.assemble(header){null}}.isFailure)
   }finally{db.close()}
  }
+ @Test fun smallMetadataScansNeverReadOrAssembleUnrelatedTrackerChunks()=runBlocking {
+  val db=Room.inMemoryDatabaseBuilder(ApplicationProvider.getApplicationContext(),EurosDatabase::class.java).build()
+  try {
+   val dao=db.dao()
+   // Deliberately missing chunk: a small scan must still succeed, unlike allMetadata().
+   dao.putRawMeta(Metadata(HealthImport.KEY,JSONObject().put("encoding","metadata-chunks-v1").put("count",1).put("length",10).toString()))
+   dao.meta(Metadata("weekly_review_job:2026-11-09","{}"))
+   dao.meta(Metadata("reminder_copy:abc","{}"));dao.meta(Metadata("reminderXcopy:other","{}"))
+   assertEquals(listOf("weekly_review_job:2026-11-09"),dao.metadataWithPrefix("weekly_review_job:").map{it.key})
+   assertEquals(listOf("reminder_copy:abc"),dao.metadataWithPrefix("reminder_copy:").map{it.key})
+   assertTrue(dao.metadataWithPrefix("absent:").isEmpty())
+   assertTrue(runCatching{dao.allMetadata()}.isFailure)
+  }finally{db.close()}
+ }
+
 }
