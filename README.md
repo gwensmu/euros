@@ -9,17 +9,17 @@ An individual recreational BJJ athlete preparing for a specific competition, or 
 ## Architecture
 
 - **Android:** Kotlin, Jetpack Compose, Room and a durable offline write queue.
-- **Backend:** Python, Starlette/Uvicorn, SQLite and FastMCP. The phone API and MCP use the same revision-checked domain operations.
-- **AI:** server-side food interpretation, weekly reflection and constrained reminder-copy selection. Provider credentials never belong in the app.
+- **Backend:** Python, Starlette/Uvicorn, one shared SQLite database, SQLAlchemy and FastMCP. The phone API and MCP use the same revision-checked domain operations.
+- **AI:** server-side food interpretation and constrained reminder-copy selection. Provider credentials never belong in the app.
 - **Trackers:** Android Health Connect imports, automatic unambiguous planned-workout linking, and optional food-log export; source identity and missing values are preserved.
 
-This is personal software, not a general coaching service. It contains opinionated example goals, dates, schedules, meal preferences and nutrition policies. Review and customize those before using it. Bundled plans are prescriptions, not records of actual workouts or food intake. The Android app seeds dated activities on first launch; the backend starts empty.
+This is personal software, not a general coaching service. It contains opinionated example goals, dates, schedules, meal preferences and nutrition policies. Review and customize those before using it. Bundled plans are prescriptions, not records of actual workouts or food intake. New accounts start without logged records or a copied personal schedule. Create dated sessions from your account plan or explicitly import an authored plan.
 
 ## Recreate and personalize
 
 The [implementation recipe](docs/shareable/PERSONAL_TRAINING_APP_BLUEPRINT.md) describes the product, interactions, system architecture and personalization workflow. The [standalone illustrated version](docs/shareable/PERSONAL_TRAINING_APP_BLUEPRINT.html) can be downloaded and opened in a browser.
 
-Start with `plan/euros.json`, its Android asset counterpart, the dated schedule assets, and nutrition-policy code/contracts. Some defaults also live in code; this is not yet a configurable multi-user product. Model names must be available to your own provider account.
+Start with `plan/euros.json`, its Android asset counterpart, the dated schedule assets, and nutrition-policy code/contracts. Account plan settings cover competition, goals, meals and weekly training times; detailed prescriptions and some defaults still live in code. Model names must be available to your own provider account.
 
 ## Run the backend
 
@@ -31,14 +31,15 @@ server/.venv/bin/pip install -r server/requirements-dev.lock
 server/.venv/bin/pip install -e server --no-deps
 ```
 
-Create two private token files outside the repository, each containing a different random ASCII token of at least 32 characters. Set these environment variables to your own paths:
+Set a private persistent directory outside the repository, create an account, and start the service:
 
 ```sh
-export EUROS_DB_PATH=/absolute/path/to/private/euros.sqlite3
-export EUROS_API_TOKEN_FILE=/absolute/path/to/private/app-token
-export EUROS_MCP_TOKEN_FILE=/absolute/path/to/private/mcp-token
+export EUROS_DATA_DIR=/absolute/path/to/private/euros
+server/.venv/bin/euros-server --create-account athlete
 server/.venv/bin/euros-server --port 3013
 ```
+
+The account command prompts for a password. All users, authorizations and training data live in `EUROS_DATA_DIR/euros.db`. Sign-up is closed by default. Use your server's account site at `/account/` to manage your plan; the Android app signs in through the browser with OAuth and PKCE.
 
 The server binds to loopback. HTTPS hosting and phone enrollment are described in [backend setup](server/README.md); routes are in the [API contract](docs/API_CONTRACT.md). [.env.example](.env.example) lists configuration placeholders; the server does not load dotenv files automatically. AI configuration is optional for storage and sync.
 
@@ -51,7 +52,7 @@ cd android
 ./gradlew testDebugUnitTest lintDebug assembleDebug
 ```
 
-Enroll your own server URL and app token. Example hostnames are placeholders; they do not connect to the original deployment. Enable the required Health Connect permissions on your device.
+Sign in to your own server URL from Settings; static-token enrollment remains available for configured deployments. Example hostnames are placeholders; they do not connect to the original deployment. Enable the required Health Connect permissions on your device.
 
 ## Tests
 

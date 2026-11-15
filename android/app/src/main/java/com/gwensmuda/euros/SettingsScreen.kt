@@ -83,12 +83,23 @@ import java.time.LocalTime
  }
 }
 
+/** The account site is where meals, calorie goals, the competition date and workouts are set. */
+@Composable private fun AccountSiteLink(server:String) {
+ val context=LocalContext.current
+ val site=AccountPlan.accountSite(server) ?: return
+ TextButton(onClick={
+  runCatching{context.startActivity(android.content.Intent(android.content.Intent.ACTION_VIEW,android.net.Uri.parse(site))
+   .addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK))}
+ }){Text("Edit your training plan on the web")}
+}
+
 @Composable private fun ConnectionDiagnostics(repo:Repository,pending:List<Pending>) {
  var server by rememberSaveable { mutableStateOf("") }
  var token by remember { mutableStateOf("") }
  var message by remember { mutableStateOf<String?>(null) }
  var busy by remember { mutableStateOf(false) }
  var connection by remember { mutableStateOf(false) }
+ var tokenEntry by remember { mutableStateOf(false) }
  val scope=rememberCoroutineScope()
  val context=LocalContext.current
  val controller=(context.applicationContext as EurosApplication).connection
@@ -105,17 +116,37 @@ import java.time.LocalTime
   TextButton(onClick={confirm=true}){Text("Use server version")}
   if(confirm) AlertDialog(onDismissRequest={confirm=false},title={Text("Discard local change?")},text={Text("This record will use the server version.")},confirmButton={TextButton(onClick={scope.launch{runCatching{repo.acceptServer(p)}.onFailure{message=it.message};confirm=false}}){Text("Discard")}},dismissButton={TextButton(onClick={confirm=false}){Text("Cancel")}})
  }
- TextButton(onClick={connection=!connection}){Text(if(state.connected) "Update connection" else "Connect to server")}
+ state.account?.let{Text("Signed in as $it",style=MaterialTheme.typography.bodyMedium)}
+ if(state.connected) AccountSiteLink(state.server)
+ TextButton(onClick={connection=!connection}){Text(if(state.connected) "Update connection" else "Sign in to your server")}
  if(connection) {
   OutlinedTextField(server,{server=it},label={Text("Server URL")},singleLine=true,modifier=Modifier.fillMaxWidth())
-  OutlinedTextField(token,{token=it},label={Text("Access token")},singleLine=true,visualTransformation=PasswordVisualTransformation(),modifier=Modifier.fillMaxWidth())
-  Button(enabled=!busy && !state.syncing && server.isNotBlank() && token.isNotBlank(),onClick={scope.launch{
+  Text("Sign in opens your server's page in the browser. Euros never sees your password.",style=MaterialTheme.typography.bodySmall)
+  Button(enabled=!busy && !state.syncing && server.isNotBlank(),onClick={scope.launch{
    busy=true
-   try { withContext(Dispatchers.IO){controller.connect(server,token)};token="";connection=false;message="Connected" }
+   try {
+    val pending=withContext(Dispatchers.IO){controller.beginSignIn(server)}
+    connection=false;message="Finish signing in with your browser"
+    context.startActivity(android.content.Intent(android.content.Intent.ACTION_VIEW,android.net.Uri.parse(pending.authorizationUrl))
+     .addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK))
+   }
    catch(e:kotlinx.coroutines.CancellationException){throw e}
-   catch(e:Exception){message=syncFailureMessage(e)}
+   catch(e:ApiFailure){message=e.message}
+   catch(_:android.content.ActivityNotFoundException){message="No browser available to sign in"}
+   catch(_:Exception){message="Couldn't reach that server. Check the address"}
    finally{busy=false}
-  }}){Text(if(busy)"Syncing…" else "Sync")}
+  }}){Text(if(busy)"Opening…" else "Sign in")}
+  TextButton(onClick={tokenEntry=!tokenEntry}){Text("Use a server token instead")}
+  if(tokenEntry) {
+   OutlinedTextField(token,{token=it},label={Text("Access token")},singleLine=true,visualTransformation=PasswordVisualTransformation(),modifier=Modifier.fillMaxWidth())
+   Button(enabled=!busy && !state.syncing && server.isNotBlank() && token.isNotBlank(),onClick={scope.launch{
+    busy=true
+    try { withContext(Dispatchers.IO){controller.connect(server,token)};token="";connection=false;tokenEntry=false;message="Connected" }
+    catch(e:kotlinx.coroutines.CancellationException){throw e}
+    catch(e:Exception){message=syncFailureMessage(e)}
+    finally{busy=false}
+   }}){Text(if(busy)"Syncing…" else "Sync")}
+  }
  }
  if(state.connected || state.error!=null) TextButton(enabled=!busy && !state.syncing,onClick={scope.launch{
   busy=true

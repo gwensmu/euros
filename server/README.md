@@ -1,27 +1,32 @@
 # Euros backend
 
-AI weekly wrap-up has been removed: no review screen, API/MCP generation or active background job. Food interpretation, Week agenda, workout recaps and weight logging remain. Older wrap-up descriptions below are historical.
-
-Python 3.12+, Starlette/Uvicorn, SQLite and FastMCP. Run from the repository root:
+Python 3.12+, Starlette/Uvicorn, SQLAlchemy, SQLite and FastMCP. The app API, account site and MCP share domain operations. Weekly AI wrap-up has been removed.
 
 ```sh
 python3 -m venv server/.venv
 server/.venv/bin/pip install -r server/requirements-dev.lock
 server/.venv/bin/pip install -e server --no-deps
-```
-
-Set `EUROS_DB_PATH` to a persistent writable database path. Set `EUROS_API_TOKEN_FILE` and `EUROS_MCP_TOKEN_FILE` to separate private files containing independently generated random ASCII tokens of at least 32 characters. Keep them outside the repository with restrictive permissions. Environment alternatives are `EUROS_API_TOKEN` and `EUROS_MCP_TOKEN`.
-
-```sh
+export EUROS_DATA_DIR=/absolute/path/to/private/euros
+server/.venv/bin/euros-server --create-account athlete
 server/.venv/bin/euros-server --port 3013
 ```
 
-The server binds to loopback. The app API is `/v1/`; Streamable HTTP MCP is `/mcp`. To host it on an owner-operated computer, use your own HTTPS reverse proxy/tunnel and process supervisor. Add the intended hostname with `--public-host`. This flag configures allowed hosts/origins; it does not provision a tunnel. Keep the database outside release directories.
+Account creation prompts for a password. One persistent `euros.db` contains identities, browser sessions, OAuth grants and account-owned training data. SQLAlchemy composite primary keys, user foreign keys and account-scoped sessions protect domain access. Authentication uses explicit parameterized transactions in the same file. Clients cannot choose a row's owner. Sync cursors and command retries are per account.
 
-Optional model calls use `OPENAI_API_KEY_FILE` (or `OPENAI_API_KEY`), `EUROS_FOOD_MODEL`, and `EUROS_REVIEW_MODEL`. Select model IDs available to your account. Model calls produce drafts/read-only output, never automatic plan edits. Credentials stay server-side. Bounded requests and persistent inference allowances reduce exposure but do not replace provider spending controls.
+The server binds to loopback. Supply your own HTTPS proxy/tunnel, `--public-host training.example.com` and `--public-url https://training.example.com` for external clients. These flags do not provision hosting. API routes are under `/v1/`, MCP at `/mcp`, and the account site at `/account/`. Sign-up is closed unless `--allow-signup` is explicitly enabled. The Android app and MCP clients use OAuth authorization code with PKCE and read/write scopes; the account website handles passwords.
 
-App and MCP bearer credentials are separate coarse access boundaries, not per-tool OAuth scopes. Do not expose an unauthenticated origin. Rotate tokens by replacing their private values and restarting. No owner credentials or deployment endpoint is provided.
+Optional static credentials use `EUROS_STATIC_ACCOUNT` to name an existing account plus separate `EUROS_API_TOKEN_FILE` and `EUROS_MCP_TOKEN_FILE`. Token files must contain independent random ASCII values of at least 32 characters and stay outside the repository. Environment alternatives are `EUROS_API_TOKEN` and `EUROS_MCP_TOKEN`. Static credentials remain restricted to their API or MCP surface. No credentials or original hosting endpoint are supplied.
 
-Back up a live database with SQLite's backup API so WAL contents are included. Store backups privately, test restoration on a separate database, and preserve unsynced phone writes before recovery. Android replacement installs should preserve data; do not uninstall to update.
+Optional model calls use `OPENAI_API_KEY_FILE` (or `OPENAI_API_KEY`) and `EUROS_FOOD_MODEL`. Select a model available to your provider account. Food results are editable drafts; reminder output selects an approved joke. Credentials remain server-side. Persistent per-account allowances do not replace provider spending controls.
 
-See [API contract](../docs/API_CONTRACT.md) and [recreation recipe](../docs/shareable/PERSONAL_TRAINING_APP_BLUEPRINT.md). Historical records use revisions, idempotent commands and deletion tombstones. Planned meals never count as consumption. Provider errors and missing observations remain distinct from zero values.
+## Migration and recovery
+
+Stop the old service before migration. For an earlier per-user layout, run `--consolidate-databases`: it snapshots `accounts.db` and `users/<id>/euros.db` into one shared `euros.db`, preserves account credentials, IDs, revisions, tombstones, cursors and command receipts, and installs the file only after validation. Source files remain unchanged. Unknown tables/columns or orphan account directories stop migration rather than dropping data.
+
+For a personal database, first create the destination account, then run `--adopt-database /private/old.sqlite3 --username athlete`. This refuses a populated destination account and preserves the source. Do not expose the new service until migration is checked. Android caches are bound to server and account: a populated legacy cache cannot silently become a different account's cache. An explicit phone-cache migration remains separate work; keep existing enrollment and unsynced data until then.
+
+The Python `create_app(Store(path), api_token, mcp_token)` factory remains available for existing personal deployments and uses the same shared schema with a reserved legacy owner. Normal CLI startup uses account mode. Schema version 2 cannot be opened by older server releases. Keep a consistent pre-upgrade backup and matching old image for rollback; never overwrite newer writes with an older backup.
+
+Back up the entire shared database with SQLite's online backup API to include WAL contents. Keep backups private and test restoration separately. `--list-accounts`, `--set-password USERNAME` and `--import-plan FILE --username USERNAME` support local administration. Account deletion/export and automatic phone account switching are not implemented. Live external OAuth/client compatibility still requires deployment-specific verification.
+
+See the [API contract](../docs/API_CONTRACT.md) and [recreation recipe](../docs/shareable/PERSONAL_TRAINING_APP_BLUEPRINT.md). No demo records are installed automatically. The explicit demo seeder creates an isolated personal database for development only.

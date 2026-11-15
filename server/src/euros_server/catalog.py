@@ -3,6 +3,8 @@
 Not synced records: the phone never sees the catalog, only the dated meal plans built from it.
 Every accepted edit is revisioned with history; saved plans snapshot the values they used.
 """
+from sqlalchemy import select, func
+from .models import CatalogItem, CatalogHistory
 import json
 import re
 from datetime import datetime, timezone
@@ -140,24 +142,17 @@ def _write(db, kind, identity, revision, payload, now, only_if_missing=False):
 
     only_if_missing inserts atomically or not at all, so concurrent startups seed once.
     """
-    verb = 'INSERT OR IGNORE' if only_if_missing else 'INSERT OR REPLACE'
-    if db.execute(f'{verb} INTO catalog_items VALUES (?,?,?,?,?)', (kind, identity, revision, canonical(payload), now)).rowcount:
-        db.execute('INSERT INTO catalog_history(kind,id,revision,payload,updated_at) VALUES (?,?,?,?,?)',
-                   (kind, identity, revision, canonical(payload), now))
+    if only_if_missing and db.get(CatalogItem, (db.user_id, kind, identity)) is not None:
+        return
+    db.merge(CatalogItem(user_id=db.user_id, kind=kind, id=identity, revision=revision, payload=canonical(payload), updated_at=now))
+    cursor = (db.scalar(select(func.max(CatalogHistory.cursor))) or 0) + 1
+    db.add(CatalogHistory(user_id=db.user_id, cursor=cursor, kind=kind, id=identity, revision=revision, payload=canonical(payload), updated_at=now))
 
 
 class Catalog:
     def __init__(self, store):
         self.store = store
-        with store.connect() as db:
-            db.executescript('''
-                CREATE TABLE IF NOT EXISTS catalog_items (
-                  kind TEXT NOT NULL, id TEXT NOT NULL, revision INTEGER NOT NULL,
-                  payload TEXT NOT NULL, updated_at TEXT NOT NULL, PRIMARY KEY(kind, id));
-                CREATE TABLE IF NOT EXISTS catalog_history (
-                  cursor INTEGER PRIMARY KEY AUTOINCREMENT, kind TEXT NOT NULL, id TEXT NOT NULL,
-                  revision INTEGER NOT NULL, payload TEXT NOT NULL, updated_at TEXT NOT NULL);
-            ''')
+        with store.session(write=True) as db:
             now = datetime.now(timezone.utc).isoformat()
             # Insert built-ins only when missing; never overwrite a stored edit.
             for kind, identity, payload in _seeds():
@@ -176,20 +171,20 @@ class Catalog:
         for identity, raw in catalog_seed.FOODS.items():
             if not set(raw.get('purchase', {})) & BACKFILLED:
                 continue
-            row = db.execute("SELECT revision, payload FROM catalog_items WHERE kind='food' AND id=?", (identity,)).fetchone()
+            row = db.get(CatalogItem, (db.user_id, "food", identity))
             if not row:
                 continue
             old = {**raw, 'purchase': {k: v for k, v in raw['purchase'].items() if k not in BACKFILLED}}
             # Older servers stored built-ins as written; newer ones store them validated.
-            if json.loads(row['payload']) in (old, validate_food(old)):
-                _write(db, 'food', identity, row['revision'] + 1, validate_food(raw), now)
+            if json.loads(row.payload) in (old, validate_food(old)):
+                _write(db, 'food', identity, row.revision + 1, validate_food(raw), now)
 
     def snapshot(self):
-        with self.store.connect() as db:
-            rows = db.execute('SELECT * FROM catalog_items ORDER BY kind, id').fetchall()
+        with self.store.session() as db:
+            rows = db.scalars(select(CatalogItem).order_by(CatalogItem.kind, CatalogItem.id)).all()
         out = {'foods': {}, 'templates': {}}
         for r in rows:
-            out['foods' if r['kind'] == 'food' else 'templates'][r['id']] = {**json.loads(r['payload']), 'revision': r['revision']}
+            out['foods' if r.kind == 'food' else 'templates'][r.id] = {**json.loads(r.payload), 'revision': r.revision}
         return out
 
     def upsert(self, kind, identity, payload, expected_revision):
@@ -199,19 +194,18 @@ class Catalog:
             raise DomainError('invalid_catalog_id', pattern=IDENTIFIER.pattern)
         if type(expected_revision) is not int or expected_revision < 0:
             raise DomainError('invalid_revision')
-        with self.store.connect() as db:
-            db.execute('BEGIN IMMEDIATE')
+        with self.store.session(write=True) as db:
             if kind == 'food':
                 clean = validate_food(payload)
             else:
-                foods = {r['id'] for r in db.execute("SELECT id FROM catalog_items WHERE kind='food'")}
+                foods = set(db.scalars(select(CatalogItem.id).where(CatalogItem.kind == "food")))
                 clean = validate_template(payload, foods)
-            row = db.execute('SELECT revision, payload FROM catalog_items WHERE kind=? AND id=?', (kind, identity)).fetchone()
-            current = row['revision'] if row else 0
+            row = db.get(CatalogItem, (db.user_id, kind, identity))
+            current = row.revision if row else 0
             if expected_revision != current:
                 raise DomainError('revision_conflict', 409, current={'id': identity, 'revision': current,
-                                                                     'payload': json.loads(row['payload']) if row else None})
-            if row and json.loads(row['payload']) == clean:
+                                                                     'payload': json.loads(row.payload) if row else None})
+            if row and json.loads(row.payload) == clean:
                 return {'kind': kind, 'id': identity, 'revision': current, 'payload': clean, 'changed': False}
             _write(db, kind, identity, current + 1, clean, datetime.now(timezone.utc).isoformat())
             return {'kind': kind, 'id': identity, 'revision': current + 1, 'payload': clean, 'changed': True}

@@ -30,7 +30,57 @@ class SyncConnectionTest {
    return JSONObject("""{"changes":[],"next_cursor":0,"has_more":false}""")
   }
  }
+ private class SignInTransport:OAuthTransport {
+  var exchanges=0
+  override fun get(url:String)=JSONObject()
+   .put("issuer","https://example.com").put("authorization_endpoint","https://example.com/oauth/authorize")
+   .put("token_endpoint","https://example.com/oauth/token").put("registration_endpoint","https://example.com/oauth/register")
+  override fun form(url:String,fields:Map<String,String>):JSONObject {
+   exchanges++
+   return JSONObject().put("access_token","access-1").put("refresh_token","refresh-1")
+    .put("token_type","Bearer").put("expires_in",3600).put("scope",OAUTH_SCOPE)
+  }
+  override fun json(url:String,body:JSONObject)=JSONObject().put("client_id","cli-1")
+ }
  private fun database()=Room.inMemoryDatabaseBuilder(ApplicationProvider.getApplicationContext(),EurosDatabase::class.java).build()
+ @Test fun accountSignInEnrollsOnlyForTheRequestThisDeviceStarted()=runBlocking {
+  val db=database();val store=MemoryStore();val schedule=Schedule();val api=Transport();val repo=Repository(db)
+  val oauth=SignInTransport()
+  val connection=SyncConnection(repo,store,schedule,{api},oauth=OAuthClient(oauth))
+  val pending=connection.beginSignIn("https://example.com")
+  assertNotNull(repo.dao.meta(SyncConnection.SIGN_IN_KEY))
+  assertFalse(connection.completeSignIn(android.net.Uri.parse("$OAUTH_REDIRECT?code=c&state=someone-elses")))
+  assertNull(store.value);assertFalse(connection.state.value.connected);assertEquals(0,oauth.exchanges)
+  assertTrue(connection.completeSignIn(android.net.Uri.parse("$OAUTH_REDIRECT?code=c&state=${pending.state}")))
+  assertEquals("access-1",store.value!!.token);assertEquals("refresh-1",store.value!!.refreshToken)
+  assertTrue(store.value!!.renewable);assertTrue(connection.state.value.connected)
+  assertTrue(repo.dao.meta(SyncConnection.SIGN_IN_KEY).isNullOrBlank())
+  assertEquals(1,schedule.enables)
+  db.close()
+ }
+ @Test fun aCancelledSignInEnrollsNothingAndSaysSo()=runBlocking {
+  val db=database();val store=MemoryStore();val api=Transport();val repo=Repository(db)
+  val oauth=SignInTransport()
+  val connection=SyncConnection(repo,store,Schedule(),{api},oauth=OAuthClient(oauth))
+  val pending=connection.beginSignIn("https://example.com")
+  assertFalse(connection.completeSignIn(android.net.Uri.parse("$OAUTH_REDIRECT?error=access_denied&state=${pending.state}")))
+  assertNull(store.value);assertFalse(connection.state.value.connected)
+  assertEquals("Sign-in was cancelled",connection.state.value.error)
+  // The spent request is gone, so a replayed redirect cannot enroll later.
+  assertFalse(connection.completeSignIn(android.net.Uri.parse("$OAUTH_REDIRECT?code=c&state=${pending.state}")))
+  assertEquals(0,oauth.exchanges);db.close()
+ }
+ @Test fun disconnectForgetsTheAccountPlanAndAnyUnfinishedSignIn()=runBlocking {
+  val db=database();val store=MemoryStore();val api=Transport();val repo=Repository(db)
+  val connection=SyncConnection(repo,store,Schedule(),{api},oauth=OAuthClient(SignInTransport()))
+  connection.connect("https://example.com","secret")
+  repo.dao.meta(Metadata(AccountPlan.KEY,"""{"plan":{"competition":{"name":"X","date":"2027-01-13"}}}"""))
+  connection.beginSignIn("https://example.com")
+  connection.disconnect()
+  assertTrue(repo.dao.meta(AccountPlan.KEY).isNullOrBlank())
+  assertTrue(repo.dao.meta(SyncConnection.SIGN_IN_KEY).isNullOrBlank())
+  db.close()
+ }
  @Test fun enrollmentSurvivesControllerRestartAndRestoresModelBeforeNetwork()=runBlocking {
   val db=database();val store=MemoryStore();val schedule=Schedule();val api=Transport()
   val first=SyncConnection(Repository(db),store,schedule,{api})

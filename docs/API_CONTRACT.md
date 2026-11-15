@@ -1,10 +1,60 @@
 # Euros synchronization contract — v1
 
+Current scope (November 15, 2026): AI weekly wrap-up removed. No weekly-review UI, API/MCP generation or active worker remains; any older descriptions below are historical. Food interpretation, Week agenda, weight logging/chart and workout recaps remain.
+
 The Android app and MCP tools share the server's domain service and accepted records. This is the first implementation slice, not the complete release API. JSON uses snake_case. Record responses also include server `updated_at` timestamps. All timestamps include a UTC offset. Health data is never logged in HTTP diagnostics.
 
 ## Authentication and transport
 
-Use HTTPS outside a loopback development environment. The initial development service accepts a configured bearer token. Never commit a token or embed one in an APK. This first authentication adapter is not a claim of ChatGPT OAuth compatibility; remote client connection, revocation and scopes must be verified before deployment. All implemented routes require authentication; there is no public record or health endpoint.
+Use HTTPS outside a loopback development environment. Every `/v1/` and `/mcp` request carries a bearer token and resolves to exactly one account before any handler runs; responses only ever contain that account's records. Never commit a token or embed one in an APK.
+
+**OAuth 2.1.** Clients obtain tokens by authorization code with PKCE (S256 only) at this server's own sign-in page. Endpoints, discoverable from `GET /.well-known/oauth-authorization-server`:
+
+| Endpoint | Purpose |
+| --- | --- |
+| `GET /.well-known/oauth-authorization-server` | Authorization-server metadata (RFC 8414) |
+| `GET /.well-known/oauth-protected-resource[/...]` | Protected-resource metadata (RFC 9728) |
+| `POST /oauth/register` | Dynamic client registration (RFC 7591); open, grants no account access |
+| `GET,POST /oauth/authorize` | Sign-in and consent; redirects with `code` and `state` |
+| `POST /oauth/token` | `authorization_code` and `refresh_token` grants |
+| `POST /oauth/revoke` | Revocation (RFC 7009); ends the whole grant |
+
+Scopes are `training.read` and `training.write`; `GET` and `HEAD` on `/v1/` and all MCP reads need read, everything else needs write. Access tokens last an hour; refresh tokens rotate, and presenting a spent one revokes the grant. Registered redirect URIs must be HTTPS, loopback HTTP or a private-use scheme, matched exactly. An unauthenticated request answers `401` with `WWW-Authenticate: Bearer realm="euros", error="unauthorized", resource_metadata="<base>/.well-known/oauth-protected-resource"`; an under-scoped one answers `403 insufficient_scope`.
+
+**Static tokens.** A deployment may configure app and MCP tokens instead of, or alongside, OAuth. Each stays bound to its surface and authenticates as one named account. They are a deployment convenience, not a second identity model.
+
+Discovery, OAuth endpoints and the account site at `/account/` authenticate themselves and are the only routes reachable without a bearer token. There is no public record or health endpoint.
+
+## Account identity and isolation
+
+`GET /v1/account` returns the authenticated `user_id` before the phone uploads or pulls cached data. Ownership comes exclusively from the authenticated principal; request-supplied owner fields cannot change it. Record IDs, command receipts and change cursors are account-qualified in one shared database. A phone cache bound to another account refuses sync and retains its data. Migrating a populated legacy phone cache to a newly created account is not automatic.
+
+## Read and write the training plan
+
+`GET /v1/plan` returns the signed-in account's plan, the revision to send back, whether it is user-set or the shipped default, and the account's username and display name:
+
+```json
+{
+  "revision": 2,
+  "source": "user",
+  "updated_at": "2026-11-14T18:02:11.904Z",
+  "plan": {
+    "competition": {"name": "Euros", "date": "2027-01-13"},
+    "goal": {"weight_lb": 155, "maintenance": true},
+    "calorie_goals": {
+      "tiers": {"recovery": {"kcal": 1850, "proteinG": 120, "carbohydrateG": 165, "fatG": 72}},
+      "maintenance_add": {"kcal": 200, "carbohydrateG": 50}
+    },
+    "meals": [{"slot": "breakfast", "title": "Breakfast", "local_time": "08:00"}],
+    "workout_schedule": [{"weekday": "tuesday", "kind": "bjj", "local_time": "18:30", "title": "BJJ class"}]
+  },
+  "account": {"user_id": "usr-…", "username": "athlete", "display_name": "Sam"}
+}
+```
+
+`PUT /v1/plan` takes `{"plan": {…}, "expected_revision": 2}` and saves the plan whole; a stale revision is a `409` carrying the current record. The example above is abbreviated — all four tiers are required.
+
+`POST /v1/plan/sessions` takes `{"date_from": "2026-12-01", "date_to": "2026-12-14"}` (at most 180 days) and creates dated activities from the weekly schedule, answering with `created` and `skipped` lists. Dates that already hold a session at that time, sessions already generated and sessions the user deleted are skipped; logged records are never overwritten.
 
 ## Write a record
 

@@ -14,7 +14,17 @@
  <queries><package android:name="com.google.android.apps.healthdata" /></queries>
  <uses-permission android:name="android.permission.health.WRITE_NUTRITION" />
  <application android:name=".EurosApplication" android:label="Euros" android:icon="@mipmap/ic_launcher" android:roundIcon="@mipmap/ic_launcher" android:theme="@android:style/Theme.Material.Light.NoActionBar" android:allowBackup="false" android:supportsRtl="true">
-  <activity android:name=".MainActivity" android:exported="true" android:launchMode="singleTask"><intent-filter><action android:name="android.intent.action.MAIN"/><category android:name="android.intent.category.LAUNCHER"/></intent-filter></activity>
+  <activity android:name=".MainActivity" android:exported="true" android:launchMode="singleTask">
+   <intent-filter><action android:name="android.intent.action.MAIN"/><category android:name="android.intent.category.LAUNCHER"/></intent-filter>
+   <!-- Where the browser returns after signing in to a Euros account. -->
+   <intent-filter>
+    <action android:name="android.intent.action.VIEW"/>
+    <category android:name="android.intent.category.DEFAULT"/>
+    <category android:name="android.intent.category.BROWSABLE"/>
+    <!-- The private-use scheme is this app's alone; the path is checked in consumeSignInRedirect. -->
+    <data android:scheme="com.gwensmuda.euros"/>
+   </intent-filter>
+  </activity>
   <activity android:name=".HealthPermissionsRationaleActivity" android:exported="true">
    <intent-filter><action android:name="androidx.health.ACTION_SHOW_PERMISSIONS_RATIONALE" /></intent-filter>
   </activity>

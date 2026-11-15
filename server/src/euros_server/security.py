@@ -1,4 +1,6 @@
-"""Shared transport bounds and persistent inference allowances for the single-user service."""
+"""Shared transport bounds and persistent inference allowances per account."""
+from sqlalchemy import select, func, delete
+from .models import InferenceRequest
 import threading
 import time
 from datetime import datetime
@@ -49,23 +51,19 @@ class LimitedProvider:
         self.per_minute, self.concurrent = per_minute, concurrent
         self.active = 0
         self.lock = threading.Lock()
-        with store.connect() as db:
-            db.execute('CREATE TABLE IF NOT EXISTS inference_requests (at REAL NOT NULL, day TEXT NOT NULL, kind TEXT NOT NULL)')
-            db.execute('CREATE INDEX IF NOT EXISTS inference_requests_at ON inference_requests(at)')
 
     def reserve(self, kind):
         now = self.clock()
         day = datetime.fromtimestamp(now, ZONE).date().isoformat()
-        with self.store.connect() as db:
-            db.execute('BEGIN IMMEDIATE')
+        with self.store.session(write=True) as db:
             if kind not in self.limits:
                 raise DomainError('model_not_configured', 503)
-            if db.execute('SELECT COUNT(*) FROM inference_requests WHERE day=? AND kind=?', (day, kind)).fetchone()[0] >= self.limits[kind]:
+            if db.scalar(select(func.count(InferenceRequest.id)).where(InferenceRequest.day == day, InferenceRequest.kind == kind)) >= self.limits[kind]:
                 raise DomainError('model_daily_limit', 429)
-            if db.execute('SELECT COUNT(*) FROM inference_requests WHERE at>?', (now-60,)).fetchone()[0] >= self.per_minute:
+            if db.scalar(select(func.count(InferenceRequest.id)).where(InferenceRequest.at > now - 60)) >= self.per_minute:
                 raise DomainError('model_rate_limit', 429)
-            db.execute('DELETE FROM inference_requests WHERE day<? AND at<=?', (day, now-86400*7))
-            db.execute('INSERT INTO inference_requests VALUES (?,?,?)', (now, day, kind))
+            db.execute(delete(InferenceRequest).where(InferenceRequest.day < day, InferenceRequest.at <= now - 86400 * 7))
+            db.add(InferenceRequest(user_id=db.user_id, at=now, day=day, kind=kind))
 
     async def generate(self, **kwargs):
         with self.lock:

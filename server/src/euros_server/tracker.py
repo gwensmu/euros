@@ -1,4 +1,6 @@
 """Source-owned tracker snapshots, isolated from manual records and their change feed."""
+from sqlalchemy import select
+from .models import TrackerWorkout, TrackerCommand, RecordRow
 import hashlib
 import json
 from datetime import date, datetime, timezone, timedelta
@@ -143,20 +145,12 @@ def metrics(payload, boundaries=None):
 class TrackerStore:
     def __init__(self, store):
         self.store = store
-        with store.connect() as db:
-            db.executescript('''
-                CREATE TABLE IF NOT EXISTS tracker_workouts (
-                    source_key TEXT PRIMARY KEY, revision INTEGER NOT NULL, deleted INTEGER NOT NULL,
-                    payload TEXT NOT NULL, observed_at TEXT NOT NULL, received_at TEXT NOT NULL);
-                CREATE TABLE IF NOT EXISTS tracker_commands (
-                    command_id TEXT PRIMARY KEY, digest TEXT NOT NULL, result TEXT NOT NULL);
-            ''')
 
     @staticmethod
     def header(row):
-        return {'source_key': row['source_key'], 'revision': row['revision'], 'deleted': bool(row['deleted']),
-                'observed_at': row['observed_at'], 'received_at': row['received_at'],
-                'content_hash': hashlib.sha256(row['payload'].encode()).hexdigest()}
+        return {'source_key': row.source_key, 'revision': row.revision, 'deleted': bool(row.deleted),
+                'observed_at': row.observed_at, 'received_at': row.received_at,
+                'content_hash': hashlib.sha256(row.payload.encode()).hexdigest()}
 
     def ingest(self, command):
         if not isinstance(command, dict): raise DomainError('invalid_tracker_import')
@@ -169,57 +163,55 @@ class TrackerStore:
         raw = canonical(command)
         if len(raw.encode()) > 4194304: raise DomainError('request_too_large', 413)
         digest = hashlib.sha256(raw.encode()).hexdigest()
-        with self.store.connect() as db:
-            db.execute('BEGIN IMMEDIATE')
-            prior = db.execute('SELECT * FROM tracker_commands WHERE command_id=?', (cid,)).fetchone()
+        with self.store.session(write=True) as db:
+            prior = db.get(TrackerCommand, (db.user_id, cid))
             if prior:
-                if prior['digest'] != digest: raise DomainError('idempotency_key_reused', 409)
-                return json.loads(prior['result'])
+                if prior.digest != digest: raise DomainError('idempotency_key_reused', 409)
+                return json.loads(prior.result)
             result = []
             for incoming in records:
                 key = incoming['source_key']
-                row = db.execute('SELECT * FROM tracker_workouts WHERE source_key=?', (key,)).fetchone()
-                if incoming['expected_revision'] != (row['revision'] if row else 0):
+                row = db.get(TrackerWorkout, (db.user_id, key))
+                if incoming['expected_revision'] != (row.revision if row else 0):
                     raise DomainError('tracker_revision_conflict', 409, current=self.header(row) if row else None, source_key=key)
-                if row and instant(incoming['observed_at'], 'observed_at') < instant(row['observed_at'], 'observed_at'):
+                if row and instant(incoming['observed_at'], 'observed_at') < instant(row.observed_at, 'observed_at'):
                     raise DomainError('stale_tracker_observation', 409, current=self.header(row), source_key=key)
                 if incoming['deleted'] and row is None: raise DomainError('unknown_tracker_workout', 404)
-                payload = json.loads(row['payload']) if incoming['deleted'] else {k:v for k,v in incoming.items() if k not in ('expected_revision','deleted')}
+                payload = json.loads(row.payload) if incoming['deleted'] else {k:v for k,v in incoming.items() if k not in ('expected_revision','deleted')}
                 if row and not incoming['deleted']:
-                    old = json.loads(row['payload'])
+                    old = json.loads(row.payload)
                     if (old['source_package'],old['source_id']) != (payload['source_package'],payload['source_id']):
                         raise DomainError('tracker_identity_changed',409)
                     if instant(payload['source_modified_at'],'source_modified_at') < instant(old['source_modified_at'],'source_modified_at'):
                         raise DomainError('stale_tracker_source',409)
                 if not incoming['deleted']:
-                    for other in db.execute('SELECT source_key,payload FROM tracker_workouts WHERE source_key!=?',(key,)):
-                        old = json.loads(other['payload'])
+                    for other in db.scalars(select(TrackerWorkout).where(TrackerWorkout.source_key != key)):
+                        old = json.loads(other.payload)
                         if (old['source_package'],old['source_id']) == (payload['source_package'],payload['source_id']):
                             raise DomainError('duplicate_tracker_source_identity',409)
                 linked = payload.get('activity_id') if not incoming['deleted'] else None
                 if linked:
-                    activity = db.execute("SELECT deleted FROM records WHERE entity_type='activities' AND entity_id=?",(linked,)).fetchone()
-                    if activity is None or activity['deleted']: raise DomainError('unknown_linked_activity')
-                revision = (row['revision'] if row else 0)+1
+                    activity = db.get(RecordRow, (db.user_id, "activities", linked))
+                    if activity is None or activity.deleted: raise DomainError('unknown_linked_activity')
+                revision = (row.revision if row else 0)+1
                 received = datetime.now(timezone.utc).isoformat()
-                db.execute('INSERT OR REPLACE INTO tracker_workouts VALUES (?,?,?,?,?,?)',
-                           (key, revision, int(incoming['deleted']), canonical(payload), incoming['observed_at'], received))
+                db.merge(TrackerWorkout(user_id=db.user_id, source_key=key, revision=revision, deleted=int(incoming['deleted']), payload=canonical(payload), observed_at=incoming['observed_at'], received_at=received))
                 result.append({'source_key': key, 'revision': revision, 'deleted': incoming['deleted']})
-            links = [json.loads(r['payload']).get('activity_id') for r in db.execute('SELECT payload FROM tracker_workouts WHERE deleted=0')]
+            links = [json.loads(r.payload).get('activity_id') for r in db.scalars(select(TrackerWorkout).where(TrackerWorkout.deleted == 0))]
             links = [link for link in links if link is not None]
             if len(links) != len(set(links)): raise DomainError('tracker_activity_already_linked',409)
             response = {'command_id': cid, 'records': result}
-            db.execute('INSERT INTO tracker_commands VALUES (?,?,?)',(cid,digest,canonical(response)))
+            db.add(TrackerCommand(user_id=db.user_id, command_id=cid, digest=digest, result=canonical(response)))
             return response
 
     def read(self, key, boundaries=None):
         text(key,'source_key')
-        with self.store.connect() as db:
-            row = db.execute('SELECT * FROM tracker_workouts WHERE source_key=?',(key,)).fetchone()
+        with self.store.session() as db:
+            row = db.get(TrackerWorkout, (db.user_id, key))
         if row is None: return {'workout': None}
         header = self.header(row)
-        if row['deleted']: return {'workout': header}
-        payload = json.loads(row['payload'])
+        if row.deleted: return {'workout': header}
+        payload = json.loads(row.payload)
         return {'workout': {**header, **{k:v for k,v in payload.items() if k != 'heart_rate_samples'},
                             'heart_rate_source_ids': sorted({s['source_id'] for s in payload['heart_rate_samples']}),
                             **sport_identity(payload), 'training_benefit': None, 'polar_zone_definitions': PERSONAL_ZONE_PROFILE,
@@ -231,15 +223,15 @@ class TrackerStore:
             if first.isoformat()!=date_from or last.isoformat()!=date_to or not 0 <= (last-first).days <= 365: raise ValueError()
         except (TypeError, ValueError): raise DomainError('invalid_tracker_date_range') from None
         result=[]
-        with self.store.connect() as db:
-            rows=db.execute('SELECT * FROM tracker_workouts ORDER BY source_key').fetchall()
+        with self.store.session() as db:
+            rows=db.scalars(select(TrackerWorkout).order_by(TrackerWorkout.source_key)).all()
         for row in rows:
-            payload=json.loads(row['payload'])
+            payload=json.loads(row.payload)
             day=instant(payload['start_at'],'start_at').astimezone(ZONE).date()
             if not first<=day<=last: continue
             item=self.header(row)
             item.update({k:payload.get(k) for k in ('source_package','source_id','source_modified_at','start_at','end_at','activity_id','exercise_type','source_title')})
-            if not row['deleted']:
+            if not row.deleted:
                 item.update(sport_identity(payload))
                 measured=metrics(payload)
                 item['metrics']={k:v for k,v in measured.items() if k not in ('curve','intervals','time_bands')}

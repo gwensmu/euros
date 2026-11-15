@@ -53,8 +53,7 @@ def seed(path,start):
     descriptor=os.open(path,os.O_WRONLY|os.O_CREAT|os.O_EXCL,0o600)
     os.close(descriptor)
     store=Store(path)
-    with store.connect() as db:
-        db.execute("BEGIN IMMEDIATE")
+    with store.session(write=True) as db:
         for item in data:store.command(item,_db=db)
     return len(data)
 

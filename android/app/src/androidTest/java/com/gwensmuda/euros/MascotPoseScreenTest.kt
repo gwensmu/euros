@@ -36,7 +36,8 @@ class MascotPoseScreenTest {
   try {
    val repo=Repository(db)
    compose.setContent{EurosTheme{Euros(repo)}}
-   compose.waitUntil(10_000){runBlocking{repo.dao.pending().isNotEmpty()}}
+   compose.waitForIdle()
+   org.junit.Assert.assertTrue(runBlocking{repo.dao.pending().isEmpty()})
    fun tab(name:String)=compose.onNode(hasText(name) and SemanticsMatcher.keyIsDefined(androidx.compose.ui.semantics.SemanticsProperties.Selected))
    tab("Food").performClick()
    runBlocking{repo.upsert("food_entries","synthetic-mascot-food",JSONObject("""{"consumed_at":"2026-10-14T12:00:00-05:00","local_date":"2026-10-14","raw_text":"synthetic food","nutrients":{"kcal":null,"protein_g":null,"carbs_g":null,"fat_g":null}}"""))}

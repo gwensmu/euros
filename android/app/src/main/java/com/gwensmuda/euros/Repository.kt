@@ -292,11 +292,20 @@ class Repository(private val db:EurosDatabase, llmClient:LlmClient?=null) {
  suspend fun sync(api:SyncApi)=mutex.withLock {
   val bound=dao.meta("server_identity")
   check(bound==null || bound==api.identity) { "This database belongs to a different server" }
+  val account=api.accountId
+  val boundAccount=dao.meta("server_account")
+  if(boundAccount!=null && boundAccount!=account) throw AccountCacheMismatch()
+  if(account!=null && boundAccount==null) {
+   // An old cache can only be claimed by the existing personal-service identity.
+   // Signing into a new account never transfers another account's offline records.
+   if(account!="usr-00000000000000000000000000000000" && (bound!=null || dao.hasAccountData())) throw AccountCacheMismatch(migrationRequired=true)
+  }
   if(bound==null) {
    // Verify authorization before binding this cache; never send writes to an unbound host.
    api.request("/v1/changes?after=0&limit=1")
    dao.meta(Metadata("server_identity",api.identity))
   }
+  if(account!=null && boundAccount==null) dao.meta(Metadata("server_account",account))
   for(pending in dao.pending()) {
    if(pending.error!=null || dao.pendingFor(pending.type,pending.id)?.commandId!=pending.commandId || dao.pendingForEntity(pending.type,pending.id).any{it.error!=null}) continue
    try {

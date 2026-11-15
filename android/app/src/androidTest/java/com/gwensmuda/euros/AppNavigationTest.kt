@@ -26,7 +26,8 @@ class AppNavigationTest {
   repo=Repository(db)
   restoration=StateRestorationTester(compose)
   restoration.setContent {EurosTheme {Euros(repo)}}
-  compose.waitUntil(10_000){runBlocking{repo.dao.pending().isNotEmpty()}}
+  compose.waitForIdle()
+   org.junit.Assert.assertTrue(runBlocking{repo.dao.pending().isEmpty()})
  }
  @After fun close(){db.close()}
  private fun tab(name:String)=compose.onNode(hasText(name) and SemanticsMatcher.keyIsDefined(androidx.compose.ui.semantics.SemanticsProperties.Selected))

@@ -4,6 +4,8 @@ Drafts are server-side proposals, not synced records. Applying a draft writes
 meal_plans and prep activities through the same revision-checked command path
 as the app. Planning never logs food, deducts a pantry or creates purchases.
 """
+from sqlalchemy import select, delete
+from .models import MealDraft, RecordRow
 import copy
 import hashlib
 import json
@@ -14,20 +16,16 @@ from .domain import MACROS, DomainError, canonical
 from .localtime import ZONE, local_clock, local_day, local_today
 from .meal_planning import preview
 from .meals import MEAL_FLAGS, food_grams, meal_flag, parse_week, snapshot_item
-from .nutrition_policy import TIERS, resolve, tier_for, training_on
+from .nutrition_policy import resolve, tier_for, training_on
+from .plan import PlanSettings, meal_clocks, weekly_sessions
 from .portions import balance
 
 POLICY_VERSION = '2026-11-11-v3'
 # Rotation stays continuous with the accepted nutrition-v2 plans.
 ROTATION_EPOCH = date(2026, 10, 22)
-# Last date covered by the saved training schedule; later days fall back to the weekly pattern.
-# Includes the accepted recurring extension and January 3–13 taper. An empty
-# date inside this horizon is a rest day, not a gap to fill from a recurrence.
-CONFIRMED_THROUGH = date(2027, 1, 13)
-COMPETITION_DAY = date(2027, 1, 13)
-PROVISIONAL_SESSIONS = {1: [('bjj', '18:30')], 3: [('bjj', '18:30')],
-                        5: [('bjj', '10:00')], 6: [('weights', '11:00')]}
-DEFAULT_CLOCKS = {'breakfast': '08:00', 'lunch': '12:30', 'dinner': '18:30', 'recovery-snack': '20:30'}
+# The user's event date is also the horizon of their saved schedule: dated activities decide
+# every day up to it, and only later days fall back to their weekly pattern. An empty date
+# inside the horizon is a rest day, not a gap to fill from a recurrence.
 PREP_WEEKDAYS = (2, 6)
 PREP_CLOCK = '16:30'
 PREP_DAYS_COVERED = 3
@@ -105,38 +103,45 @@ def _calculate(m, foods):
     return m
 
 
-def _training(records, day):
+def _training(records, day, plan):
+    """The day's sessions: saved activities, or the user's weekly pattern past their event date."""
     saved = training_on(records, day)
     sessions = [(r['payload']['kind'], local_clock(r['payload']['scheduled_at'])) for r in saved]
     snapshot = [dict(id=r['entity_id'], scheduled_at=r['payload']['scheduled_at'], kind=r['payload']['kind'],
                      status=r['payload']['status']) for r in saved]
-    if day > CONFIRMED_THROUGH and not saved:
-        return PROVISIONAL_SESSIONS.get(day.weekday(), []), 'provisional-weekly-pattern', snapshot
+    if day > _competition_day(plan) and not saved:
+        return weekly_sessions(plan).get(day.weekday(), []), 'provisional-weekly-pattern', snapshot
     return sessions, 'saved-schedule', snapshot
 
 
-def _day_tier(day, sessions, basis):
+def _competition_day(plan):
+    return date.fromisoformat(plan['competition']['date'])
+
+
+def _day_tier(day, sessions, basis, plan):
     tier = tier_for(k for k, _ in sessions)
     # Countdown anchor: food uses a training tier while the assigned event day/time
     # is still unknown. This is a meal assumption, never an authored workout.
-    if day == COMPETITION_DAY and not sessions:
+    if day == _competition_day(plan) and not sessions:
         return 'bjj', 'provisional-competition-day'
     return tier, basis
 
 
-def _meal_clocks(day, sessions):
-    """Meal times around the day's training: earlier meals for morning sessions, a pre-training
-    snack 90 minutes before BJJ, and dinner moved off late classes."""
-    clocks = dict(DEFAULT_CLOCKS)
+def _meal_clocks(day, sessions, plan):
+    """Meal times around the day's training: the user's planned times, moved earlier for morning
+    sessions, with a pre-training snack 90 minutes before BJJ and dinner off late classes."""
+    clocks = meal_clocks(plan)
     bjj = next((t for k, t in sessions if k == 'bjj'), None)
+    # Only slots the user actually plans are moved; training never adds a meal they removed.
+    shift = lambda slot, clock: clocks.update({slot: clock}) if slot in clocks else None
     if sessions and min(t for _, t in sessions) < '13:00':
-        clocks.update(breakfast='07:30', lunch='13:00')
+        shift('breakfast', '07:30'), shift('lunch', '13:00')
     if bjj:
         clocks['pre-training'] = (datetime.combine(day, datetime.strptime(bjj, '%H:%M').time()) - timedelta(minutes=90)).strftime('%H:%M')
         if bjj >= '17:00':
             # Dinner before late classes; no invented training finish or post-session time.
-            clocks['dinner'] = '17:30' if bjj >= '20:00' else '20:30'
-            clocks['recovery-snack'] = '21:00' if bjj < '20:00' else '15:00'
+            shift('dinner', '17:30' if bjj >= '20:00' else '20:30')
+            shift('recovery-snack', '21:00' if bjj < '20:00' else '15:00')
     return clocks
 
 
@@ -190,22 +195,23 @@ def _balanced(meals, catalog, targets, avoid, warnings, day):
 RETIRED_FIELDS = ('maintenance_meals', 'maintenance_planned_totals')
 
 
-def _build_day(day, records, old, swaps, avoid, catalog, today):
+def _build_day(day, records, old, swaps, avoid, catalog, today, plan):
     """One dated plan, balanced to the day's target.
 
     The target is whatever the nutrition policy says the day's budget is; drafting never asks
     why (training tier, weight phase). The plan keeps the tier it was drafted from as its
     nutrition_targets, which is the policy's input, not a second answer.
     """
-    sessions, basis, snapshot = _training(records, day)
-    tier, basis = _day_tier(day, sessions, basis)
-    target = resolve(records, str(day), TIERS[tier], today=str(today))['targets']
+    sessions, basis, snapshot = _training(records, day, plan)
+    tier, basis = _day_tier(day, sessions, basis, plan)
+    tiers = plan['calorie_goals']['tiers']
+    target = resolve(records, str(day), tiers[tier], today=str(today), plan=plan)['targets']
     warnings = []
-    meals = _pick_meals(day, _meal_clocks(day, sessions), swaps, avoid, catalog, warnings)
+    meals = _pick_meals(day, _meal_clocks(day, sessions, plan), swaps, avoid, catalog, warnings)
     meals = _balanced(meals, catalog, target, avoid, warnings, day)
     # Stable IDs keep existing links; preserve unrelated payload fields from the saved plan.
     payload = {k: v for k, v in copy.deepcopy(old['payload']).items() if k not in RETIRED_FIELDS} if old else {}
-    payload.update(date=str(day), reference_day=tier, nutrition_targets=dict(TIERS[tier]), meals=meals,
+    payload.update(date=str(day), reference_day=tier, nutrition_targets=dict(tiers[tier]), meals=meals,
                    policy_version=POLICY_VERSION, training_basis=basis, training_snapshot=snapshot)
     payload['planned_totals'] = preview(payload)['planned_totals']
     return payload, target, sessions, warnings
@@ -328,11 +334,9 @@ def _parse_swaps(swaps, days, catalog):
 
 
 class MealWeeks:
-    def __init__(self, store):
+    def __init__(self, store, plans=None):
         self.store, self.catalog = store, Catalog(store)
-        with store.connect() as db:
-            db.execute('CREATE TABLE IF NOT EXISTS meal_week_drafts '
-                       '(draft_id TEXT PRIMARY KEY, created_at TEXT NOT NULL, body TEXT NOT NULL)')
+        self.plans = plans or PlanSettings(store)
 
     def draft(self, week_start, dates=None, swaps=None, avoid_foods=None, today=None):
         _, days = parse_week(week_start, dates)
@@ -342,6 +346,7 @@ class MealWeeks:
             raise DomainError('unknown_food', unknown=sorted(avoid - set(catalog['foods'])), allowed=sorted(catalog['foods']))
         swaps = _parse_swaps(swaps, days, catalog)
         today = today or local_today()
+        plan = self.plans.plan()
         records = self.store.records()['records']
         saved = {r['payload']['date']: r for r in records if r['entity_type'] == 'meal_plans'}
         skipped, plans, summary, warnings = [], {}, [], []
@@ -355,7 +360,7 @@ class MealWeeks:
                 skipped.append(dict(date=str(day), reason='plan deleted; not recreated'))
                 continue
             old = saved.get(str(day))
-            payload, target, sessions, day_warnings = _build_day(day, records, old, swaps.get(str(day), {}), avoid, catalog, today)
+            payload, target, sessions, day_warnings = _build_day(day, records, old, swaps.get(str(day), {}), avoid, catalog, today, plan)
             warnings += day_warnings
             plans[str(day)] = dict(entity_id=key, base_revision=old['revision'] if old else 0, payload=payload)
             summary.append(_day_summary(day, payload, target, sessions, old))
@@ -368,33 +373,31 @@ class MealWeeks:
                     next_step='Show the user this week. Redraft with swaps/avoid_foods for changes; call apply_week only after they accept.')
 
     def _deleted_plans(self):
-        with self.store.connect() as db:
-            return {r['entity_id'] for r in db.execute(
-                "SELECT entity_id FROM records WHERE entity_type='meal_plans' AND deleted=1")}
+        with self.store.session() as db:
+            return set(db.scalars(select(RecordRow.entity_id).where(RecordRow.entity_type == "meal_plans", RecordRow.deleted == 1)))
 
     def _store_draft(self, body):
         """Content-addressed, so redrafting the same week returns the same ID; expired drafts are swept."""
         draft_id = hashlib.sha256(canonical(body).encode()).hexdigest()[:16]
         now = datetime.now(timezone.utc)
-        with self.store.connect() as db:
-            db.execute('DELETE FROM meal_week_drafts WHERE created_at<?', ((now - DRAFT_TTL).isoformat(),))
-            db.execute('INSERT OR REPLACE INTO meal_week_drafts VALUES (?,?,?)', (draft_id, now.isoformat(), canonical(body)))
+        with self.store.session(write=True) as db:
+            db.execute(delete(MealDraft).where(MealDraft.created_at < (now - DRAFT_TTL).isoformat()))
+            db.merge(MealDraft(user_id=db.user_id, draft_id=draft_id, created_at=now.isoformat(), body=canonical(body)))
         return draft_id
 
     def apply(self, draft_id):
         if not isinstance(draft_id, str) or not draft_id:
             raise DomainError('invalid_draft_id')
-        with self.store.connect() as db:
-            row = db.execute('SELECT body FROM meal_week_drafts WHERE draft_id=?', (draft_id,)).fetchone()
+        with self.store.session() as db:
+            row = db.get(MealDraft, (db.user_id, draft_id))
         if row is None:
             raise DomainError('draft_not_found', 404, hint='Drafts expire after 7 days; call draft_week again.')
-        body = json.loads(row['body'])
+        body = json.loads(row.body)
         commands = [dict(command_id=f'week-{draft_id}-{p["entity_id"]}', entity_type=kind, entity_id=p['entity_id'],
                          expected_revision=p['base_revision'], operation='upsert', payload=p['payload'])
                     for kind, items in (('meal_plans', body['plans']), ('activities', body['preps'])) for p in items]
         try:
-            with self.store.connect() as db:
-                db.execute('BEGIN IMMEDIATE')
+            with self.store.session(write=True) as db:
                 results = [self.store.command(c, _db=db) for c in commands]
         except DomainError as exc:
             if exc.body.get('error') in ('revision_conflict', 'record_deleted'):

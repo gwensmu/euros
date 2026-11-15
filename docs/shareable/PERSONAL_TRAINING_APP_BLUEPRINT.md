@@ -18,19 +18,19 @@ The companion HTML edition includes reference layouts. Both editions contain the
 
 ## 1. What you are building
 
-A private, single-person app for preparing for a specific training goal or competition—for example, a Brazilian jiu-jitsu tournament. The goal and its target date organize the training phases, weekly schedule, recovery routines and nutrition plan. The app turns that preparation into concrete daily actions and makes progress toward the goal visible.
+A private app for preparing for a specific training goal or competition—for example, a Brazilian jiu-jitsu tournament. One installation can hold several people's accounts, and no account sees another's training (see *Accounts, sign-in and the plan a user sets*). The goal and its target date organize the training phases, weekly schedule, recovery routines and nutrition plan. The app turns that preparation into concrete daily actions and makes progress toward the goal visible.
 
 It answers three questions: what should I do next, what have I logged, and how is my training week going? It combines a dated training plan, recovery actions, food intake and meal plans, tracker workout recaps, a weekly reflection, and a small animal companion. Personalize it around the recipient’s own goal, whether that is a BJJ competition, another sporting event, or a defined training milestone.
 
 The phone is the everyday interface. A backend on an always-on local computer provides durable shared storage and AI requests. An authenticated public HTTPS tunnel makes it accessible away from home and to the owner's external AI. The external AI can read the plan and logs, help with meals or shopping, and make explicitly requested changes through a model-facing tool interface such as MCP.
 
-The app follows an existing plan; it is not an autonomous coach. Plan revisions happen through conversations with the owner's AI or coding sessions outside the app. No social feed, multi-athlete administration, technique journal, calorie reward for exercise, generic readiness score, or in-app shopping system.
+The app follows an existing plan; it is not an autonomous coach. A user sets the shape of their own plan — event and date, calorie goals, meals, weekly training days — on the account website; session-level prescriptions and plan revisions come from conversations with the owner's AI or coding sessions outside the app. No social feed, coach-managed rosters or shared training groups, technique journal, calorie reward for exercise, generic readiness score, or in-app shopping system.
 
 ### Current scope versus future ideas
 
 Recreate now: Today, Week, Food, activity details, recovery steps, food interpretation/review/save, weight observations, reminders, settings, durable offline records, authenticated synchronization, saved meal plans available to agents, tracker HR recaps and agent-readable workouts, and mascot moods.
 
-Not part of the current baseline: natural-language manual workout interpretation, automatic workout categorization by an LLM, generated in-app workout narratives, sleep tracking, a full plan editor, pantry/leftover accounting, automatic shopping messages, advanced post-session arrival-relative notifications, or a containerized hosting setup. Natural-language manual workout logging was explicitly removed from scope. Other deferred features may be proposed later; do not implement them simply because an early design implies them.
+Not part of the current baseline: natural-language manual workout interpretation, automatic workout categorization by an LLM, generated in-app workout narratives, sleep tracking, an in-app editor for session prescriptions, pantry/leftover accounting, automatic shopping messages, advanced post-session arrival-relative notifications, or a containerized hosting setup. Natural-language manual workout logging was explicitly removed from scope. Other deferred features may be proposed later; do not implement them simply because an early design implies them.
 
 The original app has some incomplete future schedule/prescription data. A new owner's plan should be authored only through their confirmed horizon; do not copy gaps as a feature or silently repeat one phase forever.
 
@@ -41,6 +41,7 @@ Ask the owner for the following in small groups. Record answers in a human-reada
 | Input | What to establish |
 | --- | --- |
 | Device and access | Phone platform, local computer, whether it stays awake, external AI clients, and who will maintain it. |
+| Accounts | Who may have an account, whether visitors can create their own, who holds the operator commands, and whose model budget the accounts spend. |
 | Event | App name, event name and date, or an agreed alternate home heading if no event. |
 | Time and units | Home time zone, week start, body-weight unit, food and nutrient units, clock format. |
 | Training | Dated phases, weekly days/times, session intent, exercise prescriptions, rest days, and any confirmed durations. |
@@ -188,25 +189,37 @@ flowchart TB
         mobile -->|"Opt-in saved food logs, edits and deletions"| health
     end
     agent["Owner's external AI: own LLM + MCP tool client"]
+    browser["Any browser: account site and sign-in screen"]
     tunnel["Authenticated public HTTPS tunnel"]
     mobile <-->|"Sync, tracker upload, app AI requests"| tunnel
     agent <-->|"MCP tool calls and results"| tunnel
+    browser <-->|"Password sign-in, account and plan settings"| tunnel
+    mobile -.->|"Opens the sign-in screen, never handles the password"| browser
+    agent -.->|"Opens the sign-in screen, never handles the password"| browser
     subgraph host["Always-on local computer"]
         api["Mobile app API"]
         mcp["MCP server interface"]
+        site["Account website: password, plan settings, connected apps"]
+        accounts["Accounts: identities, tokens and grants"]
         rules["Shared validation, revisions and limits"]
-        db[("Canonical records and usage ledger")]
+        db[("Shared database: accounts, records, plan settings and usage ledger")]
         secrets["App model-provider credential"]
         api <--> rules
         mcp <--> rules
+        site <--> accounts
+        site <--> rules
+        accounts -->|"Which account this request is"| rules
         rules <--> db
         secrets -.-> rules
     end
     tunnel <--> api
     tunnel <--> mcp
+    tunnel <--> site
     models["App's model provider: food drafts"]
     rules <-->|"Selected inputs / structured proposals"| models
 ```
+
+**Every request belongs to one account before any handler runs.** The account site, the mobile API and the tool interface all resolve an identity first, and account-owned reads and writes are scoped by the authenticated identity, with ownership included in record and retry keys.
 
 **The mobile API and MCP server are two interfaces to the same backend, not two independent databases.** The mobile app reads cached data and queues offline changes; the backend accepts canonical revisions. Tracker data enters through the phone and selected records are uploaded.
 
@@ -232,7 +245,10 @@ The phone works offline for viewing cached plans, manual logging, corrections an
 
 | Concept | Minimum responsibility |
 | --- | --- |
-| Personal configuration | Event, time zone, units, targets, selected sources, confirmed mapping rules and preferences. |
+| Account identity | Username, display name, password verifier, disabled flag, and the storage that account's records live in. Never a plaintext password or token. |
+| Authorization grant | Which client a user allowed, which scopes, the issued credentials' verifiers and expiry, and whether it is revoked. |
+| Training plan settings | The user's own event, goal weight and maintenance choice, calorie tiers, planned meals and weekly workout schedule, with a revision. Settings, not records. |
+| Personal configuration | Time zone, units, selected sources, confirmed mapping rules and preferences. |
 | Plan revision/template | Versioned prescriptions and phase scope; reusable training and recovery definitions. |
 | Scheduled activity | Stable ID, kind, title, timestamp, prescription snapshot, parent/link IDs and explicit outcome/time. |
 | Recovery child | Stable parent occurrence identity, action type, offset semantics, own outcome and actual intake only when supplied. |
@@ -596,6 +612,46 @@ Display-only tracker queries run on a background CPU dispatcher, separate from t
 
 Workout details show a temporary loading state while preparing a cold recap and keep a valid displayed recap if a fresh read fails. Existing actionable health errors remain. Day/food projections are remembered against records, local date/timezone and applicable policy-day boundaries; Today omits unused nutrition targets. Food reuses one selected entry list for totals, consumed entries and remaining meals, preserving unknown nutrient values and dismissals. Mascot calculations run only while Home is visible, reuse the activity index and are memoized without changing pose rules. Weekly-review evidence fingerprints are computed in the background only when evidence/week/coverage changes; valid saved output remains visible while checking freshness. Targets in Settings are memoized without changing the nutrition policy.
 
+## Accounts, sign-in and the plan a user sets
+
+One installation can serve several people. Everything else in this blueprint describes what one signed-in person sees.
+
+### What an account is
+
+An account has a username, a display name and a password. Store the password only as a verifier from a slow, salted password hash; never anything reversible. Require a password long enough to resist guessing rather than a character-class puzzle, and stop answering sign-in attempts for a username for a while after a run of failures — the correct password included, so an attacker cannot distinguish lockout from a wrong guess. Make an unknown username cost the same work as a wrong password.
+
+Each account owns its records, plan, catalog, meal drafts, tracker observations, caches and model-usage ledger. These share one database with the account and authentication tables. Bind the authenticated account once before entering a handler; never accept ownership from a payload, query parameter or guessed identifier. Include ownership in every account-data read, update, delete, uniqueness constraint and retry key. Sync cursors are local to each account. A conflict response may contain only that account’s record. Account-site forms and MCP use the same boundary.
+
+Decide deliberately who may create an account. Self-service sign-up is reasonable for a service whose users bring their own costs, and wrong for an installation where every account spends the operator's model budget: there, keep sign-up closed and create accounts with an operator command. Give the operator commands to create an account, reset a password, list accounts, and adopt an existing single-person database into a named account — adoption copies rather than moves, so rollback keeps working.
+
+### Signing in
+
+Clients never handle a password. The app and the tool client send the user to the backend's own sign-in page in a browser and receive a scoped, expiring credential for that account; implement this with the authorization-code flow and a proof key, refusing any weaker challenge method. Rotate the renewal credential on every use, and treat a replayed authorization code or a spent renewal credential as a compromise: revoke that whole grant rather than issuing more. Store only verifiers of issued credentials, and keep them out of logs and error text.
+
+Offer at least a read scope and a write scope, and check them where the work happens: a read-only grant must be refused a write, including through the tool interface. Let a client register itself if the tool ecosystem requires it, and keep registration harmless — registering must grant no access until a user signs in. Publish the metadata documents that let a tool client discover where to sign in, and answer an unauthenticated request with a challenge naming that metadata. A deployment may also configure a static credential; keep it bound to one named account and to its own surface.
+
+### The account website
+
+Server-rendered pages, no client-side framework and no third-party assets: sign in, see the plan and countdown, edit the training plan, change the password, and see and revoke connected applications. Session cookies are opaque values stored as verifiers, HTTP-only, same-site, and marked secure wherever the browser is not on loopback. Put an unguessable token in every form, check it on every submission, and check that the submission came from this site. Changing a password ends the account's other browser sessions and leaves connected applications alone until the user revokes them — say so on the page rather than surprising them.
+
+Behind a TLS terminator the service sees a private, unencrypted hop. Configure the public base URL explicitly and use it for the published metadata, the cookie's secure flag and the origin check; otherwise every one of those describes the wrong address.
+
+Empty and error states: a signed-out visitor is redirected to sign-in rather than shown an empty account; a wrong password and a locked-out account say which without naming whether the username exists; an expired form says it expired and can be retried; a plan that changed in another window reports the conflict instead of overwriting it; and a revoked application that is revoked again says it was already disconnected.
+
+### The plan a user sets
+
+The settings a user owns are: event name and date; goal weight and whether to move to maintenance; the calorie tiers for each kind of training day and the maintenance addition; planned meals as slot, time and name; and the weekly workout schedule as weekday, time, type and name. Save a plan whole against a revision, so a stale form cannot silently drop a field.
+
+Daily targets, the maintenance decision and meal drafting read the signed-in user's plan rather than built-in constants; a user who never edits theirs keeps the defaults the product shipped with, and an installation's historical policy boundaries still apply to dates before them, so recorded history is not recomputed under a plan set later. Saved dated plans keep their own target snapshots regardless.
+
+Generating dated sessions from the weekly schedule is an explicit, additive action over a bounded date range. Skip any date that already has a session at that time, any session this plan already generated, and any generated session the user deleted. Never overwrite a logged outcome, and report what was created and what was skipped.
+
+The phone reads the account's plan after a successful sync and caches it: the countdown and companion use the user's own event name and date, falling back to the bundled plan while offline. Keep plan editing on the website and link to it from settings; the phone shows which account is signed in.
+
+### Acceptance checks
+
+Sign-in, refusal and cancellation at the authorization screen; a wrong proof key, a replayed code and a reused renewal credential each issuing nothing and revoking the grant; a read-only grant refused a write; revocation taking effect on the next request; an unauthenticated request naming its metadata. Two accounts writing the same record, command and workout identities and never seeing each other's, through both the app API and the tool interface; account-owned caches and model allowances. Password rules, lockout, password change ending other sessions, form-token and cross-origin refusal, closed sign-up. A plan saved, conflicted on a stale revision, and validated field by field; a user's tiers and goal weight deciding their targets and leaving another account's alone; generating sessions twice creating nothing the second time and leaving a deleted or logged session alone. The whole flow once more through a TLS terminator with the public base URL configured.
+
 
 ## Tracker memory and small-cache isolation
 
@@ -606,3 +662,14 @@ Import/link mutations preserve historical sample arrays as opaque validated JSON
 Query small reminder-copy and pending-wrap-up metadata by exact prefix at the database boundary; never load unrelated tracker chunks just to filter them out. UI freshness triggers observe the compact snapshot manifest. Reminder eligibility reuses the shared sample-free linked-end projection, invalidated by import/link/deletion changes. Food interpretation, reviewed final save, durable drafts, pending commands, saved wrap-ups and notification rules retain their existing transitions and errors.
 
 Acceptance: opaque sample arrays preserve fields/nulls/precision through mutations and compressed round-trips; filtered reconciliation preserves other sources; small metadata scans succeed despite unrelated missing tracker chunks; link/deletion corrections invalidate reminder eligibility; test populated-device foreground refresh, calorie lookup/review and saved-wrap-up reopen together without exhausting the ordinary application heap. Keep personal snapshot and diagnostic artifacts private.
+
+
+## Shared account storage — November 15, 2026
+
+Use one shared database for identities, browser sessions, OAuth grants and every account's training data. Data-access objects are bound to an authenticated account; ownership is never taken from request-supplied fields. Records, command retries, tracker source identities, catalogs, draft/cache keys and training plans use account-qualified keys. Changes and catalog history retain per-account cursors. Quota checks and cache expiry affect only the current account. Unknown or disabled accounts fail before a workspace is returned. Account-scoped ORM sessions bind account identity without mutable global state; simultaneous requests cannot replace each other's identity. The implementation uses SQLAlchemy declarative models, composite account-qualified primary keys and foreign keys to users. ORM query criteria scope reads and deletes, and flush checks reject foreign-account writes or ownership changes. Authentication token/session operations remain explicit parameterized transactions in the same database. Raw database access is reserved for authentication, migration and operator tools; application domain services use scoped ORM sessions.
+
+The phone verifies the server's authenticated account before sync. Bind its durable cache to both server and account. Refuse a different account before sending pending writes, pulling records, publishing workouts or saving that account's plan. Preserve pending writes, drafts and the original enrollment on refusal; show a clear account-mismatch message. New installations do not seed a bundled personal schedule into their outbox; they receive their signed-in account’s dated plan through sync. Switching accounts within one local cache and transferring an older or already-populated unbound cache to a newly created account are not implemented. Existing personal-service caches can bind to their established legacy identity; other legacy-cache transitions require an explicit migration, never an inferred ownership transfer. Token readers belonging to an old sign-in cannot borrow a new sign-in's credentials.
+
+Migration is an operator action with the old service stopped. Copy source databases using consistent snapshots, retain source files, and refuse a populated destination account or an existing destination file. Preserve identifiers, revisions, tombstones, sync cursors and serialized idempotency results; retain retired review data as inaccessible historical data. Validate all accounts before atomically installing the consolidated file. Refuse unknown source tables or orphan account directories rather than omitting data. Ordinary startup never silently creates a new empty account registry when it finds the old layout. Back up and restore the whole shared database; old application versions cannot directly open schema version 2. Do not restore an old backup over newer writes.
+
+Acceptance includes colliding IDs between two accounts, guessed record/draft/workout IDs, cross-account conflict responses, cache and quota separation, account-local pagination, concurrent authenticated requests, read-only and revoked credentials, browser form ownership, Android account mismatch with zero uploads, and a failed migration leaving sources and the active destination intact. These checks establish tested boundaries, not a guarantee against every future implementation error. The production service still uses its existing personal authentication until account enrollment and cutover are explicitly configured.

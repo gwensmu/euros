@@ -1,11 +1,12 @@
 """Transactional canonical records. No fixtures or model-generated values enter this store."""
+from sqlalchemy import select, func
+from .models import RecordRow, Change, Command
 import hashlib
 import json
-import sqlite3
-from contextlib import contextmanager, nullcontext
+from contextlib import nullcontext
 from datetime import date, datetime, time, timezone, timedelta
 from decimal import Decimal, InvalidOperation
-from pathlib import Path
+from .database import LEGACY_OWNER, connect, initialize, account_session
 from .nutrition_policy import resolve as resolve_nutrition
 
 TYPES = {"activities", "food_entries", "weight_entries", "meal_plans"}
@@ -222,41 +223,24 @@ def validate_payload(kind, p):
 
 
 class Store:
-    def __init__(self, path):
-        self.path = str(path)
-        Path(self.path).parent.mkdir(parents=True, exist_ok=True)
-        with self.connect() as db:
-            version = db.execute("PRAGMA user_version").fetchone()[0]
-            if version not in (0, 1):
-                raise RuntimeError(f"Unsupported database schema {version}")
-            db.executescript('''
-                PRAGMA journal_mode=WAL;
-                CREATE TABLE IF NOT EXISTS records (
-                  entity_type TEXT NOT NULL, entity_id TEXT NOT NULL, revision INTEGER NOT NULL,
-                  deleted INTEGER NOT NULL, payload TEXT NOT NULL, updated_at TEXT NOT NULL,
-                  PRIMARY KEY(entity_type, entity_id));
-                CREATE TABLE IF NOT EXISTS changes (
-                  cursor INTEGER PRIMARY KEY AUTOINCREMENT, record TEXT NOT NULL);
-                CREATE TABLE IF NOT EXISTS commands (
-                  command_id TEXT PRIMARY KEY, digest TEXT NOT NULL, result TEXT NOT NULL);
-                PRAGMA user_version=1;
-            ''')
+    def __init__(self, path, user_id=LEGACY_OWNER):
+        if not isinstance(user_id, str) or not user_id.startswith('usr-') or len(user_id) != 36 or any(c not in '0123456789abcdef' for c in user_id[4:]):
+            raise ValueError('Invalid account identifier')
+        self.path, self.user_id = str(path), user_id
+        initialize(self.path, legacy_owner=user_id)
 
-    @contextmanager
     def connect(self):
-        db = sqlite3.connect(self.path, timeout=10)
-        db.row_factory = sqlite3.Row
-        try:
-            with db:
-                yield db
-        finally:
-            db.close()
+        return connect(self.path)
+
+    def session(self, write=False):
+        return account_session(self.path, self.user_id, write=write)
 
     @staticmethod
     def record(row):
         if row is None:
             return None
-        return {**dict(row), "deleted": bool(row["deleted"]), "payload": json.loads(row["payload"])}
+        return {"entity_type": row.entity_type, "entity_id": row.entity_id, "revision": row.revision,
+                "deleted": bool(row.deleted), "payload": json.loads(row.payload), "updated_at": row.updated_at}
 
     def command(self, c, _db=None):
         if not isinstance(c, dict):
@@ -270,20 +254,19 @@ class Store:
             raise DomainError("unsupported_operation")
         if type(c["expected_revision"]) is not int or not 0 <= c["expected_revision"] < MAX_SQLITE_INTEGER:
             raise DomainError("invalid_revision")
+        if _db is not None and _db.user_id != self.user_id:
+            raise DomainError('account_context_mismatch', 403)
         encoded = canonical(c).encode()
         if len(encoded) > 262144:
             raise DomainError("request_too_large", 413)
         digest = hashlib.sha256(encoded).hexdigest()
-        with (self.connect() if _db is None else nullcontext(_db)) as db:
-            if _db is None:
-                db.execute("BEGIN IMMEDIATE")
-            prior = db.execute("SELECT * FROM commands WHERE command_id=?", (c["command_id"],)).fetchone()
+        with (self.session(write=True) if _db is None else nullcontext(_db)) as db:
+            prior = db.get(Command, (self.user_id, c['command_id']))
             if prior:
-                if prior["digest"] != digest:
+                if prior.digest != digest:
                     raise DomainError("idempotency_key_reused", 409)
-                return json.loads(prior["result"])
-            current = self.record(db.execute("SELECT * FROM records WHERE entity_type=? AND entity_id=?",
-                                            (c["entity_type"], c["entity_id"])).fetchone())
+                return json.loads(prior.result)
+            current = self.record(db.get(RecordRow, (self.user_id, c['entity_type'], c['entity_id'])))
             if c["expected_revision"] != (current["revision"] if current else 0):
                 raise DomainError("revision_conflict", 409, current=current)
             if c["operation"] == "delete":
@@ -314,12 +297,11 @@ class Store:
             record = {"entity_type": c["entity_type"], "entity_id": c["entity_id"],
                       "revision": c["expected_revision"] + 1, "deleted": c["operation"] == "delete",
                       "payload": payload, "updated_at": datetime.now(timezone.utc).isoformat()}
-            db.execute("INSERT OR REPLACE INTO records VALUES (?,?,?,?,?,?)",
-                       (record["entity_type"], record["entity_id"], record["revision"], record["deleted"],
-                        canonical(payload), record["updated_at"]))
-            cursor = db.execute("INSERT INTO changes(record) VALUES (?)", (canonical(record),)).lastrowid
+            db.merge(RecordRow(user_id=self.user_id, **{**record, "payload": canonical(payload)}))
+            cursor = (db.scalar(select(func.max(Change.cursor))) or 0) + 1
+            db.add(Change(user_id=self.user_id, cursor=cursor, record=canonical(record)))
             result = {"record": record, "cursor": cursor}
-            db.execute("INSERT INTO commands VALUES (?,?,?)", (c["command_id"], digest, canonical(result)))
+            db.add(Command(user_id=self.user_id, command_id=c["command_id"], digest=digest, result=canonical(result)))
             return result
 
     @staticmethod
@@ -328,11 +310,8 @@ class Store:
         anchor, source = payload.get("weekly_anchor"), payload.get("source_key")
         if not anchor and not source:
             return
-        rows = db.execute(
-            "SELECT deleted,payload FROM records WHERE entity_type='weight_entries' AND entity_id<>?",
-            (entity_id,),
-        ).fetchall()
-        others = [(bool(row["deleted"]), json.loads(row["payload"])) for row in rows]
+        rows = db.scalars(select(RecordRow).where(RecordRow.entity_type == "weight_entries", RecordRow.entity_id != entity_id)).all()
+        others = [(bool(row.deleted), json.loads(row.payload)) for row in rows]
         if anchor and any(not deleted and p.get("weekly_anchor") == anchor for deleted, p in others):
             raise DomainError("weekly_anchor_already_selected")
         if source and any(p.get("source_key") == source for _, p in others):
@@ -341,25 +320,23 @@ class Store:
     def changes(self, after=0, limit=100):
         if type(after) is not int or not 0 <= after <= MAX_SQLITE_INTEGER or type(limit) is not int or not 1 <= limit <= 500:
             raise DomainError("invalid_pagination")
-        with self.connect() as db:
-            rows = db.execute("SELECT * FROM changes WHERE cursor>? ORDER BY cursor LIMIT ?", (after, limit + 1)).fetchall()
-        changes = [{**json.loads(r["record"]), "cursor": r["cursor"]} for r in rows[:limit]]
+        with self.session() as db:
+            rows = db.scalars(select(Change).where(Change.cursor > after).order_by(Change.cursor).limit(limit + 1)).all()
+        changes = [{**json.loads(r.record), "cursor": r.cursor} for r in rows[:limit]]
         return {"changes": changes, "next_cursor": changes[-1]["cursor"] if changes else after,
                 "has_more": len(rows) > limit}
 
     def records(self, entity_type=None):
         if entity_type is not None and (not isinstance(entity_type, str) or entity_type not in TYPES):
             raise DomainError("invalid_entity_type")
-        with self.connect() as db:
-            rows = db.execute("SELECT * FROM records WHERE deleted=0 AND (? IS NULL OR entity_type=?) ORDER BY entity_type,entity_id",
-                              (entity_type, entity_type)).fetchall()
+        with self.session() as db:
+            rows = db.scalars(select(RecordRow).where(RecordRow.deleted == 0, True if entity_type is None else RecordRow.entity_type == entity_type).order_by(RecordRow.entity_type, RecordRow.entity_id)).all()
         return {"records": [self.record(r) for r in rows]}
 
     def meal_plan(self, local_date):
         parse_local_date(local_date, "invalid_local_date")
-        with self.connect() as db:
-            row = db.execute("SELECT * FROM records WHERE entity_type='meal_plans' AND entity_id=? AND deleted=0",
-                             ("meal-plan-" + local_date,)).fetchone()
+        with self.session() as db:
+            row = db.scalar(select(RecordRow).where(RecordRow.entity_type == "meal_plans", RecordRow.entity_id == "meal-plan-" + local_date, RecordRow.deleted == 0))
         return {"local_date": local_date, "record": self.record(row)}
 
     def meal_plans(self, date_from, date_to):
@@ -370,7 +347,8 @@ class Store:
         return {"date_from": date_from, "date_to": date_to,
                 "records": [record for record in records if date_from <= record["payload"]["date"] <= date_to]}
 
-    def nutrition(self, local_date):
+    def nutrition(self, local_date, plan=None):
+        """Known intake and the day's targets. plan is the account's training plan, else defaults."""
         parse_local_date(local_date, "invalid_local_date")
         entries = [r for r in self.records("food_entries")["records"] if r["payload"]["local_date"] == local_date]
         totals = {}
@@ -379,7 +357,8 @@ class Store:
             totals[k] = {"known_total": str(sum((Decimal(str(v)) for v in values if v is not None), Decimal(0))),
                          "missing_count": sum(v is None for v in values)}
         saved = self.meal_plan(local_date)["record"]
-        policy = resolve_nutrition(self.records("weight_entries")["records"] + self.records("activities")["records"], local_date, saved["payload"]["nutrition_targets"] if saved else None)
+        policy = resolve_nutrition(self.records("weight_entries")["records"] + self.records("activities")["records"],
+                                   local_date, saved["payload"]["nutrition_targets"] if saved else None, plan=plan)
         return {"local_date": local_date, "entry_count": len(entries), "nutrients": totals, **policy}
 
     def import_plan(self, commands):
@@ -388,6 +367,5 @@ class Store:
             raise DomainError("plan_requires_1_to_500_commands")
         if any(not isinstance(c, dict) or c.get("entity_type") != "activities" for c in commands):
             raise DomainError("plan_contains_non_activity")
-        with self.connect() as db:
-            db.execute("BEGIN IMMEDIATE")
+        with self.session(write=True) as db:
             return {"results": [self.command(c, _db=db) for c in commands]}

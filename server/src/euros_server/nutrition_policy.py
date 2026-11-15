@@ -1,7 +1,12 @@
-"""Dated owner policy. Planned tiers are snapshots, never tracker calorie eat-back.
+"""Dated nutrition policy. Planned tiers are snapshots, never tracker calorie eat-back.
 
 The one home for a day's targets: which tier its training implies, when maintenance begins
 and what maintenance adds. Callers (meal drafting, totals) ask for the targets, never why.
+
+The constants below are the defaults an account starts with. A user who sets their own
+calorie goals and goal weight passes that plan (see plan.py) into resolve, which then uses
+their tiers instead. Dates before EFFECTIVE_FROM keep the original dated policy for every
+account, so already-recorded history is never recomputed under a plan set later.
 """
 from datetime import date, timedelta
 from decimal import Decimal
@@ -24,12 +29,21 @@ MAINTENANCE_ADD = dict(kcal=200, carbohydrateG=50)
 TRAINING_KINDS = ('bjj', 'weights')
 
 
-def maintenance_targets(targets):
+def maintenance_targets(targets, addition=None):
     """A tier's targets with the maintenance addition applied."""
     out = dict(targets)
-    for key, extra in MAINTENANCE_ADD.items():
-        out[key] = float(Decimal(str(targets[key])) + extra)
+    for key, extra in (addition or MAINTENANCE_ADD).items():
+        out[key] = float(Decimal(str(targets[key])) + Decimal(str(extra)))
     return out
+
+
+def plan_policy(plan=None):
+    """The goal weight, tiers and maintenance addition in force: a user's plan, else the defaults."""
+    if not plan:
+        return GOAL_LB, TIERS, MAINTENANCE_ADD, True
+    goals = plan['calorie_goals']
+    return (Decimal(str(plan['goal']['weight_lb'])), goals['tiers'], goals['maintenance_add'],
+            bool(plan['goal']['maintenance']))
 
 
 def _scheduled_day(payload):
@@ -59,7 +73,7 @@ def tier_for(kinds):
     return 'lifting' if kinds else 'recovery'
 
 
-def maintenance_start(records, today):
+def maintenance_start(records, today, goal_lb=GOAL_LB):
     # One daily observation: earliest measured reading, stable ID breaks ties.
     daily = {}
     for r in sorted(records, key=lambda r: (r.get('payload', {}).get('measured_at', ''), r.get('entity_id', ''))):
@@ -71,7 +85,7 @@ def maintenance_start(records, today):
             daily.setdefault(day, weight)
     for end in sorted(daily):
         dates = [(date.fromisoformat(end) - timedelta(days=i)).isoformat() for i in range(7)]
-        if all(d in daily for d in dates) and sum(daily[d] for d in dates) / 7 <= GOAL_LB:
+        if all(d in daily for d in dates) and sum(daily[d] for d in dates) / 7 <= goal_lb:
             return max(end, EFFECTIVE_FROM)
     return None
 
@@ -90,8 +104,9 @@ def moved_tier(records, local_date):
     return tier_for(r['payload']['kind'] for r in training_on(records, day))
 
 
-def resolve(records, local_date, saved_targets=None, today=None):
+def resolve(records, local_date, saved_targets=None, today=None, plan=None):
     today = today or local_today().isoformat()
+    goal_lb, tiers, addition, maintenance_enabled = plan_policy(plan)
     if local_date < EFFECTIVE_FROM:
         qualifying = [r['payload']['local_date'] for r in records if not r.get('deleted') and r.get('entity_type') == 'weight_entries'
                       and ENABLED_FROM <= r['payload']['local_date'] <= min(today, local_date)
@@ -99,10 +114,10 @@ def resolve(records, local_date, saved_targets=None, today=None):
         start = min(qualifying, default=None)
         return dict(mode='maintenance' if start else 'loss', maintenance_start=start,
                     targets=MAINTENANCE if start else saved_targets or DAILY)
-    start = maintenance_start(records, today)
+    start = maintenance_start(records, today, goal_lb) if maintenance_enabled else None
     active = start is not None and local_date >= start and start <= today
     tier = moved_tier(records, local_date)
-    targets = dict(TIERS[tier] if tier else saved_targets or TIERS['recovery'])
+    targets = dict(tiers[tier] if tier else saved_targets or tiers['recovery'])
     if active:
-        targets = maintenance_targets(targets)
+        targets = maintenance_targets(targets, addition)
     return dict(mode='maintenance' if active else 'loss', maintenance_start=start, targets=targets)

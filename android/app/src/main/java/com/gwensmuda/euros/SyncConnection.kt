@@ -19,8 +19,38 @@ import javax.crypto.SecretKey
 import javax.crypto.spec.GCMParameterSpec
 
 // Deliberately not a data class: credentials must never appear in generated toString output.
-class ServerEnrollment(val server:String,val token:String)
+// An account sign-in carries a refresh token and the endpoint that renews it; a server token
+// carries neither and is used until it is replaced by hand.
+class ServerEnrollment(val server:String,val token:String,val refreshToken:String?=null,
+                       val expiresAt:Long=0L,val clientId:String?=null,val tokenEndpoint:String?=null,
+                       val account:String?=null) {
+ val renewable:Boolean get() = refreshToken!=null && clientId!=null && tokenEndpoint!=null
+ fun renewed(tokens:OAuthTokens)=ServerEnrollment(server,tokens.access,tokens.refresh ?: refreshToken,
+  tokens.expiresAt,clientId,tokenEndpoint,account)
+}
 interface EnrollmentStore { fun read():ServerEnrollment?; fun write(value:ServerEnrollment); fun clear() }
+
+/**
+ * The access token for a signed-in account, renewed when the server rejects it.
+ *
+ * Always reads the stored enrollment, never a snapshot: refresh tokens rotate, so presenting an
+ * old one would end the account's grant on the server.
+ */
+class EnrollmentTokens(private val store:EnrollmentStore,private val client:OAuthClient=OAuthClient(),private val expectedClientId:String?=null):TokenSource {
+ private val lock=Any()
+ private fun enrollment():ServerEnrollment? = store.read()?.also {
+  check(expectedClientId==null || it.clientId==expectedClientId) { "Account connection changed. Try again." }
+ }
+ override fun current():String = enrollment()?.token ?: error("Sign in again in Settings")
+ override fun refreshed(expired:String):String? = synchronized(lock) {
+  val saved=enrollment() ?: return null
+  if(saved.token!=expired) return saved.token
+  if(!saved.renewable) return null
+  val tokens=client.refresh(saved.tokenEndpoint!!,saved.clientId!!,saved.refreshToken!!)
+  store.write(saved.renewed(tokens))
+  tokens.access
+ }
+}
 
 /** Ciphertext is atomic, private and excluded from backup; the non-exportable key stays in Keystore. */
 class SecureEnrollmentStore(context:Context):EnrollmentStore {
@@ -39,26 +69,35 @@ class SecureEnrollmentStore(context:Context):EnrollmentStore {
   val cipher=Cipher.getInstance("AES/GCM/NoPadding")
   cipher.init(Cipher.DECRYPT_MODE,key(),GCMParameterSpec(128,bytes.copyOfRange(0,12)))
   val value=JSONObject(String(cipher.doFinal(bytes.copyOfRange(12,bytes.size)),Charsets.UTF_8))
-  return ServerEnrollment(value.getString("server"),value.getString("token"))
+  // Enrollments written before accounts existed hold only a server token; they stay valid.
+  return ServerEnrollment(value.getString("server"),value.getString("token"),
+   value.optString("refresh_token").takeIf{it.isNotBlank()},value.optLong("expires_at",0L),
+   value.optString("client_id").takeIf{it.isNotBlank()},value.optString("token_endpoint").takeIf{it.isNotBlank()},
+   value.optString("account").takeIf{it.isNotBlank()})
  }
  override fun write(value:ServerEnrollment) {
   val cipher=Cipher.getInstance("AES/GCM/NoPadding");cipher.init(Cipher.ENCRYPT_MODE,key())
-  val bytes=JSONObject().put("server",value.server).put("token",value.token).toString().toByteArray(Charsets.UTF_8)
+  val bytes=JSONObject().put("server",value.server).put("token",value.token)
+   .put("refresh_token",value.refreshToken ?: JSONObject.NULL).put("expires_at",value.expiresAt)
+   .put("client_id",value.clientId ?: JSONObject.NULL).put("token_endpoint",value.tokenEndpoint ?: JSONObject.NULL)
+   .put("account",value.account ?: JSONObject.NULL).toString().toByteArray(Charsets.UTF_8)
   val output=file.startWrite()
   try{output.write(cipher.iv);output.write(cipher.doFinal(bytes));file.finishWrite(output)}catch(e:Exception){file.failWrite(output);throw e}
  }
  override fun clear(){file.delete();KeyStore.getInstance("AndroidKeyStore").apply{load(null)}.deleteEntry(alias)}
 }
 
-data class ConnectionState(val connected:Boolean=false,val server:String="",val syncing:Boolean=false,val lastSuccess:String?=null,val error:String?=null)
+data class ConnectionState(val connected:Boolean=false,val server:String="",val syncing:Boolean=false,val lastSuccess:String?=null,val error:String?=null,val account:String?=null)
 enum class SyncOutcome { SUCCESS, RETRY, RECONNECT }
 interface SyncScheduling { fun enable(); fun request(); fun cancel() }
 
 /** One gate covers enrollment, background requests and disconnect, including in-flight requests. */
 class SyncConnection(
  private val repo:Repository,private val store:EnrollmentStore,private val scheduling:SyncScheduling,
- private val apiFactory:(ServerEnrollment)->SyncApi={Api(it.server,it.token)},
+ private val apiFactory:(ServerEnrollment)->SyncApi={enrolled->
+  Api(enrolled.server,if(enrolled.renewable)EnrollmentTokens(store,expectedClientId=enrolled.clientId) else StaticToken(enrolled.token))},
  private val reconcile:suspend ()->Unit={},
+ private val oauth:OAuthClient=OAuthClient(),
 ) {
  private val gate=Mutex()
  private var initialized=false
@@ -70,34 +109,90 @@ class SyncConnection(
   initialized=true
   try {
    enrollment=store.read()
-   mutableState.value=ConnectionState(enrollment!=null,enrollment?.server ?: "",lastSuccess=repo.dao.meta("last_sync_success"))
+   mutableState.value=ConnectionState(enrollment!=null,enrollment?.server ?: "",
+    lastSuccess=repo.dao.meta("last_sync_success"),account=enrollment?.account)
    enrollment?.let{repo.connectInterpretation(apiFactory(it));scheduling.enable()}
   }catch(e:CancellationException){initialized=false;enrollment=null;repo.disconnectInterpretation();throw e}
   catch(_:Exception){repo.disconnectInterpretation();mutableState.value=ConnectionState(error="Reconnect in Settings to restore your connection")}
  }
  suspend fun initialize()=gate.withLock{initializeLocked()}
+
+ /** Enroll with a server token, for a server that has not moved to accounts. */
  suspend fun connect(server:String,token:String)=gate.withLock {
   initializeLocked()
   val candidate=ServerEnrollment(server.trim().trimEnd('/'),token.trim())
   require(candidate.server.isNotBlank() && candidate.token.isNotBlank())
+  enroll(candidate)
+ }
+
+ /**
+  * Start signing in to an account: ask the server where its sign-in page is, register this app
+  * and remember the one-time verifier. The browser does the rest; nothing is enrolled yet.
+  */
+ suspend fun beginSignIn(server:String):PendingSignIn {
+  val pending=oauth.begin(server)
+  repo.dao.meta(Metadata(SIGN_IN_KEY,pending.encode()))
+  return pending
+ }
+
+ /**
+  * Finish a sign-in the browser handed back.
+  *
+  * The state must match the request this device started, so another app's redirect cannot
+  * enroll an account here. Nothing is kept unless the first sync with the new tokens succeeds.
+  */
+ suspend fun completeSignIn(redirect:android.net.Uri):Boolean {
+  val pending=PendingSignIn.decode(repo.dao.meta(SIGN_IN_KEY)) ?: return false
+  val code=redirect.getQueryParameter("code")
+  val state=redirect.getQueryParameter("state")
+  val refusal=redirect.getQueryParameter("error")
+  if(state==null || state!=pending.state) return false
+  repo.dao.meta(Metadata(SIGN_IN_KEY,""))
+  if(code==null) {
+   mutableState.value=mutableState.value.copy(error=
+    if(refusal=="access_denied") "Sign-in was cancelled" else "Sign-in didn't complete. Try again")
+   return false
+  }
+  val tokens=try { oauth.exchange(pending,code) }
+  catch(e:CancellationException){ throw e }
+  catch(e:Exception) {
+   mutableState.value=mutableState.value.copy(error=if(e is ApiFailure) e.message else "Couldn't finish signing in. Try again")
+   return false
+  }
+  gate.withLock {
+   initializeLocked()
+   enroll(ServerEnrollment(pending.server,tokens.access,tokens.refresh,tokens.expiresAt,
+    pending.clientId,pending.tokenEndpoint))
+  }
+  return true
+ }
+
+ /** Caller holds the gate. Saves first, because a signed-in account's token is read back from storage. */
+ private suspend fun enroll(candidate:ServerEnrollment) {
+  val previous=enrollment
   mutableState.value=mutableState.value.copy(syncing=true,error=null)
   try {
-   repo.sync(apiFactory(candidate))
    store.write(candidate)
    enrollment=candidate
-   mutableState.value=mutableState.value.copy(connected=true,server=candidate.server)
+   repo.sync(apiFactory(candidate))
+   mutableState.value=mutableState.value.copy(connected=true,server=candidate.server,account=candidate.account)
    scheduling.enable();scheduling.request()
    success(candidate)
    publishWorkouts(apiFactory(candidate))
-  }catch(e:CancellationException){
-   enrollment?.let{repo.connectInterpretation(apiFactory(it))} ?: repo.disconnectInterpretation()
-   throw e
-  }
+  }catch(e:CancellationException){ restore(previous);throw e }
   catch(e:Exception){
-   // A failed enrollment must not leave a newly authenticated model client behind.
-   enrollment?.let{repo.connectInterpretation(apiFactory(it))} ?: repo.disconnectInterpretation()
+   // A failed enrollment must not leave credentials or a newly authenticated model client behind.
+   restore(previous)
    mutableState.value=mutableState.value.copy(error=syncFailureMessage(e));throw e
   }finally{mutableState.value=mutableState.value.copy(syncing=false)}
+ }
+
+ private fun restore(previous:ServerEnrollment?) {
+  enrollment=previous
+  runCatching {
+   if(previous!=null){store.write(previous);repo.connectInterpretation(apiFactory(previous))}
+   else {store.clear();repo.disconnectInterpretation()}
+  }.onFailure{repo.disconnectInterpretation()}
  }
  suspend fun sync():SyncOutcome=gate.withLock {
   initializeLocked()
@@ -127,17 +222,29 @@ class SyncConnection(
  private suspend fun success(saved:ServerEnrollment) {
   val now=Instant.now().toString();repo.dao.meta(Metadata("last_sync_success",now))
   repo.dao.meta(Metadata("server",saved.server))
-  mutableState.value=ConnectionState(true,saved.server,true,now)
+  val named=AccountPlan.refresh(repo,apiFactory(saved)) ?: saved.account
+  if(named!=saved.account && named!=null) {
+   // The account behind these credentials, as the server names it; shown, never used as identity.
+   val renamed=ServerEnrollment(saved.server,saved.token,saved.refreshToken,saved.expiresAt,
+    saved.clientId,saved.tokenEndpoint,named)
+   runCatching{store.write(renamed)}.onSuccess{enrollment=renamed}
+  }
+  mutableState.value=ConnectionState(true,saved.server,true,now,account=named)
   try{reconcile()}catch(e:CancellationException){throw e}catch(_:Exception){mutableState.value=mutableState.value.copy(error="Synced. Couldn't update reminders")}
  }
  suspend fun disconnect()=gate.withLock {
   initializeLocked();store.clear();enrollment=null;repo.disconnectInterpretation();scheduling.cancel()
+  repo.dao.meta(Metadata(SIGN_IN_KEY,""));repo.dao.meta(Metadata(AccountPlan.KEY,""))
   mutableState.value=ConnectionState(lastSuccess=mutableState.value.lastSuccess)
  }
  fun request(){if(mutableState.value.connected)scheduling.request()}
+ companion object { const val SIGN_IN_KEY="oauth_sign_in" }
 }
 
+class AccountCacheMismatch(val migrationRequired:Boolean=false):IllegalStateException()
+
 internal fun syncFailureMessage(error:Exception):String=when(error) {
+ is AccountCacheMismatch -> if(error.migrationRequired) "This older local cache needs an account migration. No logs were uploaded." else "These local records belong to another account. Sign in to the original account; pending logs are preserved."
  is ApiFailure -> backendErrorMessage(error.status,"")
  is java.io.IOException -> "Couldn't reach your server. Changes stay on this phone and will retry."
  else -> "Couldn't sync. Your local changes are saved. Check the connection and retry."

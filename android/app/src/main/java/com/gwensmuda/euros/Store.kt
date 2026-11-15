@@ -18,6 +18,8 @@ data class RestoreResult(val imported:Int,val skipped:Int,val localImported:Int=
 data class ExportSnapshot(val records:List<Record>,val pending:List<Pending>,val metadata:List<Metadata>)
 @Dao interface EurosDao {
  @Query("SELECT * FROM records") suspend fun recordsIncludingDeleted():List<Record>
+ // Check presence without loading private tracker blobs or draft contents into memory.
+ @Query("SELECT EXISTS(SELECT 1 FROM records) OR EXISTS(SELECT 1 FROM outbox) OR EXISTS(SELECT 1 FROM metadata WHERE value!='' AND (`key` GLOB 'draft:*' OR `key` GLOB 'health_import_v1*' OR `key` GLOB 'tracker_*' OR `key` GLOB 'reminder_copy:*' OR `key` GLOB 'dismissed_meals:*' OR `key`='account_plan'))") suspend fun hasAccountData():Boolean
  @Query("SELECT * FROM metadata") suspend fun rawMetadata():List<Metadata>
  // Select before loading: unrelated tracker chunks must never enter small cache/job scans.
  @Query("SELECT * FROM metadata WHERE substr(`key`,1,length(:prefix))=:prefix") suspend fun metadataWithPrefix(prefix:String):List<Metadata>

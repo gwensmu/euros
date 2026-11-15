@@ -7,6 +7,8 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -58,7 +60,13 @@ fun weekTitle(start:LocalDate):String {
 @Composable internal fun PageTitle(tab:RootTab,today:LocalDate,week:LocalDate,foodDay:LocalDate,mascotPose:MascotPose=MascotPose.IDLE) {
  val context=androidx.compose.ui.platform.LocalContext.current
  val plan=remember(context){AuthoredPlan(context).json()}
- val event=LocalDate.parse(plan.getJSONObject("event").getString("date"))
+ // The signed-in account's own competition wins over the bundled plan as soon as it is cached.
+ val repo=remember(context){(context.applicationContext as EurosApplication).repository}
+ val cached by repo.dao.observeMeta(AccountPlan.KEY).collectAsState(initial=null)
+ val account=remember(cached){AccountPlan.parse(cached)}
+ val authoredEvent=LocalDate.parse(plan.getJSONObject("event").getString("date"))
+ val event=AccountPlan.eventDate(account) ?: authoredEvent
+ val eventName=AccountPlan.eventName(account) ?: plan.getJSONObject("event").optString("name").ifBlank{"Euros"}
  val phases=plan.getJSONArray("phases")
  val start=(0 until phases.length()).mapNotNull{index->runCatching{LocalDate.parse(phases.getJSONObject(index).getString("start"))}.getOrNull()}.minOrNull() ?: event
  val remaining=ChronoUnit.DAYS.between(today,event).coerceAtLeast(0)
@@ -67,7 +75,7 @@ fun weekTitle(start:LocalDate):String {
  @Composable fun counter(modifier:Modifier) {
   Column(modifier,horizontalAlignment=Alignment.End,verticalArrangement=Arrangement.spacedBy((-7).dp)) {
    Text("$remaining",fontSize=if(largeText)72.sp else 108.sp,lineHeight=if(largeText)80.sp else 114.sp,fontWeight=androidx.compose.ui.text.font.FontWeight.SemiBold,letterSpacing=(-3).sp,textAlign=androidx.compose.ui.text.style.TextAlign.End)
-   Text("days to Euros",fontSize=21.sp,lineHeight=30.sp,color=EurosColors.Muted,textAlign=androidx.compose.ui.text.style.TextAlign.End)
+   Text("days to $eventName",fontSize=21.sp,lineHeight=30.sp,color=EurosColors.Muted,textAlign=androidx.compose.ui.text.style.TextAlign.End)
   }
  }
  if(largeText) Column(Modifier.fillMaxWidth().padding(bottom=12.dp),horizontalAlignment=Alignment.CenterHorizontally) {
@@ -78,7 +86,7 @@ fun weekTitle(start:LocalDate):String {
   Box(Modifier.weight(1f),contentAlignment=Alignment.Center) { Weasel(mascotPose,Modifier.size(120.dp,141.dp)) }
  }
  Box(Modifier.fillMaxWidth().height(3.dp).background(EurosColors.Line,RoundedCornerShape(2.dp)).semantics {
-  contentDescription="Time to Euros"
+  contentDescription="Time to $eventName"
   stateDescription="$remaining days away"
   progressBarRangeInfo=ProgressBarRangeInfo(fraction,0f..1f)
  }) {

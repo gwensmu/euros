@@ -1,4 +1,5 @@
 """Persistent exact-item nutrition estimates; never consumption records."""
+from .models import FoodEstimate
 import asyncio
 import hashlib
 import json
@@ -14,22 +15,19 @@ class FoodCache:
         # Bounded lock storage coalesces identical misses within the app process.
         self.locks = [asyncio.Lock() for _ in range(128)]
         self.slots = asyncio.Semaphore(2)
-        with store.connect() as db:
-            db.execute('CREATE TABLE IF NOT EXISTS food_item_cache '
-                       '(key TEXT PRIMARY KEY, input TEXT NOT NULL, result TEXT NOT NULL)')
 
     async def item(self, text):
         key = hashlib.sha256(text.encode()).hexdigest()
         async with self.locks[int(key[:8], 16) % len(self.locks)]:
-            with self.store.connect() as db:
-                row = db.execute('SELECT result FROM food_item_cache WHERE key=? AND input=?', (key, text)).fetchone()
-            if row:
-                return json.loads(row['result'])
+            with self.store.session() as db:
+                row = db.get(FoodEstimate, (db.user_id, key))
+            if row and row.input == text:
+                return json.loads(row.result)
             async with self.slots:
                 result = await self.models.food({'text': text})
             if result['clarification'] is None and all(v is not None for v in result['nutrients'].values()):
-                with self.store.connect() as db:
-                    db.execute('INSERT OR REPLACE INTO food_item_cache VALUES (?,?,?)', (key, text, canonical(result)))
+                with self.store.session(write=True) as db:
+                    db.merge(FoodEstimate(user_id=db.user_id, key=key, input=text, result=canonical(result)))
             return result
 
     async def food(self, body):

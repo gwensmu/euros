@@ -50,6 +50,14 @@ class EurosApplication:android.app.Application() {
   repository.dao.observePending().collect { if(trigger.changed(it))connection.request() }
  }}
 }
+/** The browser's answer to a sign-in this app started, consumed once. */
+internal fun consumeSignInRedirect(intent:android.content.Intent):android.net.Uri? {
+ val data=intent.data ?: return null
+ if(intent.action!=android.content.Intent.ACTION_VIEW) return null
+ if(!data.scheme.equals("com.gwensmuda.euros",ignoreCase=true) || data.path!="/oauth2redirect") return null
+ intent.data=null
+ return data
+}
 internal fun consumeLaunchDestination(intent:android.content.Intent):String? {
  val destination=intent.getStringExtra("activity_id")
  intent.removeExtra("activity_id")
@@ -69,9 +77,15 @@ class MainActivity:ComponentActivity() {
  override fun onStart(){super.onStart();if(displayZoneId!=PlanDomain.zone.id){displayZoneId=PlanDomain.zone.id;recreate();return};(application as EurosApplication).let { app ->
   lifecycleScope.launch(Dispatchers.IO){app.connection.initialize();app.connection.request();HealthBackground.refresh(app);NutritionExport.request(app)}
  }}
- override fun onNewIntent(intent:android.content.Intent){super.onNewIntent(intent);setIntent(intent);notificationId=consumeLaunchDestination(intent)}
+ override fun onNewIntent(intent:android.content.Intent){super.onNewIntent(intent);setIntent(intent);finishSignIn(intent);notificationId=consumeLaunchDestination(intent)}
+ private fun finishSignIn(intent:android.content.Intent) {
+  val redirect=consumeSignInRedirect(intent) ?: return
+  val app=application as EurosApplication
+  lifecycleScope.launch(Dispatchers.IO){ runCatching{app.connection.completeSignIn(redirect)} }
+ }
  override fun onCreate(savedInstanceState:Bundle?) {
   super.onCreate(savedInstanceState)
+  finishSignIn(intent)
   androidx.core.content.ContextCompat.registerReceiver(this,timezoneReceiver,android.content.IntentFilter(android.content.Intent.ACTION_TIMEZONE_CHANGED),androidx.core.content.ContextCompat.RECEIVER_NOT_EXPORTED)
   val launchDestination=consumeLaunchDestination(intent)
   notificationId=if(savedInstanceState==null)launchDestination else null
@@ -109,11 +123,6 @@ class MainActivity:ComponentActivity() {
  val foodDay=LocalDate.parse(foodDate)
  var week by rememberSaveable{mutableStateOf(today.with(java.time.DayOfWeek.MONDAY).toString())}
  LaunchedEffect(Unit){while(true){today=LocalDate.now(PlanDomain.zone);kotlinx.coroutines.delay(30000)}}
- LaunchedEffect(repo) {
-  try { withContext(Dispatchers.IO){repo.bootstrapAuthoredSchedule(context.applicationContext)} }
-  catch(e:kotlinx.coroutines.CancellationException){throw e}
-  catch(_:Exception){error="Couldn't load the plan. Reopen Euros to retry."}
- }
  val localReminderInputs by repo.dao.observeRawMeta(HealthImport.KEY).collectAsState(initial=null)
  val dismissedReminderMeals by repo.dao.observeMeta("dismissed_meals:$today").collectAsState(initial=null)
  LaunchedEffect(records,localReminderInputs,dismissedReminderMeals,today){try{withContext(Dispatchers.IO){reminders.reconcile(records)}}catch(e:kotlinx.coroutines.CancellationException){throw e}catch(_:Exception){error="Couldn't update reminders"}}
@@ -152,8 +161,11 @@ class MainActivity:ComponentActivity() {
   }
  }
  val displayZone=PlanDomain.zone
- val mascotState=remember(homeVisible,records,today,displayZone,java.time.Instant.now().epochSecond/30){
-  if(homeVisible)MascotRules.homeState(records,java.time.Instant.now(),today,displayZone,authoredPlan.eventDate) else null
+ val cachedAccountPlan by repo.dao.observeMeta(AccountPlan.KEY).collectAsState(initial=null)
+ // The mascot's event is the account's competition when one is cached, else the bundled plan's.
+ val eventDate=remember(cachedAccountPlan){AccountPlan.eventDate(AccountPlan.parse(cachedAccountPlan))} ?: authoredPlan.eventDate
+ val mascotState=remember(homeVisible,records,today,displayZone,eventDate,java.time.Instant.now().epochSecond/30){
+  if(homeVisible)MascotRules.homeState(records,java.time.Instant.now(),today,displayZone,eventDate) else null
  }
  val mascotPose=reactionPose ?: mascotState?.pose ?: MascotPose.IDLE
  val pageScroll=rememberScrollState()

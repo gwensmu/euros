@@ -1,4 +1,6 @@
 """Model-selected mascot quips; facts and delivery remain deterministic on the phone."""
+from sqlalchemy import delete
+from .models import ReminderEstimate
 import asyncio
 import hashlib
 import json
@@ -31,7 +33,6 @@ class ReminderCopyService:
  def __init__(self,models,store):
   self.models,self.store=models,store
   self.lock=asyncio.Lock()
-  with store.connect() as db:db.execute('CREATE TABLE IF NOT EXISTS reminder_copy_cache (key TEXT PRIMARY KEY, result TEXT NOT NULL, created_at TEXT NOT NULL)')
  async def copy(self,body):
   fields={'kind','context_key','allow_skip_joke','facts','recent_joke_ids'}
   if not isinstance(body,dict) or set(body)!=fields:raise DomainError('invalid_reminder_request')
@@ -43,14 +44,14 @@ class ReminderCopyService:
   allowed={k:v[0] for k,v in JOKES.items() if kind in v[1] and (k!='weasel_out' or body['allow_skip_joke'])}
   fingerprint=hashlib.sha256(canonical({k:v for k,v in body.items() if k!='recent_joke_ids'}).encode()+VERSION.encode()+self.models.food_model.encode()).hexdigest()
   async with self.lock:
-   with self.store.connect() as db:cached=db.execute('SELECT result FROM reminder_copy_cache WHERE key=?',(fingerprint,)).fetchone()
-   if cached:return json.loads(cached[0])
+   with self.store.session() as db:cached=db.get(ReminderEstimate, (db.user_id, fingerprint))
+   if cached:return json.loads(cached.result)
    schema={'type':'object','properties':{'joke_id':{'type':'string','enum':list(allowed)}},'required':['joke_id'],'additionalProperties':False}
    result=await self.models.provider.generate(model=self.models.food_model,reasoning='low',instructions=INSTRUCTIONS,data={'kind':kind,'facts':facts,'allowed_jokes':allowed,'recent_joke_ids':recent},schema=schema,name='reminder_copy')
    if not isinstance(result,dict) or set(result)!={'joke_id'} or not isinstance(result['joke_id'],str) or result['joke_id'] not in allowed:raise DomainError('invalid_model_output',502)
    joke_id=result['joke_id'];output=dict(context_key=key,joke_id=joke_id,joke=allowed[joke_id],prompt_version=VERSION)
    now=datetime.now(timezone.utc)
-   with self.store.connect() as db:
-    db.execute('DELETE FROM reminder_copy_cache WHERE created_at<?',((now-timedelta(days=7)).isoformat(),))
-    db.execute('INSERT OR REPLACE INTO reminder_copy_cache VALUES (?,?,?)',(fingerprint,canonical(output),now.isoformat()))
+   with self.store.session(write=True) as db:
+    db.execute(delete(ReminderEstimate).where(ReminderEstimate.created_at < (now - timedelta(days=7)).isoformat()))
+    db.merge(ReminderEstimate(user_id=db.user_id, key=fingerprint, result=canonical(output), created_at=now.isoformat()))
    return output
