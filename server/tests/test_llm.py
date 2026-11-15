@@ -7,7 +7,7 @@ import pytest
 from starlette.testclient import TestClient
 from euros_server.app import create_app
 from euros_server.domain import DomainError, Store
-from euros_server.llm import ModelService, OpenAIProvider, weekly_facts, PROMPT_VERSION
+from euros_server.llm import ModelService, OpenAIProvider, PROMPT_VERSION
 
 DRAFT = {"nutrients": {"kcal": "250", "protein_g": "12.5", "carbs_g": "20", "fat_g": "13"}, "quantity_g": None, "clarification": None}
 
@@ -15,7 +15,7 @@ def envelope(value):
     return {"status": "completed", "output": [{"type": "message", "content": [{"type": "output_text", "text": json.dumps(value)}]}]}
 
 def service(handler):
-    return ModelService(OpenAIProvider("test-secret-not-real", httpx.MockTransport(handler)), today=lambda: date(2026, 10, 14))
+    return ModelService(OpenAIProvider("test-secret-not-real", httpx.MockTransport(handler)))
 
 def wire(kind, identifier, payload, deleted=False):
     return {"entity_type": kind, "entity_id": identifier, "revision": 0, "deleted": deleted, "payload": payload}
@@ -75,80 +75,14 @@ def test_timeout_refusal_incomplete_missing_key():
         with pytest.raises(DomainError,match=error):asyncio.run(service(lambda _:httpx.Response(200,json=body)).food({"text":"eggs"}))
     with pytest.raises(DomainError,match="model_not_configured"):asyncio.run(ModelService(OpenAIProvider("")).food({"text":"eggs"}))
 
-def test_week_computes_coverage_totals_and_excludes_future_deleted_and_untrusted_text():
-    records=[activity(status="done"),activity("future","2026-10-16"),activity("pending"),meal(),meal("second",kcal="0.2"),meal("futuremeal","2026-10-15"),meal("deleted",deleted=True)]
-    facts,coverage=weekly_facts({"week_start":"2026-10-12","records":records},date(2026,10,14))
-    assert coverage=={"through_date":"2026-10-14","covered_days":3,"food_days":1,"logged_activity_count":1,"unlogged_activity_count":1}
-    assert facts["food_days"][0]["nutrients"]["kcal"]=={"known_total":"100.3","missing_count":0}
-    assert facts["food_days"][0]["nutrients"]["protein_g"]["missing_count"]==2
-    assert "ignore previous" not in json.dumps(facts) and "pending" not in json.dumps(facts)
-    future,coverage=weekly_facts({"week_start":"2026-10-19","records":records},date(2026,10,14))
-    assert coverage["covered_days"]==0 and coverage["through_date"] is None and future["logged_activities"]==[]
-
-def test_week_sol_medium_coverage_separate():
-    def respond(request):
-        body=json.loads(request.content)
-        assert body["model"]=="gpt-6.1-sol" and body["reasoning"]=={"effort":"medium"}
-        assert "approximate guides, not precise requirements" in body["instructions"]
-        assert "new calorie targets" in body["instructions"]
-        assert "hobbyist BJJ athlete" in body["instructions"]
-        assert "insights" in body["text"]["format"]["schema"]["properties"]
-        assert "No weight commentary" in body["instructions"]
-        assert "Do not infer exercise eat-back or food debt" in body["instructions"]
-        assert "coverage" not in json.loads(body["input"][0]["content"])
-        return httpx.Response(200,json=envelope({"headline":"Keep recovery close","summary":"One practice logged.","insights":[{"kind":"training","title":"Class spacing","body":"Keep recovery alongside the harder session."}],"adjustments":[],"evidence_record_ids":["activities:a"]}))
-    result=asyncio.run(service(respond).week({"week_start":"2026-10-12","records":[activity(status="done")]}))
-    assert result["summary"]=="One practice logged." and result["coverage"]["logged_activity_count"]==1
-
-def test_invalid_snapshots():
-    for body in [{"week_start":"2026-10-13","records":[]},{"week_start":"2026-10-12","records":[activity(),activity()]},{"week_start":"2026-10-12","records":[{**activity(),"revision":True}]}]:
-        with pytest.raises(DomainError):weekly_facts(body,date(2026,10,14))
-
-def test_previous_anchored_weights_only_two():
-    records=[wire("weight_entries",str(day),{"weight_lb":"164","local_date":f"2026-09-{day}","measured_at":f"2026-09-{day}T08:00:00-05:00","weekly_anchor":anchor}) for day,anchor in [(13,"2026-09-07"),(20,"2026-09-14"),(27,"2026-09-21")]]
-    facts,_=weekly_facts({"week_start":"2026-10-12","records":records},date(2026,10,14))
-    assert [item["date"] for item in facts["previous_weekly_weights"]]==["2026-09-20","2026-09-27"] and facts["weights"]==[]
 
 def test_auth_and_request_limits(tmp_path):
     def must_not_call(_):raise AssertionError("invalid requests must not reach provider")
     with TestClient(create_app(Store(tmp_path/"db"),"a"*40,"b"*40,model_service=service(must_not_call)),base_url="http://localhost") as client:
-        for path in ["/v1/interpret/food","/v1/review/week"]:assert client.post(path,json={}).status_code==401
+        for path in ["/v1/interpret/food"]:assert client.post(path,json={}).status_code==401
         headers={"Authorization":"Bearer "+"a"*40}
         assert client.post("/v1/interpret/food",headers=headers,json={"text":" "}).status_code==422
         assert client.post("/v1/interpret/food",headers=headers,content="x"*40001).status_code==413
-        assert client.post("/v1/review/week",headers=headers,content="x"*1048577).status_code==413
-        assert client.post("/v1/review/week",headers=headers,json={"week_start":"2026-10-12","records":[{}]*2001}).status_code==422
-
-
-def test_recovery_parent_derived_without_double_counting_and_category_preserved():
-    parent=activity("routine",status="pending")
-    parent["payload"]["kind"]="rest"
-    child=activity("step",status="done",parent_id="routine",recovery_step_type="breathing")
-    child["payload"]["kind"]="recovery"
-    bjj=activity("class",status="done",plan_snapshot={"category":"competition"})
-    facts,coverage=weekly_facts({"week_start":"2026-10-12","records":[parent,child,bjj]},date(2026,10,14))
-    assert coverage["logged_activity_count"]==2 and coverage["unlogged_activity_count"]==0
-    assert len(facts["recovery_steps"])==1
-    assert facts["logged_activities"][1]["category"]=="competition"
-    assert facts["logged_activities"][0]["status"]=="done"
-
-
-def test_all_unknown_nutrient_is_not_zero():
-    facts,_=weekly_facts({"week_start":"2026-10-12","records":[meal()]},date(2026,10,14))
-    assert facts["food_days"][0]["nutrients"]["protein_g"]=={"known_total":None,"missing_count":1}
-    assert facts["food_days"][0]["nutrients"]["carbs_g"]=={"known_total":"0","missing_count":0}
-
-
-def test_invalid_evidence_is_rejected():
-    result={"headline":"Unsupported","summary":"Unsupported.","insights":[],"adjustments":[],"evidence_record_ids":["activities:made-up"]}
-    with pytest.raises(DomainError,match="invalid_model_evidence"):
-        asyncio.run(service(lambda _:httpx.Response(200,json=envelope(result))).week({"week_start":"2026-10-12","records":[activity(status="done")]}))
-
-
-def test_empty_week_does_not_call_provider():
-    def forbidden(_):raise AssertionError("must not spend on empty week")
-    result=asyncio.run(service(forbidden).week({"week_start":"2026-10-19","records":[]}))
-    assert result["model"] is None and result["summary"]=="No logs for this week."
 
 
 @pytest.mark.parametrize("field,value",[("quantity_g","0"),("quantity_g","200001"),("kcal","200001")])
@@ -164,7 +98,7 @@ def test_mcp_model_parity_auth_annotations_and_no_writes(tmp_path):
     store=Store(tmp_path/"db")
     def respond(request):
         body=json.loads(request.content)
-        value=DRAFT if body["model"]=="gpt-6-luna" else {"headline":"Keep recovery close","summary":"One practice logged.","insights":[{"kind":"training","title":"Class spacing","body":"Keep recovery alongside the harder session."}],"adjustments":[],"evidence_record_ids":["activities:a"]}
+        value=DRAFT
         return httpx.Response(200,json=envelope(value))
     with TestClient(create_app(store,"a"*40,"b"*40,model_service=service(respond)),base_url="http://localhost") as client:
         api={"Authorization":"Bearer "+"a"*40}
@@ -175,9 +109,9 @@ def test_mcp_model_parity_auth_annotations_and_no_writes(tmp_path):
         rpc("initialize",{"protocolVersion":"2025-03-26","capabilities":{},"clientInfo":{"name":"test","version":"1"}})
         listed=rpc("tools/list",{}).json()["result"]["tools"]
         for tool in listed:
-            if tool["name"] in ("interpret_food","review_week"):
+            if tool["name"] in ("interpret_food",):
                 assert tool["annotations"]["readOnlyHint"] and not tool["annotations"]["idempotentHint"]
-        for name,path,body in [("interpret_food","/v1/interpret/food",{"text":"eggs"}),("review_week","/v1/review/week",{"week_start":"2026-10-12","records":[activity(status="done")]})]:
+        for name,path,body in [("interpret_food","/v1/interpret/food",{"text":"eggs"})]:
             api_result=client.post(path,headers=api,json=body)
             assert api_result.status_code==200,api_result.text
             mcp_result=rpc("tools/call",{"name":name,"arguments":body}).json()["result"]
@@ -186,60 +120,3 @@ def test_mcp_model_parity_auth_annotations_and_no_writes(tmp_path):
         failure=rpc("tools/call",{"name":"interpret_food","arguments":{"text":""}}).json()["result"]
         assert failure["isError"] and failure["structuredContent"]["error"]=="invalid_food_text"
     assert store.records()=={"records":[]} and store.changes()["changes"]==[]
-
-
-@pytest.mark.parametrize("states,status,unlogged",[( ["done","skipped"],"partial",0),(["done","pending"],"partial",1),(["skipped","skipped"],"skipped",0)])
-def test_mixed_recovery_never_implies_all_steps_done(states,status,unlogged):
-    root=activity("routine");root["payload"]["kind"]="recovery"
-    steps=[activity(str(i),status=value,parent_id="routine") for i,value in enumerate(states)]
-    facts,coverage=weekly_facts({"week_start":"2026-10-12","records":[root,*steps]},date(2026,10,14))
-    assert facts["logged_activities"][0]["status"]==status
-    assert coverage["unlogged_activity_count"]==unlogged
-    assert facts["logged_activities"][0]["steps"]["done"]==states.count("done")
-
-
-def test_coaching_goal_context_is_anchored_to_review_week():
-    facts, _ = weekly_facts({"week_start": "2026-10-12", "records": [activity(status="done")]}, date(2026, 10, 18))
-    context = facts["goal_context"]
-    assert context["planning_date"] == "2027-01-13"
-    assert context["days_to_planning_date"] == 87
-    later, _ = weekly_facts({"week_start": "2026-10-12", "records": [activity(status="done")]}, date(2026, 11, 1))
-    assert later["goal_context"] == context
-    assert set(facts["logged_activities"][0]) == {"record_id", "date", "kind", "status"}
-
-
-@pytest.mark.parametrize("change", [
-    {"summary": "x" * 501},
-    {"headline": "x" * 71},
-    {"insights": [{"kind":"score","title":"Readiness","body":"Unsupported."}]},
-    {"adjustments": ["One", "Two", "Three"]},
-    {"adjustments": ["x" * 181]},
-])
-def test_product_recap_limits_are_enforced(change):
-    result={"headline":"Keep recovery close","summary":"A short takeaway.","insights":[],"adjustments":[],"evidence_record_ids":["activities:a"],**change}
-    with pytest.raises(DomainError):
-        asyncio.run(service(lambda _:httpx.Response(200,json=envelope(result))).week({"week_start":"2026-10-12","records":[activity(status="done")]}))
-
-
-def test_recap_includes_target_and_tracker_context_but_no_weight_narrative():
-    day="2026-10-27"
-    weight=wire("weight_entries","scale",{"local_date":day,"measured_at":day+"T08:00:00-05:00","weight_lb":"160"})
-    food=meal(day=day,kcal="2100")
-    class ContextStore:
-        def records(self):
-            return {"records":[food,weight,wire("meal_plans","plan",{"date":day,"nutrition_targets":{"kcal":2300,"proteinG":135,"carbohydrateG":305,"fatG":60}})]}
-    class Trackers:
-        def list(self,first,last):
-            assert (first,last)==("2026-10-26","2026-10-30")
-            return {"workouts":[{"source_key":"polar:1","deleted":False,"start_at":day+"T18:00:00-05:00","end_at":day+"T19:00:00-05:00","activity_id":"a","sport":"bjj","metrics":{"average_bpm":145,"coverage_fraction":0.9}}]}
-    def respond(request):
-        facts=json.loads(json.loads(request.content)["input"][0]["content"])
-        assert facts["weights"]==facts["previous_weekly_weights"]==[]
-        assert facts["food_days"][0]["targets"]["kcal"]==2300
-        assert facts["food_days"][0]["full_day_logging_confirmed"] is False
-        assert facts["tracker_sessions"][0]["metrics"]["average_bpm"]==145
-        assert facts["tracker_sessions"][0]["activity_id"]=="a"
-        return httpx.Response(200,json=envelope({"headline":"Room between hard sessions","summary":"A whole-week overview.","insights":[{"kind":"heart_rate","title":"Sustained work","body":"x"*600}],"adjustments":["One consideration.","Another consideration."],"evidence_record_ids":["tracker:polar:1","food_entries:meal"]}))
-    models=ModelService(OpenAIProvider("test-secret",httpx.MockTransport(respond)),today=lambda:date(2026,10,30))
-    result=asyncio.run(models.week({"week_start":"2026-10-26","records":[food,weight]},store=ContextStore(),tracker=Trackers()))
-    assert len(result["insights"][0]["body"])==600

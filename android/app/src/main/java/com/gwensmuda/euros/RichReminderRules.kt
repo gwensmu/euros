@@ -25,10 +25,7 @@ object RichReminderRules {
   val sunday=date.dayOfWeek==DayOfWeek.SUNDAY
   val morningAt=ReminderRules.afterQuiet(at(if(sunday)"09:00" else "08:00"),settings,zone)
   if(morningAt.atZone(zone).toLocalDate()==date) {
-   val weight=records.any{!it.deleted && it.type=="weight_entries" && JSONObject(it.payload).optString("local_date")==date.toString()}
-   val facts=if(sunday) {
-    if(weight) "Your weight is logged. Let's look at this week's training and food logs." else "Let’s look at this week’s training and food logs."
-   } else buildList {
+   val facts=buildList {
     val breakfast=remaining.firstOrNull{it.title.contains("breakfast",true)}
     breakfast?.let{add("For breakfast, the plan is ${it.foods.ifEmpty{listOf(it.title)}.joinToString(", ")}.")}
     pending.filter{JSONObject(it.payload).optString("kind") in setOf("bjj","weights")}.forEach{add("${title(it)} is at ${time(it)}.")}
@@ -37,7 +34,7 @@ object RichReminderRules {
      add(if(steps.isEmpty()) "${title(r)} is on today's plan." else "Today's routine: ${steps.joinToString(", ")}.")
     }
    }.joinToString(" ").ifBlank{"There are no remaining planned activities or meals for today."}
-   result.add(RichReminder("${if(sunday)"sunday" else "morning"}:$date",morningAt,if(sunday)"Sunday review" else "Morning plan",facts,if(sunday)"@review" else "@today",if(sunday)"sunday" else "morning"))
+   result.add(RichReminder("morning:$date",morningAt,"Morning plan",facts,"@today","morning"))
   }
   val weighAt=at("08:30")
   val hasWeight=records.any{!it.deleted && it.type=="weight_entries" && JSONObject(it.payload).optString("local_date")==date.toString()}

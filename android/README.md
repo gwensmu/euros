@@ -1,5 +1,7 @@
 # Android app
 
+AI weekly wrap-up has been removed: no review screen, API/MCP generation or active background job. Food interpretation, Week agenda, workout recaps and weight logging remain. Older wrap-up descriptions below are historical.
+
 Kotlin, Compose and Room. Use JDK 21 and Android SDK 36; set ANDROID_HOME or an untracked local.properties.
 
 ```sh

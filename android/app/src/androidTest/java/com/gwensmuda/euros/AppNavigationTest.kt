@@ -82,13 +82,9 @@ class AppNavigationTest {
   tab("Week").assertIsSelected()
   compose.onNodeWithContentDescription("Next week").performScrollTo().performClick()
   val selectedWeek=LocalDate.now(PlanDomain.zone).with(java.time.DayOfWeek.MONDAY).plusWeeks(1)
-  val recapLink="Open wrap-up for ${weekTitle(selectedWeek)}"
-  compose.onNodeWithContentDescription(recapLink).performScrollTo().performClick()
-  compose.onNodeWithText("Weekly wrap-up").assertExists()
   compose.onNodeWithText(weekTitle(selectedWeek)).assertExists()
-  compose.onNodeWithText("No logs for this week yet").assertExists()
-  compose.onNodeWithContentDescription("Close").performScrollTo().performClick()
-  compose.onNodeWithContentDescription(recapLink).assertExists()
+  compose.onNodeWithText("Weekly wrap-up").assertDoesNotExist()
+  compose.onNodeWithContentDescription("Previous week").performScrollTo().performClick()
   tab("Week").assertIsSelected()
  }
  @Test fun settingsSectionsReturnToSettingsAndClosePreservesFoodTab() {

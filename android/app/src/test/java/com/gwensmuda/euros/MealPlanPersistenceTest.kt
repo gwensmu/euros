@@ -44,7 +44,6 @@ class MealPlanPersistenceTest {
     RecordValidation.validate("meal_plans",saved)
     assertEquals(4,DayPlanComposer.compose(JSONObject(),records,day).meals.size)
    }
-   assertTrue(BackendLlmClient.weeklySnapshot(LocalDate.parse("2026-10-19"),records).isEmpty())
    val archive=ExportService(context,repo.dao).document()
    val second=Repository(restored)
    assertEquals(7,second.restoreRecords(ExportService.validateEnvelope(archive)).imported)

@@ -5,7 +5,6 @@ import pytest
 from starlette.testclient import TestClient
 from euros_server.app import create_app
 from euros_server.domain import DomainError, Store
-from euros_server.llm import weekly_facts
 from datetime import date
 
 
@@ -74,10 +73,6 @@ def test_date_identity_and_read_date_validation(store):
         with pytest.raises(DomainError,match="invalid_local_date"):store.meal_plan(value)
 
 
-def test_plan_is_not_logged_food_in_weekly_facts(store):
-    record=store.command(plan())["record"]
-    facts,coverage=weekly_facts({"week_start":"2026-10-19","records":[record]},date(2026,10,25))
-    assert facts["food_days"]==[] and coverage["food_days"]==0
 
 
 def test_mcp_read_update_same_revisioned_record(store):

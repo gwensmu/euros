@@ -45,7 +45,6 @@ class EurosApplication:android.app.Application() {
    catch(e:kotlinx.coroutines.CancellationException){throw e}
    catch(_:Exception){repository.dao.meta(Metadata("health_refresh_error","Couldn't link tracker sessions. Refresh Health Connect."))}
   } }
-  WeeklyReviewWork.resume(this@EurosApplication,repository)
   HealthBackground.schedule(this@EurosApplication)
   val trigger=PendingSyncTrigger()
   repository.dao.observePending().collect { if(trigger.changed(it))connection.request() }
@@ -96,7 +95,6 @@ class MainActivity:ComponentActivity() {
  var strengthFeedbackId by rememberSaveable{mutableStateOf<String?>(null)}
  var importedId by rememberSaveable{mutableStateOf<String?>(null)}
  var weighing by rememberSaveable{mutableStateOf(false)}
- var review by rememberSaveable { mutableStateOf(false) }
  var foodEditor by remember { mutableStateOf(false) }
  var openFoodEntry by remember { mutableStateOf(false) }
  var foodActivity by remember { mutableStateOf<String?>(null) }
@@ -119,7 +117,7 @@ class MainActivity:ComponentActivity() {
  val localReminderInputs by repo.dao.observeRawMeta(HealthImport.KEY).collectAsState(initial=null)
  val dismissedReminderMeals by repo.dao.observeMeta("dismissed_meals:$today").collectAsState(initial=null)
  LaunchedEffect(records,localReminderInputs,dismissedReminderMeals,today){try{withContext(Dispatchers.IO){reminders.reconcile(records)}}catch(e:kotlinx.coroutines.CancellationException){throw e}catch(_:Exception){error="Couldn't update reminders"}}
- LaunchedEffect(notificationId){if(notificationId!=null){selected=null;strengthFeedbackId=null;settings=false;review=false;weighing=false;importedId=null;openFoodEntry=false;foodEditor=false;snoozeId=null;when(notificationId){"@weight"->{weighing=true;tab=RootTab.Today};"@today"->tab=RootTab.Today;"@food-overview"->{tab=RootTab.Food;foodDate=today.toString();openFoodEntry=false};"@food"->{tab=RootTab.Food;foodDate=today.toString();openFoodEntry=true};"@review"->{tab=RootTab.Week;week=today.with(java.time.DayOfWeek.MONDAY).toString();review=true};else->if(notificationId.startsWith("@snooze:"))snoozeId=notificationId.removePrefix("@snooze:") else selected=notificationId};onNotificationHandled()}}
+ LaunchedEffect(notificationId){if(notificationId!=null){selected=null;strengthFeedbackId=null;settings=false;weighing=false;importedId=null;openFoodEntry=false;foodEditor=false;snoozeId=null;when(notificationId){"@weight"->{weighing=true;tab=RootTab.Today};"@today"->tab=RootTab.Today;"@food-overview"->{tab=RootTab.Food;foodDate=today.toString();openFoodEntry=false};"@food"->{tab=RootTab.Food;foodDate=today.toString();openFoodEntry=true};"@review"->{tab=RootTab.Week;week=today.with(java.time.DayOfWeek.MONDAY).toString()};else->if(notificationId.startsWith("@snooze:"))snoozeId=notificationId.removePrefix("@snooze:") else selected=notificationId};onNotificationHandled()}}
  snoozeId?.let{id->SnoozeDialog(onClose={snoozeId=null},onSave={until->withContext(Dispatchers.IO){reminders.snoozeUntil(id,until)};snoozeId=null})}
 
  val detail=records.find { it.type=="activities" && it.id==selected }
@@ -128,11 +126,10 @@ class MainActivity:ComponentActivity() {
  fun closeOverlay() {
   selected=null
   settings=false
-  review=false
   importedId=null
   weighing=false
  }
- val hasOverlay=strengthFeedbackId!=null || selected!=null || settings || review || importedId!=null || weighing
+ val hasOverlay=strengthFeedbackId!=null || selected!=null || settings || importedId!=null || weighing
  BackHandler(hasOverlay,::closeOverlay)
  val focused=hasOverlay || foodEditor
  var completionSequence by remember{mutableLongStateOf(0L)}
@@ -160,7 +157,7 @@ class MainActivity:ComponentActivity() {
  }
  val mascotPose=reactionPose ?: mascotState?.pose ?: MascotPose.IDLE
  val pageScroll=rememberScrollState()
- LaunchedEffect(tab,selected,settings,review,importedId,foodEditor,strengthFeedbackId){pageScroll.scrollTo(0)}
+ LaunchedEffect(tab,selected,settings,importedId,foodEditor,strengthFeedbackId){pageScroll.scrollTo(0)}
  val snackbar=remember{SnackbarHostState()}
  val actionScope=rememberCoroutineScope()
  fun showCompletionUndo(record:Record) { actionScope.launch {
@@ -197,15 +194,14 @@ class MainActivity:ComponentActivity() {
     weighing -> {Row(Modifier.fillMaxWidth(),horizontalArrangement=Arrangement.SpaceBetween){Text("Weight",style=MaterialTheme.typography.headlineMedium);IconButton(onClick={weighing=false}){Icon(Icons.Outlined.Close,"Close")}};WeightPanel(repo,records,today,onSaved={weighing=false})}
     settings -> SettingsScreen(repo,pending,records,onClose={settings=false})
     importedId!=null -> ImportedWorkoutScreen(importedId!!,repo){importedId=null}
-    review -> WeeklyReview(repo,records,LocalDate.parse(week)){review=false}
     detail!=null -> ActivityDetail(detail,records,repo,{selected=null},::open,{food(detail.id)})
     selected!=null -> {Text("This activity is no longer available");TextButton(onClick={selected=null}){Text("Close")}}
     else -> {
      if(!foodEditor && tab==RootTab.Today) PageTitle(tab,today,LocalDate.parse(week),foodDay,mascotPose)
      when(tab) {
-      RootTab.Today -> {SundayWrapUp(today){week=today.with(java.time.DayOfWeek.MONDAY).toString();review=true};TodayContent(records,remember(authoredPlan,records,today,displayZone){authoredPlan.day(today,records,includeNutrition=false)},::open,{foodDate=today.toString();foodActivity=null;openFoodEntry=false;tab=RootTab.Food},repo,onMealLog={food()});MovementCard(repo,today)}
+      RootTab.Today -> {TodayContent(records,remember(authoredPlan,records,today,displayZone){authoredPlan.day(today,records,includeNutrition=false)},::open,{foodDate=today.toString();foodActivity=null;openFoodEntry=false;tab=RootTab.Food},repo,onMealLog={food()});MovementCard(repo,today)}
       RootTab.Week -> {
-       Row(Modifier.fillMaxWidth(),horizontalArrangement=Arrangement.SpaceBetween){IconButton(onClick={week=LocalDate.parse(week).minusWeeks(1).toString()}){Icon(Icons.Outlined.ChevronLeft,"Previous week")};TextButton(modifier=Modifier.weight(1f).semantics{contentDescription="Open wrap-up for ${weekTitle(LocalDate.parse(week))}"},onClick={review=true}){Icon(Icons.Outlined.Insights,null,Modifier.size(20.dp));Spacer(Modifier.width(8.dp));Text(weekTitle(LocalDate.parse(week)),style=MaterialTheme.typography.titleMedium)};IconButton(onClick={week=LocalDate.parse(week).plusWeeks(1).toString()}){Icon(Icons.Outlined.ChevronRight,"Next week")}}
+       Row(Modifier.fillMaxWidth(),horizontalArrangement=Arrangement.SpaceBetween){IconButton(onClick={week=LocalDate.parse(week).minusWeeks(1).toString()}){Icon(Icons.Outlined.ChevronLeft,"Previous week")};Text(weekTitle(LocalDate.parse(week)),modifier=Modifier.weight(1f),textAlign=androidx.compose.ui.text.style.TextAlign.Center,style=MaterialTheme.typography.titleMedium);IconButton(onClick={week=LocalDate.parse(week).plusWeeks(1).toString()}){Icon(Icons.Outlined.ChevronRight,"Next week")}}
        WeekContent(records,LocalDate.parse(week),::open,repo,{importedId=it})
       }
       RootTab.Food -> {

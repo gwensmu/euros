@@ -50,18 +50,17 @@ class Provider:
 
 def test_persistent_daily_budget_and_day_reset(tmp_path):
     store=Store(tmp_path/'db');now=[datetime(2026,10,14,12,tzinfo=timezone.utc).timestamp()]
-    def limiter():return LimitedProvider(Provider(),store,daily_food=2,daily_review=1,clock=lambda:now[0])
+    def limiter():return LimitedProvider(Provider(),store,daily_food=2,clock=lambda:now[0])
     limiter().reserve('food_draft');limiter().reserve('food_draft')
     with pytest.raises(DomainError,match='model_daily_limit'):limiter().reserve('food_draft')
-    limiter().reserve('weekly_wrap_up')
-    with pytest.raises(DomainError,match='model_daily_limit'):limiter().reserve('weekly_wrap_up')
+    limiter().reserve('reminder_copy')
     now[0]+=86400
     limiter().reserve('food_draft')
 
 
 def test_minute_budget_shared_between_kinds_and_atomic(tmp_path):
     store=Store(tmp_path/'db');lim=LimitedProvider(Provider(),store,per_minute=2,clock=lambda:1000000)
-    lim.reserve('food_draft');lim.reserve('weekly_wrap_up')
+    lim.reserve('food_draft');lim.reserve('reminder_copy')
     with pytest.raises(DomainError,match='model_rate_limit'):lim.reserve('food_draft')
     lim.clock=lambda:1000060
     lim.reserve('food_draft')

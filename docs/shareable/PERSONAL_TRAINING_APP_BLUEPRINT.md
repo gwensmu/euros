@@ -1,4 +1,13 @@
 # Your training companion
+
+## Weekly wrap-up removed — November 15, 2026
+
+The AI weekly wrap-up is not part of this product. Today has no Sunday review card; Week's date range is a noninteractive label with previous/next arrows. The Week agenda, logging, workout HR recaps and weight entry/chart remain available. No Generate, Refresh or saved AI summary screen is present. Sunday uses the ordinary morning-plan reminder at its existing 9 AM time; old review notification links open Week.
+
+There is no weekly-review API, MCP tool, model configuration or background generation service. Upgrade compatibility completes previously queued phone workers without network/model calls. Historical review caches and server job rows remain inert; removing this feature does not delete activity, food, weight, tracker or sync records. No replacement coaching feature is implied.
+
+Acceptance: no review entry points on Today/Week; week navigation still works; retired routes return 404 and MCP does not advertise review_week; queued legacy workers cannot generate; food interpretation/cache, reminder copy and ordinary sync retain their existing behavior. These requirements supersede historical wrap-up references below.
+
 ## A technology-agnostic implementation blueprint and AI build recipe
 
 Edition: October 15, 2026. Based on the implemented Euros personal training app, with identifying information and personal records removed.
@@ -19,7 +28,7 @@ The app follows an existing plan; it is not an autonomous coach. Plan revisions 
 
 ### Current scope versus future ideas
 
-Recreate now: Today, Week, Food, activity details, recovery steps, food interpretation/review/save, weight observations, weekly AI wrap-up, reminders, settings, durable offline records, authenticated synchronization, saved meal plans available to agents, tracker HR recaps and agent-readable workouts, and mascot moods.
+Recreate now: Today, Week, Food, activity details, recovery steps, food interpretation/review/save, weight observations, reminders, settings, durable offline records, authenticated synchronization, saved meal plans available to agents, tracker HR recaps and agent-readable workouts, and mascot moods.
 
 Not part of the current baseline: natural-language manual workout interpretation, automatic workout categorization by an LLM, generated in-app workout narratives, sleep tracking, a full plan editor, pantry/leftover accounting, automatic shopping messages, advanced post-session arrival-relative notifications, or a containerized hosting setup. Natural-language manual workout logging was explicitly removed from scope. Other deferred features may be proposed later; do not implement them simply because an early design implies them.
 
@@ -102,7 +111,7 @@ Time controls use 12-hour display with explicit AM/PM, including session Move, f
 
 Moving a session retains its identity and outcome history. Move unfinished attached recovery steps by the same intended offset once; preserve completed step timing. Do not invent additional sessions as debt.
 
-Put **Weekly wrap-up** here, not on Today or a separate history screen.
+The date-range heading is a label; previous/next arrows navigate weeks.
 
 ### Food overview
 
@@ -144,11 +153,9 @@ A routine contains independently loggable steps. Each has its concrete action an
 
 Hydration is an action such as “12–20 oz of water,” personalized to the owner's chosen instruction, with Log/Skip. Do not ask for a consumed amount or infer an exact volume from completion. Supplements, if enabled, require the owner's product and actual dose; do not invent or activate unspecified doses. No sleep form or ambiguous “evening times” screen.
 
-### Weight and weekly wrap-up
+### Weight
 
 Weight entry is an explicit observation with unit, time and optional context. Allow manual entry or selection of an eligible imported measured weight. Profile settings on a tracker are not measured body weight. Prevent duplicate imported selections. Support correction/deletion and a selected weekly observation.
-
-Weekly wrap-up: graphical observed weight trend/delta, a coaching synthesis of what the logged week suggests about preparation for the configured goal, and read-only considerations for the next week. Put missing-day/logging coverage in a footnote, not throughout the summary. Show dates and gaps; do not manufacture trend points.
 
 No “what would you change” form, Save Plan, Ask Follow-up, or chat interface. Suggestions never modify the plan or targets. The owner discusses changes with their external AI. Cache generated text for its input snapshot and regenerate when relevant data changes. A week without evidence should say so without calling a model to invent a narrative.
 
@@ -162,7 +169,7 @@ Settings groups: synchronization, tracker access/refresh, notification preferenc
 
 Reminders are opt-in, with the existing user's preferences preserved during upgrades. Defaults: morning overview at 8:00 AM, training preparation 60 minutes before a session, recovery 15 minutes after a linked tracker's actual end (otherwise only after an explicitly configured duration), and a single food check-in at 7:30 PM only if no food entries are saved for that local date. Sunday review at 9:00 AM replaces ordinary morning; a saved Sunday weight changes the message to wrap-up. Morning includes concrete planned meals, training times and recovery steps on rest days. Food mentions only currently visible meal suggestions, without asserting that they were not eaten. Explicit prior-day skip references disappear after subsequent completion. No per-step or per-meal nagging.
 
-Open routes to Today, the session/recovery detail, food entry or weekly review. Snooze 30 minutes is a notification action; a second action opens 10/30/60 minutes and a custom AM/PM picker. An earlier chosen clock time means tomorrow, within 24 hours. Reject quiet-hour snoozes with an explanation. Daily overview, food and Sunday-review snoozes stay on their original date; the chooser rejects a next-day time for these. Training and recovery snoozes may cross midnight within 24 hours, retaining the original activity. Dismiss closes only the notification; no action silently records completion or changes scheduled activities. Announce action labels for accessibility and keep the useful fact first in collapsed notifications.
+Open routes to Today, the session/recovery detail, food entry or Week. Snooze 30 minutes is a notification action; a second action opens 10/30/60 minutes and a custom AM/PM picker. An earlier chosen clock time means tomorrow, within 24 hours. Reject quiet-hour snoozes with an explanation. Daily overview, food and Sunday-review snoozes stay on their original date; the chooser rejects a next-day time for these. Training and recovery snoozes may cross midnight within 24 hours, retaining the original activity. Dismiss closes only the notification; no action silently records completion or changes scheduled activities. Announce action labels for accessibility and keep the useful fact first in collapsed notifications.
 
 Keep one alarm per stable reminder identity; persist scheduling/snoozes locally. Reconcile moves, completion, tracker-link changes, meal dismissals, reboot and clock changes. Re-read eligibility and facts at delivery. Cancel already-visible notifications when facts change; do not re-notify just because text changed. Quiet-hour non-overview prompts are dropped, while the next overview describes current plans. Shift the overview to quiet-hours end only within the same date. Drop very late callbacks rather than producing catch-up bursts. Schedule a rolling horizon and replenish after delivery and synchronization. Permission denial leaves in-app tasks available; platform delivery is approximate. Dated prep activities support local notifications. External shopping/message delivery remains disabled until configured.
 
@@ -197,7 +204,7 @@ flowchart TB
     end
     tunnel <--> api
     tunnel <--> mcp
-    models["App's model provider: food drafts + weekly reflections"]
+    models["App's model provider: food drafts"]
     rules <-->|"Selected inputs / structured proposals"| models
 ```
 
@@ -213,7 +220,7 @@ Owner ↔ phone UI ↔ durable local records/drafts/outbox ↔ authenticated HTT
 
 External AI ↔ authenticated model-facing tools ↔ the same backend/domain operations.
 
-Backend ↔ selected model provider for food drafts and weekly reflections. Phone ↔ platform health-data interface for permitted tracker imports.
+Backend ↔ selected model provider for food drafts. Phone ↔ platform health-data interface for permitted tracker imports.
 
 Choose native, cross-platform or another mobile approach according to reliable local storage, health access, background sync and notifications—not appearance alone. A browser-only build must not claim native health ingestion or background delivery it cannot support. If a platform requires a bridge, document it before promising parity.
 
@@ -235,7 +242,7 @@ The phone works offline for viewing cached plans, manual logging, corrections an
 | Imported source record | Provider/record identity, original type and values, timestamps/offsets, correction metadata and tombstone. |
 | Tracker snapshot | Selected workout, same-source samples, revision, observation time and explicit plan link. |
 | Command/outbox | Unique command ID, entity ID, expected revision, operation and durable payload. |
-| Draft/wrap-up cache | User draft or generated result with source/input fingerprint; separate from saved facts. |
+| Food draft cache | User draft or generated result with source/input fingerprint; separate from saved facts. |
 | Notification/usage state | Delivery identity/snooze state; model usage reservations without private prompt content. |
 
 A typed plan framework composes these records. Do not implement a single opaque blob of disconnected UI entries. Keep definitions, dated occurrences, observations and derived summaries separate even if the chosen storage format is flexible.
@@ -279,15 +286,9 @@ Treat input as data, not instructions to change role, schema or rules. No tool e
 
 Choose a capable inexpensive model for this task; do not hard-code the reference provider/model. On-device inference is optional only after testing equivalent quality and device availability.
 
-### Weekly reflection
-
-Compute facts deterministically before calling the model: relevant logged activities, consumed-food subtotals, observed weights and coverage. Send the minimum useful snapshot. Ask for a short summary, up to three read-only considerations, and references to supporting record IDs. Validate references and output. Never interpret a partial food subtotal as a complete day's intake, recommend different daily targets just because of session intensity, or equate competition practice with a tournament.
-
-Choose a stronger model/reasoning level for this task. Cache by input fingerprint; errors retain observations and allow retry. No automatic acceptance or application of suggestions.
-
 ### External tools
 
-Expose capabilities equivalent to reading records, incremental changes, nutrition totals, one/range of dated meal plans, workout lists and detailed HR recaps; proposing food/weekly reflections; and explicitly applying revision-checked record commands. Names and transport details may vary. Use a standard agent protocol when supported by the recipient's AI.
+Expose capabilities equivalent to reading records, incremental changes, nutrition totals, one/range of dated meal plans, workout lists and detailed HR recaps; proposing food drafts; and explicitly applying revision-checked record commands. Names and transport details may vary. Use a standard agent protocol when supported by the recipient's AI.
 
 Saved meal plans must be real records that agents can read/update. Offer a weekly draft tool that proposes every remaining day of a week (portions from training tiers, conversational swaps/avoided foods, prep instructions derived from the covered batch meals) without saving, and a matching apply tool that commits the accepted draft atomically with revision checks, or nothing if any record changed since drafting. Acceptance: drafting writes no records; applying twice is idempotent; a concurrent edit makes apply save nothing; completed prep is never overwritten; no food is logged. Keep foods and meal templates in an agent-editable, revisioned catalog on the backend rather than in code: per-100 g estimates, a balancing role per food, starting gram amounts per template, and entries the owner can switch off or add in conversation. Balance each drafted day toward the protein/carbohydrate/fat targets within sensible portion bounds, and snapshot the food values into each saved plan item and the template's batch/use-up flags into each saved meal. Validate structured items (food identity, positive grams), since prep and shopping compute from them. Keep meal planning ignorant of why a day's targets are what they are: drafting asks the nutrition policy for the date's targets and balances one set of meals to them. A weight-phase change (such as starting maintenance) changes targets only; redraft the remaining days rather than storing alternative portions. Acceptance: catalog edits never change already saved plans, including which meals count as batch or use-up; a plan with an item lacking grams is rejected at save; restarting never overwrites edits; drafted days land within a few grams of each macro target when the catalog contains adequate fat and carbohydrate sources. Agent edits propagate to the phone. External shopping suggestions do not log food or deduct a pantry automatically. Tools that write require explicit user intent in the caller's workflow, but textual tool descriptions are not server authorization controls.
 
@@ -344,7 +345,7 @@ Paste this instruction with the complete document:
 Recommended implementation sequence:
 
 1. **Personal contract:** confirm device/host, identity, schedule, targets, units, sources, mascot and privacy choices. Mark unanswered inputs. Define the confirmed schedule horizon.
-2. **Visual contract:** render Today, Week, Food, food entry/review, tracker detail, recovery/strength, weekly wrap-up and Settings using synthetic fixtures. Check the copy/action rules before adding infrastructure. Use this document's layouts to avoid reopening settled product decisions.
+2. **Visual contract:** render Today, Week, Food, food entry/review, tracker detail, recovery/strength, Settings using synthetic fixtures. Check the copy/action rules before adding infrastructure. Use this document's layouts to avoid reopening settled product decisions.
 3. **Durable core:** implement typed records, reusable plan/protocol composition, actual/scheduled times, explicit status, drafts and stable identities. Prove restart and correction behavior.
 4. **Shared service:** implement canonical commands, auth, revisions, idempotency, tombstones, incremental sync and durable outbox. Add pre-parser limits and usage allowances before exposing inference.
 5. **Everyday flows:** build Today, Week, food/manual review/save, weight, recovery and reminders. No synthetic data may appear as the owner's recorded history.
@@ -402,10 +403,6 @@ Each planned meal includes the configured water action (the source owner's choic
 
 ### Weekly coaching synthesis — October 18
 
-The weekly wrap-up interprets the logged week in relation to the configured competition goal, rather than listing completed activities. Lead with the most useful implication, explain its evidence and tradeoff, and offer up to three concrete considerations with reasons. Connect training mix, spacing and explicit recovery observations when supported; completion does not prove fitness, skill gains, fatigue or readiness. Keep coverage gaps in the footnote and do not compare partial food totals to daily targets. Sparse evidence warrants a shorter synthesis, not invented conclusions. Goal/date and strength preferences are recipient configuration, not universal prescriptions.
-
-Generate creates a read-only result; Refresh wrap-up requests a replacement while preserving the displayed valid result on failure. Retry is available after failure. No plan changes, chat or additional logging form. Cache format changes invalidate older recap-style results. Current inputs include activity categories/completion, recovery steps, recorded food subtotals and weights; raw tracker HR, subjective effort and prior-week training comparisons are not yet included.
-
 ## Updated meal, prep and notification contract
 
 Exercise rows have one-tap Done with Undo; the full row opens details. Use soft blue rounded tap areas of at least 44 dp, a check for exercise, pencil for other logs, filled blue completion and muted minus for skipped. Completion never fabricates an actual workout interval or HR. Undo restores only the unchanged completion it just created; conflicting edits are preserved with an actionable error. Home retains the complete mascot, countdown, dated next activities, Next meal and later items. No on-screen snooze links. Food retains its blue actual/target summary and pencil; no meal alternatives or assumed fridge/prep status in the app.
@@ -447,7 +444,7 @@ Countdown refinement: keep the large number and quiet “days to Euros” captio
 
 Food keeps its blue consumed/target summary and single right-aligned pencil. Compact macro values put actual and target on one line; larger text stacks the three macros. Meal rows use neutral icon tiles, title and time on one line, followed by foods/portions and water. Planned meals follow totals without a Keep eating heading; entry history stays collapsible. Preserve swipe dismissal, accessible dismiss/restore actions and Undo; dismissal never records consumption. Empty meals and incomplete nutrient values remain explicit.
 
-Week uses neutral 44 dp date tiles, with today in blue, and thin separators. Expanding a day removes its duplicated summary and displays its activities with existing log/move actions; opening another day closes the previous one. Dates remain stable across navigation; current week initially opens today. The weekly wrap-up is a full-width neutral row. Workout-row spacing and behavior are unchanged. Text can grow vertically and actions retain accessible labels and touch targets.
+Week uses neutral 44 dp date tiles, with today in blue, and thin separators. Expanding a day removes its duplicated summary and displays its activities with existing log/move actions; opening another day closes the previous one. Dates remain stable across navigation; current week initially opens today. The week date range is a noninteractive label. Workout-row spacing and behavior are unchanged. Text can grow vertically and actions retain accessible labels and touch targets.
 
 Training moves append an `adjust_nutrition` event to the same activity move history in the existing transactional offline write queue. Both event dates use local-time conversion and derive the current training tier from nondeleted scheduled BJJ/weights records: none/recovery, lifting only, single BJJ, or two-plus/double. Completion/skip status does not reduce this count. Apply the existing maintenance increment once. No older unmarked move is retroactively opted in; dates before the nutrition-policy boundary retain historical behavior. The backend reads the same marker and adds it for accepted schedule edits through the shared command operation. Conflicts continue through normal revision resolution; failed saves retain the move dialog, and retry never adds consumption. Budgets are derived, not separate meal-plan writes, avoiding partial budget updates during sync. Existing food records, meal IDs, portions and target snapshots are preserved; targets on move-affected dates display the derived budget. Explicit new skips still permit meal review without automatic calorie reduction. No move success dialog or request to contact an agent is shown.
 
@@ -478,48 +475,8 @@ Generation still uses the authenticated backend with the selected week's offline
 
 Weekly recap product treatment (October 30, supersedes the prose-first layout): a soft-blue takeaway card contains a concrete 3–7 word headline and at most two brief sentences. Follow it with zero to two flat insight rows, each with a topic icon, specific short title and concise body. Show at most one Next week consideration with a forward icon; do not invent filler to fill slots. Weight and the coverage footnote remain supporting sections. Text remains selectable; refresh, retry, empty/loading states and read-only persistence are unchanged.
 
-The server returns schema_version 2 plus headline (≤70 characters), summary (≤280), insights (≤2; kind training/recovery/food/weight, title ≤50, body ≤240), and adjustments (≤1, ≤220). Evidence references stay internal and must match supplied records. Both backend and Android validate limits. Cache version advances to regenerate older unstructured prose. Retain summary/adjustments fields for earlier clients. Empty weeks have no provider call and empty insight/action lists. The prompt asks for natural coaching and narrower supported observations instead of stock research disclaimers such as “completion alone does not show.” It still forbids invented facts, inferred readiness, automatic plan edits, calorie recommendations or partial-log deficit claims. Coverage limitations stay in the footnote. Verify structured output, limits, topic icons, sparse content, failed-refresh preservation and an actual device generation.
-
-
-### Conversational whole-week recap and weight trend — October 30, 2026
-
-The recap reviews training, food, recovery and available server-synced Polar HR together. It has a short overview, up to four titled findings (training/recovery/food/heart rate), and up to two practical priorities, usually 250–400 words when supported. Each finding connects an observed pattern to its implication. No body-weight discussion appears in the narrative; weight stays in the chart. No automated plan changes, invented readiness claims, follow-up questions, or audit-style boilerplate. Consecutive training is evaluated in context rather than automatically condemned.
-
-The backend supplements the submitted offline records with accepted daily nutrition targets and compact source-identified tracker summaries (duration, average/peak HR, zone time and coverage). Submitted records override matching canonical records for target derivation. Linked sessions must not be counted twice; unlinked observations cannot be blindly added to manual logs. Unknown food nutrients and missing days are not zero; recorded days are not assumed complete. Below-target patterns must be described conditionally, while today remains partial. HR comparisons require comparable sessions and adequate coverage. Only narrative generation reads these facts; no records, targets or tracker links are changed. Cache version changes require regeneration; failed refresh retains the current valid result. Server tracker updates are reflected on explicit Refresh.
-
-The wrap-up weight chart shows all locally available observed readings through the selected week, excluding future/invalid/deleted readings. Source-linked overrides and deletion tombstones take precedence over imported points. Older cached scale readings are chart-only; they do not create historical shared records or change the maintenance policy. Weight refresh now reads 30 days separately from the shorter exercise/HR window; older cached readings remain visible. Access is limited to measurements actually shared through Health Connect, not all data held privately by another health app. Extended historical permission is not implemented.
-
-Muted dots show individual weigh-ins. The blue trend is a trailing seven-calendar-day mean of daily means, giving each observed day one vote. Missing days are omitted, never zero-filled; at least two observed days are needed for a trend value, and gaps of seven days or more are not connected. This display calculation is separate from maintenance's seven consecutive days using the earliest reading. Latest measurement and latest available trend have text values, with dates and a measurement count; no-data state remains explicit.
-
-Acceptance: check all observations appear without weekly-anchor filtering; verify same-day repeats do not overweight the trend, missing days stay missing, tombstones/overrides survive merging, and invalid/future points are excluded. Verify food targets and measured HR reach the model, weight values do not, richer findings pass both response validators, generation remains read-only and refresh failure preserves the displayed result.
-
-
-Week date navigation (October 30): tapping the date-range heading opens the wrap-up for the currently selected week, rather than resetting to the present week. Previous/next arrows still change weeks. Close or Android Back returns to the same selected week. The date button has an accessible “Open wrap-up for [date range]” label; the Insights chart icon sits beside the dates as its visual cue, and the duplicate bottom wrap-up row is removed. Opening does not generate or write records automatically; cached, loading, empty/future and retry behavior remain unchanged. Acceptance: navigate to another week, tap its date, verify that exact week in the recap, then close and verify the selected date is preserved.
-
-
-Wrap-up request stability (October 30): generation captures one immutable record snapshot per explicit tap. Background record updates and sync acknowledgements must not cancel, restart or reset that request or its loading/error state. Keep a displayed result while newer logs arrive, with a quiet refresh notice; preserve the request fingerprint in its cache. JSON key order and whitespace are canonicalized so equivalent synced payloads reuse the same cache identity. Switching weeks/closing still cancels the screen effect; no automatic paid retry is introduced. Acceptance: hold generation open, deliver a changed record, confirm the loading state remains and exactly one provider call completes; then show the result with the newer-logs notice.
-
-
-Next week presentation (October 30): group suggestions in a neutral rounded card with a forward-arrow heading, small blue numbered badges and thin dividers between suggestions. Each suggestion is read-only, with no checkbox or implied plan change. New generations use at most two single-sentence actions, ideally 15–25 words and at most 180 characters each; lead with the action and avoid repeating the findings. Existing saved recaps remain readable until explicitly refreshed. Allow text to wrap at larger font scales and retain normal reading order.
-
-
-Sunday Today entry (October 30): beneath the countdown, show a soft-blue Weekly wrap-up card with the Insights icon, current Monday–Sunday date range and chevron. The entire card opens that current week’s recap, regardless of the week last browsed in Week. Close/Back returns to Today. Show this card only on the device-local Sunday, independently of unresolved activities; opening does not automatically generate or write logs. Other days retain the week-date shortcut.
-
-
-### Saved asynchronous weekly recaps — November 2, 2026
-
-Generate/Refresh creates a durable request for the selected week. The app saves a UUID and immutable input snapshot before scheduling network-constrained background work. The server acknowledges quickly, persists queued/running/completed/failed status and the completed result in SQLite, and generates independently of the HTTP connection. Android polls status using short requests and caches a completed result in Room. Reopening a week displays its saved result, even when newer logs exist; a quiet refresh notice indicates changed inputs. Reopening, background sync, navigation or process recreation never automatically regenerate a recap. Refresh is explicit and preserves the displayed result if it fails. The loading panel retains its generation status without explanatory leave-screen copy.
-
-Idempotent request IDs prevent repeat model calls when a connection is lost or Android resumes work. Background polling retries transport failures up to three worker attempts, using the same request identity. A poll attempt is bounded; provider generation is bounded at 150 seconds externally (the existing model request remains limited to 120 seconds). Persistent queued jobs resume on server startup; interrupted running jobs become a clear failed state rather than silently repeating a potentially billed call. App startup reschedules pending local jobs. Model failures have a retry action. Network-constrained jobs wait for connectivity; there is no claim of exact Android background timing. The compatibility synchronous API/MCP route remains, but native recap generation uses the job endpoints. Jobs store input/result metadata separately from canonical training/food records and never change the plan.
-
-The approved writing prompt describes the user as a hobbyist BJJ athlete preparing for competition alongside everyday life. It discusses what happened, not perfect adherence. Targets are rough guides; numbers are approximate when useful. No grading, praise, jargon, obvious advice or repeated missing-log caveats. Unknowns remain unknown by narrowing claims or omitting unsupported observations. Body weight stays in its chart. Remove the visible coverage footnote entirely; internal coverage validation remains. Existing saved text is preserved until the user explicitly refreshes. Model remains gpt-6.1-sol; the approved assessment update below uses medium reasoning.
-
-Acceptance: return a queued acknowledgement without waiting for inference; resubmit an identical request without another model call; persist completed results across server/client restarts; expose failed/interrupted requests rather than infinite loading; leave/reopen during generation and receive the result once; reopen a completed week without regeneration; failed refresh preserves the valid prior result; no coverage footer or domain-record writes. Keep labeled Generate/Refresh/Close controls, readable status text and natural accessibility reading order.
-
 
 ### Approved weekly assessment — November 2, 2026
-
-Weekly wrap-up answers whether the observed week supports competition preparation, why, and what most deserves attention. It evaluates actual habits rather than plan compliance. Lead with a supported, week-specific assessment; connect training, HR, food and recovery observations to useful implications. Avoid unsupported readiness or progress claims, logging audits, target policing, stock coaching language and narrating internal evidence safeguards. A single lower-protein day must not dominate the overall judgment. Sparse records support narrower observations; repeated substantial low logged intake can become the main concern. Suggestions remain optional: zero actions is valid when no useful change is supported. No automatic plan changes.
 
 The user reviewed and approved the final candidate before release. The provider remains gpt-6.1-sol; weekly assessment uses medium reasoning and prompt v11. Four final-prompt development trials completed: two real-week runs with consistent conclusions, one isolated sparse-data case, and one isolated repeated-low-food case. All passed structured-response checks and received manual content review. This small sample is not a reliability guarantee; some explanatory filler remains possible. Keep existing saved recaps until explicit Refresh, including after prompt changes. Generation, persistence, error handling and accessible native rendering are unchanged. No Android update is required for this server prompt change.
 

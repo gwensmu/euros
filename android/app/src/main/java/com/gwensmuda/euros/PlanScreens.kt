@@ -160,19 +160,6 @@ object PlanDisplay {
  }
 
 }
-@Composable fun SundayWrapUp(date:LocalDate,onOpen:()->Unit) {
- if(date.dayOfWeek!=java.time.DayOfWeek.SUNDAY)return
- Surface(onClick=onOpen,color=EurosColors.Soft,shape=RoundedCornerShape(16.dp),modifier=Modifier.fillMaxWidth()) {
-  Row(Modifier.padding(16.dp),verticalAlignment=Alignment.CenterVertically,horizontalArrangement=Arrangement.spacedBy(12.dp)) {
-   Icon(Icons.Outlined.Insights,null,tint=EurosColors.Blue,modifier=Modifier.size(24.dp))
-   Column(Modifier.weight(1f),verticalArrangement=Arrangement.spacedBy(3.dp)) {
-    Text("Weekly wrap-up",style=MaterialTheme.typography.titleMedium,fontWeight=FontWeight.SemiBold)
-    Text(weekTitle(date.with(java.time.DayOfWeek.MONDAY)),style=MaterialTheme.typography.bodySmall,color=EurosColors.Muted)
-   }
-   Icon(Icons.Outlined.ChevronRight,null,tint=EurosColors.Blue)
-  }
- }
-}
 @Composable fun WeekContent(records:List<Record>,week:LocalDate,onOpen:(Record)->Unit,repo:Repository,onImported:(String)->Unit) {
  val app=LocalContext.current.applicationContext as EurosApplication
  val tracker by app.weekTracker.state.collectAsState()

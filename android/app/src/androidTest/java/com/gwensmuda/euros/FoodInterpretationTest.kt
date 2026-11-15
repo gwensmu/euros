@@ -30,7 +30,6 @@ class FoodInterpretationTest {
   db=Room.inMemoryDatabaseBuilder(ApplicationProvider.getApplicationContext(),EurosDatabase::class.java).build()
   repo=Repository(db,object:LlmClient {
    override suspend fun interpretFood(text:String):JSONObject {calls++;return responder(text)}
-   override suspend fun reviewWeek(weekStart:LocalDate,records:List<Record>):JSONObject=error("Not used")
   })
   compose.setContent {val records by repo.dao.observe().collectAsState(emptyList());EurosTheme {Column(Modifier.verticalScroll(rememberScrollState())) {FoodScreen(repo,records,LocalDate.of(2026,10,14),null,emptyList())}}}
  }

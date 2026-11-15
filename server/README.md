@@ -1,5 +1,7 @@
 # Euros backend
 
+AI weekly wrap-up has been removed: no review screen, API/MCP generation or active background job. Food interpretation, Week agenda, workout recaps and weight logging remain. Older wrap-up descriptions below are historical.
+
 Python 3.12+, Starlette/Uvicorn, SQLite and FastMCP. Run from the repository root:
 
 ```sh
