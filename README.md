@@ -9,7 +9,7 @@ An individual recreational BJJ athlete preparing for a specific competition, or 
 ## Architecture
 
 - **Android:** Kotlin, Jetpack Compose, Room and a durable offline write queue.
-- **Backend:** Python, Starlette/Uvicorn, one shared SQLite database, SQLAlchemy and FastMCP. The phone API and MCP use the same revision-checked domain operations.
+- **Backend:** Python, Starlette/Uvicorn, one shared PostgreSQL database (SQLite for local development/tests), SQLAlchemy and FastMCP. The phone API and MCP use the same revision-checked domain operations.
 - **AI:** server-side food interpretation and constrained reminder-copy selection. Provider credentials never belong in the app.
 - **Trackers:** Android Health Connect imports, automatic unambiguous planned-workout linking, and optional food-log export; source identity and missing values are preserved.
 

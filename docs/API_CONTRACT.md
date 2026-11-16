@@ -77,7 +77,7 @@ Discovery, OAuth endpoints and the account site at `/account/` authenticate them
 }
 ```
 
-Example values are test data, never an automatically installed user plan. Use globally unique IDs in real clients. `expected_revision: 0` creates; subsequent writes carry the revision read by that client. Upsert sends the full validated payload. Supported first-slice types are `activities`, `food_entries`, and `weight_entries`; operations are `upsert` and `delete`.
+Example values are test data, never an automatically installed user plan. Use globally unique IDs in real clients. `expected_revision: 0` creates; subsequent writes carry the revision read by that client. Upsert sends the full validated payload. Supported canonical record types are `activities`, `food_entries`, `weight_entries` and `meal_plans`; operations are `upsert` and `delete`.
 
 Successful response:
 
@@ -126,7 +126,7 @@ MCP read and write tools delegate to the same service as the REST routes. A pars
 
 ## Follow-on contracts
 
-Health Connect record batches, HR samples, plan snapshots/target history, natural-language draft interpretation, generated wrap-ups, recovery quantity records and scoped remote authentication require subsequent typed contracts. No generic record payload should be used to bypass their domain validation.
+Tracker workout/HR publication, food drafts, meal plans and account/OAuth routes have dedicated contracts below and in the shareable blueprint. Weekly-review generation is retired. No generic record payload may bypass domain validation. Unsupported future integrations require a separate typed contract.
 
 ## Model proposals
 
@@ -141,7 +141,7 @@ MCP `interpret_food(text)` and `review_week(week_start, records)` call these sam
 
 ## Source-owned tracker workouts (phone upload; read-only MCP)
 
-Tracker snapshots use separate `tracker_workouts` and `tracker_commands` tables in the same persistent SQLite database. They never enter manual `records`, ordinary `changes`, food totals, or activity completion. Existing schema v1 tables are untouched; the tracker extension creates its additional tables at application setup. SQLite backups include both. This contract is implemented locally; deployment and personal data upload are separate steps.
+Tracker snapshots use separate `tracker_workouts` and `tracker_commands` tables in the same shared account-scoped database. They never enter manual `records`, ordinary `changes`, food totals, or activity completion. Whole-database backups include tracker storage. SQLite schema/import history is documented separately from the production PostgreSQL schema; see server/POSTGRES.md for setup and migration limits.
 
 `POST /v1/tracker/import` requires the **app** token. MCP has no corresponding writer; `apply_command` rejects `tracker_workouts`. Body limit is 4 MiB, with 1–20 records per atomic batch and at most 20,000 HR samples per workout. [Synthetic fixture](../contracts/tracker-import.json) is contract data only, never an authored or imported personal record.
 
