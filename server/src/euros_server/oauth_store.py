@@ -5,6 +5,8 @@ endpoints that call it are in oauth.py. Codes are single use, refresh tokens rot
 credential presented after it was spent is treated as a leak: the whole grant is revoked
 rather than extended.
 """
+from sqlalchemy import select, insert, update, delete, func, and_
+from .models import oauth_clients as clients, oauth_codes as codes, oauth_grants as grants, oauth_tokens as tokens
 import base64
 import hashlib
 import hmac
@@ -62,24 +64,6 @@ def valid_redirect_uri(value):
 class OAuthStore:
     def __init__(self, database, users):
         self.database, self.users = database, users
-        with database.connect() as db:
-            db.executescript('''
-                CREATE TABLE IF NOT EXISTS oauth_clients (
-                  client_id TEXT PRIMARY KEY, secret_hash TEXT, name TEXT NOT NULL, uris TEXT NOT NULL,
-                  auth_method TEXT NOT NULL, created_at REAL NOT NULL, registered INTEGER NOT NULL);
-                CREATE TABLE IF NOT EXISTS oauth_codes (
-                  code_hash TEXT PRIMARY KEY, client_id TEXT NOT NULL, user_id TEXT NOT NULL,
-                  redirect_uri TEXT NOT NULL, challenge TEXT NOT NULL, scope TEXT NOT NULL,
-                  resource TEXT, grant_id TEXT NOT NULL, expires_at REAL NOT NULL, used INTEGER NOT NULL DEFAULT 0);
-                CREATE TABLE IF NOT EXISTS oauth_grants (
-                  grant_id TEXT PRIMARY KEY, user_id TEXT NOT NULL, client_id TEXT NOT NULL,
-                  scope TEXT NOT NULL, created_at REAL NOT NULL, revoked INTEGER NOT NULL DEFAULT 0);
-                CREATE TABLE IF NOT EXISTS oauth_tokens (
-                  token_hash TEXT PRIMARY KEY, kind TEXT NOT NULL, grant_id TEXT NOT NULL,
-                  user_id TEXT NOT NULL, client_id TEXT NOT NULL, scope TEXT NOT NULL,
-                  created_at REAL NOT NULL, expires_at REAL NOT NULL, revoked INTEGER NOT NULL DEFAULT 0);
-                CREATE INDEX IF NOT EXISTS oauth_tokens_grant ON oauth_tokens(grant_id);
-            ''')
 
     # --- clients -----------------------------------------------------------------------
 
@@ -116,15 +100,13 @@ class OAuthStore:
             raise DomainError('invalid_client_metadata', 400, error_description='response_types')
         client_id = 'cli-' + new_secret(16)
         secret = None if method == 'none' else new_secret()
-        with self.database.connect() as db:
-            db.execute('INSERT INTO oauth_clients VALUES (?,?,?,?,?,?,1)',
-                       (client_id, digest(secret) if secret else None, name.strip(),
-                        json.dumps(list(uris)), method, time.time()))
+        with self.database.transaction(write=True) as db:
+            db.execute(insert(clients).values(client_id=client_id, secret_hash=digest(secret) if secret else None, name=name.strip(), uris=json.dumps(list(uris)), auth_method=method, created_at=time.time(), registered=1))
         return {**self.client(client_id), 'client_secret': secret}
 
     def _client_row(self, client_id):
-        with self.database.connect() as db:
-            return db.execute('SELECT * FROM oauth_clients WHERE client_id=?', (client_id,)).fetchone()
+        with self.database.transaction(write=True) as db:
+            return db.execute(select(clients).where(clients.c.client_id == client_id)).mappings().first()
 
     def client(self, client_id):
         return self._client(self._client_row(client_id))
@@ -144,12 +126,10 @@ class OAuthStore:
     def create_code(self, client_id, user_id, redirect_uri, challenge, scope, resource=None):
         """Record the user's decision as a fresh grant and the one-time code that opens it."""
         code, grant_id, now = new_secret(), 'grt-' + uuid.uuid4().hex, time.time()
-        with self.database.connect() as db:
-            db.execute('DELETE FROM oauth_codes WHERE expires_at<?', (now - CODE_TTL,))
-            db.execute('INSERT INTO oauth_grants VALUES (?,?,?,?,?,0)', (grant_id, user_id, client_id, scope, now))
-            db.execute('INSERT INTO oauth_codes VALUES (?,?,?,?,?,?,?,?,?,0)',
-                       (digest(code), client_id, user_id, redirect_uri, challenge, scope, resource,
-                        grant_id, now + CODE_TTL))
+        with self.database.transaction(write=True) as db:
+            db.execute(delete(codes).where(codes.c.expires_at < now - CODE_TTL))
+            db.execute(insert(grants).values(grant_id=grant_id, user_id=user_id, client_id=client_id, scope=scope, created_at=now, revoked=0))
+            db.execute(insert(codes).values(code_hash=digest(code), client_id=client_id, user_id=user_id, redirect_uri=redirect_uri, challenge=challenge, scope=scope, resource=resource, grant_id=grant_id, expires_at=now+CODE_TTL, used=0))
         return code
 
     def redeem_code(self, code, client_id, redirect_uri, verifier):
@@ -158,12 +138,11 @@ class OAuthStore:
         The code is spent in its own committed transaction before the verifier is checked, so a
         failed attempt cannot be retried with a different verifier.
         """
-        with self.database.connect() as db:
-            db.execute('BEGIN IMMEDIATE')
-            row = db.execute('SELECT * FROM oauth_codes WHERE code_hash=?', (digest(code or ''),)).fetchone()
+        with self.database.transaction(write=True) as db:
+            row = db.execute(select(codes).where(codes.c.code_hash == digest(code or "")).with_for_update()).mappings().first()
             spent = bool(row and row['used'])
             if row is not None and not spent:
-                db.execute('UPDATE oauth_codes SET used=1 WHERE code_hash=?', (row['code_hash'],))
+                db.execute(update(codes).where(codes.c.code_hash == row["code_hash"]).values(used=1))
         if spent:
             self.revoke_grant_id(row['grant_id'])
             raise DomainError('invalid_grant', 400, error_description='authorization code replayed')
@@ -181,27 +160,23 @@ class OAuthStore:
 
     def issue_tokens(self, grant_id, user_id, client_id, scope):
         access, refresh, now = new_secret(), new_secret(), time.time()
-        with self.database.connect() as db:
-            db.execute('DELETE FROM oauth_tokens WHERE expires_at<?', (now - 86400,))
+        with self.database.transaction(write=True) as db:
+            db.execute(delete(tokens).where(tokens.c.expires_at < now - 86400))
             for kind, value, ttl in (('access', access, ACCESS_TTL), ('refresh', refresh, REFRESH_TTL)):
-                db.execute('INSERT INTO oauth_tokens VALUES (?,?,?,?,?,?,?,?,0)',
-                           (digest(value), kind, grant_id, user_id, client_id, scope, now, now + ttl))
+                db.execute(insert(tokens).values(token_hash=digest(value), kind=kind, grant_id=grant_id, user_id=user_id, client_id=client_id, scope=scope, created_at=now, expires_at=now+ttl, revoked=0))
         return dict(access_token=access, refresh_token=refresh, token_type='Bearer',
                     expires_in=ACCESS_TTL, scope=scope)
 
     def refresh(self, token, client_id):
         """Rotation: the presented refresh token is spent, and reusing a spent one ends the grant."""
         now = time.time()
-        with self.database.connect() as db:
-            db.execute('BEGIN IMMEDIATE')
-            row = db.execute("SELECT * FROM oauth_tokens WHERE token_hash=? AND kind='refresh'",
-                             (digest(token or ''),)).fetchone()
-            grant = db.execute('SELECT * FROM oauth_grants WHERE grant_id=?',
-                               (row['grant_id'],)).fetchone() if row else None
+        with self.database.transaction(write=True) as db:
+            row = db.execute(select(tokens).where(tokens.c.token_hash == digest(token or ""), tokens.c.kind == "refresh").with_for_update()).mappings().first()
+            grant = db.execute(select(grants).where(grants.c.grant_id == row["grant_id"])).mappings().first() if row else None
             usable = bool(row and row['client_id'] == client_id and not row['revoked']
                           and row['expires_at'] >= now and grant and not grant['revoked'])
             if usable:
-                db.execute('UPDATE oauth_tokens SET revoked=1 WHERE token_hash=?', (row['token_hash'],))
+                db.execute(update(tokens).where(tokens.c.token_hash == row["token_hash"]).values(revoked=1))
         if usable:
             return self.issue_tokens(row['grant_id'], row['user_id'], client_id, row['scope'])
         if row is not None and row['client_id'] == client_id and (row['revoked'] or row['expires_at'] < now):
@@ -214,12 +189,11 @@ class OAuthStore:
         account are all checked here, so a caller never has to."""
         if not isinstance(token, str) or not token:
             return None
-        with self.database.connect() as db:
-            row = db.execute("SELECT * FROM oauth_tokens WHERE token_hash=? AND kind='access'",
-                             (digest(token),)).fetchone()
+        with self.database.transaction(write=True) as db:
+            row = db.execute(select(tokens).where(tokens.c.token_hash == digest(token), tokens.c.kind == "access")).mappings().first()
             if row is None or row['revoked'] or row['expires_at'] < time.time():
                 return None
-            grant = db.execute('SELECT revoked FROM oauth_grants WHERE grant_id=?', (row['grant_id'],)).fetchone()
+            grant = db.execute(select(grants).where(grants.c.grant_id == row["grant_id"])).mappings().first()
         if grant is None or grant['revoked']:
             return None
         user = self.users.active(row['user_id'])
@@ -232,35 +206,28 @@ class OAuthStore:
 
     def revoke_token(self, token):
         """RFC 7009: revoking either token of a pair ends the whole grant, and is never an error."""
-        with self.database.connect() as db:
-            row = db.execute('SELECT grant_id FROM oauth_tokens WHERE token_hash=?',
-                             (digest(token or ''),)).fetchone()
+        with self.database.transaction(write=True) as db:
+            row = db.execute(select(tokens).where(tokens.c.token_hash == digest(token or ""))).mappings().first()
         if row:
             self.revoke_grant_id(row['grant_id'])
 
     def revoke_grant_id(self, grant_id):
-        with self.database.connect() as db:
-            db.execute('UPDATE oauth_grants SET revoked=1 WHERE grant_id=?', (grant_id,))
-            db.execute('UPDATE oauth_tokens SET revoked=1 WHERE grant_id=?', (grant_id,))
+        with self.database.transaction(write=True) as db:
+            db.execute(update(grants).where(grants.c.grant_id == grant_id).values(revoked=1))
+            db.execute(update(tokens).where(tokens.c.grant_id == grant_id).values(revoked=1))
 
     def grants(self, user_id):
         """Connected applications for the account page: one row per live authorization."""
-        with self.database.connect() as db:
-            rows = db.execute('''SELECT g.grant_id, g.scope, g.created_at, c.name, c.client_id,
-                                        MAX(t.expires_at) AS last_expiry
-                                 FROM oauth_grants g JOIN oauth_clients c ON c.client_id=g.client_id
-                                 LEFT JOIN oauth_tokens t ON t.grant_id=g.grant_id AND t.revoked=0
-                                 WHERE g.user_id=? AND g.revoked=0 GROUP BY g.grant_id
-                                 ORDER BY g.created_at DESC''', (user_id,)).fetchall()
+        with self.database.transaction(write=True) as db:
+            rows = db.execute(select(grants.c.grant_id, grants.c.scope, grants.c.created_at, clients.c.name, clients.c.client_id, func.max(tokens.c.expires_at).label("last_expiry")).select_from(grants.join(clients).outerjoin(tokens, and_(tokens.c.grant_id == grants.c.grant_id, tokens.c.revoked == 0))).where(grants.c.user_id == user_id, grants.c.revoked == 0).group_by(grants.c.grant_id, grants.c.scope, grants.c.created_at, clients.c.name, clients.c.client_id).order_by(grants.c.created_at.desc())).mappings().all()
         return [dict(grant_id=r['grant_id'], client_id=r['client_id'], name=r['name'], scope=r['scope'].split(),
                      created_at=datetime.fromtimestamp(r['created_at'], timezone.utc).isoformat(),
                      active=bool(r['last_expiry'] and r['last_expiry'] > time.time())) for r in rows]
 
     def revoke_grant(self, user_id, grant_id):
         """Revocation from the account site, which may only end this user's own grants."""
-        with self.database.connect() as db:
-            changed = db.execute('UPDATE oauth_grants SET revoked=1 WHERE grant_id=? AND user_id=?',
-                                 (grant_id, user_id)).rowcount
-            db.execute('UPDATE oauth_tokens SET revoked=1 WHERE grant_id=? AND user_id=?', (grant_id, user_id))
+        with self.database.transaction(write=True) as db:
+            changed = db.execute(update(grants).where(grants.c.grant_id == grant_id, grants.c.user_id == user_id).values(revoked=1)).rowcount
+            db.execute(update(tokens).where(tokens.c.grant_id == grant_id, tokens.c.user_id == user_id).values(revoked=1))
         if not changed:
             raise DomainError('grant_not_found', 404)

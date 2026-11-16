@@ -72,3 +72,12 @@ def test_an_operator_can_reset_a_forgotten_password(users):
         users.reset_password(user['user_id'], 'short')
     with pytest.raises(DomainError, match='user_not_found'):
         users.reset_password('usr-nobody', 'a replacement password')
+
+
+def test_email_username_is_normalized_and_authenticates(users):
+    user = users.create(' Athlete+training@Example.COM ', PASSWORD)
+    assert user['username'] == 'athlete+training@example.com'
+    assert users.authenticate('ATHLETE+TRAINING@EXAMPLE.COM', PASSWORD)['user_id'] == user['user_id']
+    for bad in ('a@@example.com', 'a@example', 'a@-example.com', 'a @example.com'):
+        with pytest.raises(DomainError, match='invalid_username'):
+            users.create(bad, PASSWORD)

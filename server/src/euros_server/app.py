@@ -481,17 +481,19 @@ def _read_password(prompt, environment="EUROS_NEW_PASSWORD"):
 
 
 def _data_dir():
-    directory = os.environ.get("EUROS_DATA_DIR")
+    from .database import configured_database_url
+    directory = configured_database_url() or os.environ.get("EUROS_DATA_DIR")
     if not directory:
         if os.environ.get("EUROS_DB_PATH"):
             raise ValueError("Set EUROS_DATA_DIR to the account data directory. An existing single-account "
                              "database is adopted once with --adopt-database; it is never moved automatically.")
-        raise ValueError("Set EUROS_DATA_DIR to a persistent directory outside release directories")
-    return Path(directory)
+        raise ValueError("Set EUROS_DATABASE_URL_FILE, EUROS_DATABASE_URL or EUROS_DATA_DIR")
+    return directory if directory.startswith("postgresql") else Path(directory)
 
 
 def _account_database(data_dir, user_id):
-    return Store(Path(data_dir) / "euros.db", user_id)
+    from .database import is_postgres
+    return Store(data_dir if is_postgres(data_dir) else Path(data_dir) / "euros.db", user_id)
 
 
 def _adopt(accounts, data_dir, source, username):
@@ -502,12 +504,22 @@ def _adopt(accounts, data_dir, source, username):
     user = accounts.users.by_username(username)
     if user is None:
         raise ValueError('Create the destination account before adopting its database')
-    counts = import_training(accounts.path, source, user['user_id'])
-    return {"username":user['username'], "user_id":user['user_id'], "database":accounts.path,
+    from .database import is_postgres
+    if is_postgres(accounts.path):
+        from .postgres_migration import import_snapshot
+        counts = import_snapshot(accounts.path, source, user['user_id'])
+        destination = 'PostgreSQL'
+    else:
+        counts = import_training(accounts.path, source, user['user_id'])
+        destination = str(accounts.path)
+    return {"username":user['username'], "user_id":user['user_id'], "database":destination,
             "source":str(source), "rows":counts, "note":"The source database was copied, not deleted."}
 
 
 def _accounts(data_dir):
+    from .database import is_postgres
+    if is_postgres(data_dir):
+        return AccountStore(data_dir)
     root = Path(data_dir)
     if not (root / 'euros.db').exists() and ((root / 'accounts.db').exists() or (root / 'users').exists()):
         raise ValueError('Run --consolidate-databases before starting the shared database service')
@@ -532,6 +544,9 @@ def main():
     args = parser.parse_args()
     data_dir = _data_dir()
     if args.consolidate_databases:
+        from .database import is_postgres
+        if is_postgres(data_dir):
+            raise ValueError('--consolidate-databases is only for the legacy SQLite directory layout')
         from .storage_migration import consolidate
         print(json.dumps(consolidate(data_dir), indent=2))
         return

@@ -1,10 +1,11 @@
 """SQLAlchemy engines and transaction-scoped account sessions; raw access is for admin/migrations."""
 import sqlite3
+import os
 from contextlib import contextmanager
 from functools import lru_cache
 from pathlib import Path
 
-from sqlalchemy import create_engine, event, inspect
+from sqlalchemy import create_engine, event, inspect, select, insert
 from sqlalchemy.dialects.sqlite import dialect
 from sqlalchemy.orm import Session, with_loader_criteria
 from sqlalchemy.pool import NullPool
@@ -16,14 +17,41 @@ LEGACY_OWNER = 'usr-' + '0' * 32
 SCHEMA = OWNED_TABLES
 
 
+def configured_database_url():
+    filename = os.environ.get('EUROS_DATABASE_URL_FILE')
+    return Path(filename).read_text().strip() if filename else os.environ.get('EUROS_DATABASE_URL')
+
+
+def is_postgres(path):
+    return str(path).startswith(('postgresql://', 'postgresql+psycopg://'))
+
+
 @lru_cache(maxsize=32)
 def engine(path):
+    if is_postgres(path):
+        url = str(path).replace('postgresql://', 'postgresql+psycopg://', 1)
+        return create_engine(url, pool_pre_ping=True, pool_size=5, max_overflow=5)
     result = create_engine('sqlite:///' + str(Path(path).resolve()), poolclass=NullPool,
                            connect_args={'timeout':10})
     @event.listens_for(result, 'connect')
     def configure(db, _):
         db.execute('PRAGMA foreign_keys=ON')
     return result
+
+
+@contextmanager
+def transaction(path, write=False):
+    with engine(path).connect() as connection:
+        if connection.dialect.name == 'sqlite':
+            connection.exec_driver_sql('BEGIN IMMEDIATE' if write else 'BEGIN')
+        else:
+            connection.begin()
+        try:
+            yield connection
+            connection.commit()
+        except BaseException:
+            connection.rollback()
+            raise
 
 
 class AccountSession(Session):
@@ -60,22 +88,20 @@ def scope_writes(session, *_):
 
 @contextmanager
 def account_session(path, user_id, write=False):
-    # SQLite serializes writers. Lock before reading revisions or allocating account cursors.
-    with engine(path).connect() as connection:
-        connection.exec_driver_sql('BEGIN IMMEDIATE' if write else 'BEGIN')
-        try:
-            with AccountSession(bind=connection, user_id=user_id, expire_on_commit=False) as session:
-                yield session
-                session.flush()
-            connection.commit()
-        except BaseException:
-            connection.rollback()
-            raise
+    with transaction(path, write=write) as connection:
+        if write and connection.dialect.name == 'postgresql':
+            # Serialize one account's revisions/cursors, without blocking other accounts.
+            connection.execute(select(User.user_id).where(User.user_id == user_id).with_for_update()).scalar_one()
+        with AccountSession(bind=connection, user_id=user_id, expire_on_commit=False) as session:
+            yield session
+            session.flush()
 
 
 @contextmanager
 def connect(path):
     """Unscoped operator connection. Application account queries use account_session."""
+    if is_postgres(path):
+        raise ValueError('Use SQLAlchemy transactions for PostgreSQL')
     db = sqlite3.connect(str(path), timeout=10)
     db.row_factory = sqlite3.Row
     db.execute('PRAGMA foreign_keys=ON')
@@ -88,6 +114,17 @@ def connect(path):
 
 def initialize(path, legacy_owner=LEGACY_OWNER):
     """Atomic v1 upgrade; all new table definitions come from SQLAlchemy metadata."""
+    if is_postgres(path):
+        Base.metadata.create_all(engine(path))
+        if legacy_owner is not None:
+            with transaction(path, write=True) as db:
+                found = db.scalar(select(User.user_id).where(User.user_id == legacy_owner))
+                if found is None:
+                    if legacy_owner != LEGACY_OWNER:
+                        raise ValueError('Unknown account')
+                    from sqlalchemy.dialects.postgresql import insert as pg_insert
+                    db.execute(pg_insert(User).values(user_id=LEGACY_OWNER, username='__legacy__', display_name='Personal installation', password_hash='!', created_at='', password_changed_at='', disabled=1).on_conflict_do_nothing())
+        return
     Path(path).parent.mkdir(parents=True, exist_ok=True)
     with connect(path) as db:
         version = db.execute('PRAGMA user_version').fetchone()[0]
@@ -117,3 +154,5 @@ def initialize(path, legacy_owner=LEGACY_OWNER):
         db.execute('CREATE TABLE IF NOT EXISTS imported_databases (user_id TEXT PRIMARY KEY REFERENCES users(user_id), source TEXT NOT NULL, imported_at TEXT NOT NULL)')
         db.execute('CREATE TABLE IF NOT EXISTS retired_account_data (user_id TEXT NOT NULL REFERENCES users(user_id), table_name TEXT NOT NULL, row_json TEXT NOT NULL)')
         db.execute('PRAGMA user_version=2')
+
+    Base.metadata.create_all(engine(path))

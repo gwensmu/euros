@@ -4,7 +4,10 @@ A user row is the only place an account exists. Training records share the same 
 with account-scoped domain access (workspace.py); this store only manages identities.
 """
 import re
-import sqlite3
+from sqlalchemy import select, insert, update, delete, func
+from sqlalchemy.exc import IntegrityError
+from .models import User, login_failures
+users = User.__table__
 import time
 import uuid
 from datetime import datetime, timezone
@@ -13,14 +16,15 @@ from .credentials import ITERATIONS, hash_password, validate_password, verify_pa
 from .domain import DomainError
 
 USERNAME = re.compile(r'[a-z0-9][a-z0-9._-]{2,31}')
+EMAIL_USERNAME = re.compile(r"[a-z0-9][a-z0-9._+\-]{0,63}@[a-z0-9](?:[a-z0-9\-]*[a-z0-9])?(?:\.[a-z0-9](?:[a-z0-9\-]*[a-z0-9])?)+")
 # Failed sign-ins per username within the window before the account stops answering attempts.
 MAX_FAILURES, FAILURE_WINDOW = 10, 900
 
 
 def validate_username(value):
-    if not isinstance(value, str) or not USERNAME.fullmatch(value.strip().lower()):
+    if not isinstance(value, str) or len(value.strip()) > 254 or not (USERNAME.fullmatch(value.strip().lower()) or EMAIL_USERNAME.fullmatch(value.strip().lower())):
         raise DomainError('invalid_username', 422,
-                          rule='3-32 characters: lowercase letters, digits, dot, dash or underscore')
+                          rule='A 3-32 character username or an email address')
     return value.strip().lower()
 
 
@@ -37,15 +41,6 @@ class UserStore:
 
     def __init__(self, database, iterations=ITERATIONS):
         self.database, self.iterations = database, iterations
-        with database.connect() as db:
-            db.executescript('''
-                CREATE TABLE IF NOT EXISTS users (
-                  user_id TEXT PRIMARY KEY, username TEXT NOT NULL UNIQUE, display_name TEXT NOT NULL,
-                  password_hash TEXT NOT NULL, created_at TEXT NOT NULL, password_changed_at TEXT NOT NULL,
-                  disabled INTEGER NOT NULL DEFAULT 0);
-                CREATE TABLE IF NOT EXISTS login_failures (username TEXT NOT NULL, at REAL NOT NULL);
-                CREATE INDEX IF NOT EXISTS login_failures_at ON login_failures(at);
-            ''')
 
     @staticmethod
     def account(row):
@@ -63,64 +58,60 @@ class UserStore:
         stamp = datetime.now(timezone.utc).isoformat()
         user_id = 'usr-' + uuid.uuid4().hex
         try:
-            with self.database.connect() as db:
-                db.execute('INSERT INTO users VALUES (?,?,?,?,?,?,0)',
-                           (user_id, username, display, hash_password(password, self.iterations), stamp, stamp))
-        except sqlite3.IntegrityError:
+            with self.database.transaction(write=True) as db:
+                db.execute(insert(users).values(user_id=user_id, username=username, display_name=display, password_hash=hash_password(password, self.iterations), created_at=stamp, password_changed_at=stamp, disabled=0))
+        except IntegrityError:
             raise DomainError('username_taken', 409) from None
         return self.read(user_id)
 
     def read(self, user_id):
-        with self.database.connect() as db:
-            return self.account(db.execute('SELECT * FROM users WHERE user_id=?', (user_id,)).fetchone())
+        with self.database.transaction() as db:
+            return self.account(db.execute(select(users).where(users.c.user_id == user_id)).mappings().first())
 
     def active(self, user_id):
         """The account behind a credential, or None when it is unknown or disabled."""
-        with self.database.connect() as db:
-            return self.account(db.execute('SELECT * FROM users WHERE user_id=? AND disabled=0',
-                                           (user_id,)).fetchone())
+        with self.database.transaction() as db:
+            return self.account(db.execute(select(users).where(users.c.user_id == user_id, users.c.disabled == 0)).mappings().first())
 
     def by_username(self, username):
         if not isinstance(username, str):
             return None
-        with self.database.connect() as db:
-            return self.account(db.execute('SELECT * FROM users WHERE username=?',
-                                           (username.strip().lower(),)).fetchone())
+        with self.database.transaction() as db:
+            return self.account(db.execute(select(users).where(users.c.username == username.strip().lower())).mappings().first())
 
     def ids(self):
-        with self.database.connect() as db:
-            return [r['user_id'] for r in db.execute('SELECT user_id FROM users WHERE disabled=0 ORDER BY created_at')]
+        with self.database.transaction() as db:
+            return list(db.scalars(select(users.c.user_id).where(users.c.disabled == 0).order_by(users.c.created_at)))
 
     def count(self):
-        with self.database.connect() as db:
-            return db.execute('SELECT COUNT(*) FROM users').fetchone()[0]
+        with self.database.transaction() as db:
+            return db.scalar(select(func.count()).select_from(users))
 
     def authenticate(self, username, password):
         """A verified account, or DomainError. Unknown users cost the same work as wrong passwords."""
         if not isinstance(username, str) or not isinstance(password, str):
             raise DomainError('invalid_credentials', 401)
         name, now = username.strip().lower(), time.time()
-        with self.database.connect() as db:
-            db.execute('DELETE FROM login_failures WHERE at<?', (now - FAILURE_WINDOW,))
-            failures = db.execute('SELECT COUNT(*) FROM login_failures WHERE username=? AND at>?',
-                                  (name, now - FAILURE_WINDOW)).fetchone()[0]
-            row = db.execute('SELECT * FROM users WHERE username=?', (name,)).fetchone()
+        with self.database.transaction(write=True) as db:
+            db.execute(delete(login_failures).where(login_failures.c.at < now - FAILURE_WINDOW))
+            failures = db.scalar(select(func.count()).select_from(login_failures).where(login_failures.c.username == name, login_failures.c.at > now - FAILURE_WINDOW))
+            row = db.execute(select(users).where(users.c.username == name)).mappings().first()
         if failures >= MAX_FAILURES:
             raise DomainError('too_many_attempts', 429)
         stored = row['password_hash'] if row else hash_password('unknown-account', self.iterations)
         if not verify_password(stored, password) or (row and row['disabled']):
-            with self.database.connect() as db:
-                db.execute('INSERT INTO login_failures VALUES (?,?)', (name, time.time()))
+            with self.database.transaction(write=True) as db:
+                db.execute(insert(login_failures).values(username=name, at=time.time()))
             raise DomainError('invalid_credentials', 401)
-        with self.database.connect() as db:
-            db.execute('DELETE FROM login_failures WHERE username=?', (name,))
+        with self.database.transaction(write=True) as db:
+            db.execute(delete(login_failures).where(login_failures.c.username == name))
         return self.account(row)
 
     def set_password(self, user_id, current_password, new_password):
         """The user's own change: the current password is required."""
         validate_password(new_password)
-        with self.database.connect() as db:
-            row = db.execute('SELECT * FROM users WHERE user_id=?', (user_id,)).fetchone()
+        with self.database.transaction(write=True) as db:
+            row = db.execute(select(users).where(users.c.user_id == user_id)).mappings().first()
             if row is None:
                 raise DomainError('user_not_found', 404)
             if not verify_password(row['password_hash'], current_password or ''):
@@ -132,13 +123,11 @@ class UserStore:
         """Operator reset for a forgotten password. Only reachable with filesystem access to
         this database, which already holds the verifiers, so no current password is asked for."""
         validate_password(new_password)
-        with self.database.connect() as db:
+        with self.database.transaction(write=True) as db:
             changed = self._store_password(db, user_id, new_password)
         if not changed:
             raise DomainError('user_not_found', 404)
         return self.read(user_id)
 
     def _store_password(self, db, user_id, password):
-        return db.execute('UPDATE users SET password_hash=?,password_changed_at=? WHERE user_id=?',
-                          (hash_password(password, self.iterations),
-                           datetime.now(timezone.utc).isoformat(), user_id)).rowcount
+        return db.execute(update(users).where(users.c.user_id == user_id).values(password_hash=hash_password(password, self.iterations), password_changed_at=datetime.now(timezone.utc).isoformat())).rowcount

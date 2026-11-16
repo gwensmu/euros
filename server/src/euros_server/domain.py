@@ -297,7 +297,7 @@ class Store:
             record = {"entity_type": c["entity_type"], "entity_id": c["entity_id"],
                       "revision": c["expected_revision"] + 1, "deleted": c["operation"] == "delete",
                       "payload": payload, "updated_at": datetime.now(timezone.utc).isoformat()}
-            db.merge(RecordRow(user_id=self.user_id, **{**record, "payload": canonical(payload)}))
+            db.merge(RecordRow(user_id=self.user_id, **{**record, "deleted": int(record["deleted"]), "payload": canonical(payload)}))
             cursor = (db.scalar(select(func.max(Change.cursor))) or 0) + 1
             db.add(Change(user_id=self.user_id, cursor=cursor, record=canonical(record)))
             result = {"record": record, "cursor": cursor}

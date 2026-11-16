@@ -1,10 +1,10 @@
 """SQLAlchemy mappings for the shared database and account-owned application data."""
-from sqlalchemy import CheckConstraint, ForeignKey, Index, Text
+from sqlalchemy import BigInteger, Integer, CheckConstraint, ForeignKey, Index, Text
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column
 
 
 class Base(DeclarativeBase):
-    pass
+    type_annotation_map = {int: BigInteger().with_variant(Integer, "sqlite")}
 
 
 class User(Base):
@@ -124,3 +124,41 @@ class TrainingPlan(Owned, Base):
 
 
 OWNED_TABLES = {m.local_table.name: m.local_table for m in Base.registry.mappers if issubclass(m.class_, Owned)}
+
+# Authentication uses SQLAlchemy Core transactions in the same database. These tables
+# are not exposed through account domain sessions.
+from sqlalchemy import Table, Column, String, Integer, Float
+
+login_failures = Table('login_failures', Base.metadata,
+    Column('username', String, nullable=False), Column('at', Float, nullable=False))
+Index('login_failures_at', login_failures.c.at)
+sessions = Table('sessions', Base.metadata,
+    Column('session_hash', String, primary_key=True), Column('user_id', ForeignKey('users.user_id'), nullable=False),
+    Column('csrf', String, nullable=False), Column('created_at', Float, nullable=False), Column('expires_at', Float, nullable=False))
+oauth_clients = Table('oauth_clients', Base.metadata,
+    Column('client_id', String, primary_key=True), Column('secret_hash', String), Column('name', String, nullable=False),
+    Column('uris', Text, nullable=False), Column('auth_method', String, nullable=False), Column('created_at', Float, nullable=False),
+    Column('registered', Integer, nullable=False))
+oauth_grants = Table('oauth_grants', Base.metadata,
+    Column('grant_id', String, primary_key=True), Column('user_id', ForeignKey('users.user_id'), nullable=False),
+    Column('client_id', ForeignKey('oauth_clients.client_id'), nullable=False), Column('scope', String, nullable=False),
+    Column('created_at', Float, nullable=False), Column('revoked', Integer, nullable=False, server_default='0'))
+oauth_codes = Table('oauth_codes', Base.metadata,
+    Column('code_hash', String, primary_key=True), Column('client_id', ForeignKey('oauth_clients.client_id'), nullable=False),
+    Column('user_id', ForeignKey('users.user_id'), nullable=False), Column('redirect_uri', String, nullable=False),
+    Column('challenge', String, nullable=False), Column('scope', String, nullable=False), Column('resource', String),
+    Column('grant_id', ForeignKey('oauth_grants.grant_id'), nullable=False), Column('expires_at', Float, nullable=False),
+    Column('used', Integer, nullable=False, server_default='0'))
+oauth_tokens = Table('oauth_tokens', Base.metadata,
+    Column('token_hash', String, primary_key=True), Column('kind', String, nullable=False),
+    Column('grant_id', ForeignKey('oauth_grants.grant_id'), nullable=False),
+    Column('user_id', ForeignKey('users.user_id'), nullable=False), Column('client_id', ForeignKey('oauth_clients.client_id'), nullable=False),
+    Column('scope', String, nullable=False), Column('created_at', Float, nullable=False), Column('expires_at', Float, nullable=False),
+    Column('revoked', Integer, nullable=False, server_default='0'))
+Index('oauth_tokens_grant', oauth_tokens.c.grant_id)
+imported_databases = Table('imported_databases', Base.metadata,
+    Column('user_id', ForeignKey('users.user_id'), primary_key=True), Column('source', Text, nullable=False),
+    Column('imported_at', String, nullable=False))
+retired_account_data = Table('retired_account_data', Base.metadata,
+    Column('user_id', ForeignKey('users.user_id'), nullable=False), Column('table_name', String, nullable=False),
+    Column('row_json', Text, nullable=False))

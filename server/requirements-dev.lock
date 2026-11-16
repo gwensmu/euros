@@ -16,6 +16,8 @@ jsonschema-specifications==2025.9.1
 mcp==1.30.0
 packaging==26.3
 pluggy==1.6.0
+psycopg==3.3.9
+psycopg-binary==3.3.9
 pycparser==3.11
 pydantic==2.14.1
 pydantic-settings==2.16.0

@@ -20,7 +20,7 @@ def login_body(form_token, message=None, username='', allow_signup=True):
               if allow_signup else '')
     return (f'{notice(message, "error") if message else ""}'
             f'<form method="post" action="/account/login">{hidden("form_token", form_token)}'
-            f'{field("Username", "username", username)}'
+            f'{field("Username or email", "username", username)}'
             f'{field("Password", "password", kind="password")}'
             f'<button>Sign in</button></form>{signup}')
 
@@ -29,7 +29,7 @@ def signup_body(form_token, message=None, values=None):
     values = values or {}
     return (f'{notice(message, "error") if message else ""}'
             f'<form method="post" action="/account/signup">{hidden("form_token", form_token)}'
-            f'{field("Username", "username", values.get("username", ""))}'
+            f'{field("Username or email", "username", values.get("username", ""))}'
             f'{field("Display name (optional)", "display_name", values.get("display_name", ""))}'
             f'{field("Password", "password", kind="password")}'
             f'{field("Repeat password", "password2", kind="password")}'
@@ -97,7 +97,7 @@ def message_for(exc):
     """A short sentence for a page; never the raw error body."""
     return {
         'username_taken': 'That username is already in use.',
-        'invalid_username': 'Usernames are 3-32 characters: lowercase letters, digits, dot, dash or underscore.',
+        'invalid_username': 'Use a 3-32 character username or an email address.',
         'invalid_password': f'Passwords are {MIN_PASSWORD}-200 characters.',
         'invalid_credentials': 'That password is not correct.',
         'too_many_attempts': 'Too many sign-in attempts. Try again later.',

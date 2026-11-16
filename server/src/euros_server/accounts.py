@@ -1,6 +1,6 @@
 """Authentication stores in the same SQLite database as account-owned training data."""
 
-from .database import initialize, connect
+from .database import initialize, connect, transaction
 from .credentials import ITERATIONS
 from .oauth_store import OAuthStore
 from .sessions import SessionStore
@@ -15,6 +15,9 @@ class AccountStore:
         self.users = UserStore(self, iterations)
         self.sessions = SessionStore(self, self.users)
         self.oauth = OAuthStore(self, self.users)
+
+    def transaction(self, write=False):
+        return transaction(self.path, write=write)
 
     def connect(self):
         return connect(self.path)

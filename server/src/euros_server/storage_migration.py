@@ -16,7 +16,7 @@ def import_training(target, source, user_id):
     if source == target:
         raise ValueError('Source and destination must differ')
     # backup() includes committed WAL data and never modifies the source.
-    with tempfile.TemporaryDirectory() as tmp:
+    with tempfile.TemporaryDirectory(prefix='.adoption-', dir=target.parent) as tmp:
         snapshot = Path(tmp) / 'source.db'
         with sqlite3.connect(source.as_uri() + '?mode=ro', uri=True) as original, sqlite3.connect(snapshot) as copy:
             original.backup(copy)
@@ -24,6 +24,11 @@ def import_training(target, source, user_id):
             if old.execute('PRAGMA integrity_check').fetchone()[0] != 'ok':
                 raise ValueError('Source database integrity check failed')
             tables = {r[0] for r in old.execute("SELECT name FROM sqlite_master WHERE type='table' AND name NOT LIKE 'sqlite_%'")}
+            empty_auth = {'sessions', 'login_failures', 'oauth_clients', 'oauth_codes', 'oauth_grants', 'oauth_tokens'}
+            for table in tables & empty_auth:
+                if old.execute(f'SELECT 1 FROM {table} LIMIT 1').fetchone():
+                    raise ValueError('Adoption requires a personal source, not an account registry')
+            tables -= empty_auth
             allowed = set(SCHEMA) | {'review_jobs','imported_databases','retired_account_data','users'}
             if 'users' in tables:
                 users = old.execute('SELECT user_id, disabled, password_hash FROM users').fetchall()
