@@ -2,6 +2,8 @@ package com.gwensmuda.euros
 
 import android.os.Bundle
 import androidx.lifecycle.lifecycleScope
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.repeatOnLifecycle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.compose.BackHandler
@@ -75,7 +77,7 @@ class MainActivity:ComponentActivity() {
 
  private var notificationId by mutableStateOf<String?>(null)
  override fun onStart(){super.onStart();if(displayZoneId!=PlanDomain.zone.id){displayZoneId=PlanDomain.zone.id;recreate();return};(application as EurosApplication).let { app ->
-  lifecycleScope.launch(Dispatchers.IO){app.connection.initialize();app.connection.request();HealthBackground.refresh(app);NutritionExport.request(app)}
+  lifecycleScope.launch(Dispatchers.IO){app.connection.initialize();HealthBackground.refresh(app);NutritionExport.request(app)}
  }}
  override fun onNewIntent(intent:android.content.Intent){super.onNewIntent(intent);setIntent(intent);finishSignIn(intent);notificationId=consumeLaunchDestination(intent)}
  private fun finishSignIn(intent:android.content.Intent) {
@@ -85,6 +87,9 @@ class MainActivity:ComponentActivity() {
  }
  override fun onCreate(savedInstanceState:Bundle?) {
   super.onCreate(savedInstanceState)
+  lifecycleScope.launch { repeatOnLifecycle(Lifecycle.State.STARTED) {
+   withContext(Dispatchers.IO) { (application as EurosApplication).connection.syncWhileVisible() }
+  } }
   finishSignIn(intent)
   androidx.core.content.ContextCompat.registerReceiver(this,timezoneReceiver,android.content.IntentFilter(android.content.Intent.ACTION_TIMEZONE_CHANGED),androidx.core.content.ContextCompat.RECEIVER_NOT_EXPORTED)
   val launchDestination=consumeLaunchDestination(intent)

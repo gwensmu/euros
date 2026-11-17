@@ -78,7 +78,7 @@ class HealthImport(private val context:Context,private val dao:EurosDao) {
      val payload=PlanDomain.weightPayload(java.math.BigDecimal.valueOf(r.getDouble("weight_lb")).setScale(3,java.math.RoundingMode.HALF_UP).toPlainString(),at,"tracker",PlanDomain.canonicalZone)
       .put("source_key",key).put("source_weight_lb",r.get("weight_lb")).put("original_kg",r.get("original_kg")).put("auto_imported",true)
      if(existing!=null && !JSONObject(existing.payload).optBoolean("auto_imported"))continue
-     if(existing==null || existing.payload!=payload.toString())repo.saveWeight(existing?.id ?: "scale-"+java.util.UUID.nameUUIDFromBytes(key.toByteArray()),payload,expectedPayload=existing?.payload)
+     if(existing==null || !sameImportedWeightPayload(existing.payload,payload.toString()))repo.saveWeight(existing?.id ?: "scale-"+java.util.UUID.nameUUIDFromBytes(key.toByteArray()),payload,expectedPayload=existing?.payload)
     }
    }
   }

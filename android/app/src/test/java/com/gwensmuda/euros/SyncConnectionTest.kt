@@ -43,6 +43,26 @@ class SyncConnectionTest {
   override fun json(url:String,body:JSONObject)=JSONObject().put("client_id","cli-1")
  }
  private fun database()=Room.inMemoryDatabaseBuilder(ApplicationProvider.getApplicationContext(),EurosDatabase::class.java).build()
+ @Test fun visibleSyncBypassesQueuedWorkAndKeepsPullingAfterRetry()=runBlocking {
+  val db=database();val store=MemoryStore();store.value=ServerEnrollment("https://example.com","token")
+  val schedule=Schedule();val api=Transport();val repo=Repository(db)
+  val connection=SyncConnection(repo,store,schedule,{api})
+  // A scheduler that never runs work represents a queued/backed-off WorkManager chain.
+  connection.initialize();connection.request();assertEquals(1,schedule.requests)
+  api.error=java.io.IOException("offline")
+  var pauses=0
+  try {
+   connection.syncWhileVisible {
+    pauses++
+    if(pauses==1) { assertNotNull(connection.state.value.error);api.error=null }
+    else { assertNotNull(connection.state.value.lastSuccess);throw CancellationException("screen stopped") }
+   }
+   fail("Visible loop must stop with lifecycle cancellation")
+  } catch(_:CancellationException) { }
+  assertEquals(2,pauses);assertTrue(api.calls>=2)
+  assertEquals(1,schedule.requests)
+  db.close()
+ }
  @Test fun accountSignInEnrollsOnlyForTheRequestThisDeviceStarted()=runBlocking {
   val db=database();val store=MemoryStore();val schedule=Schedule();val api=Transport();val repo=Repository(db)
   val oauth=SignInTransport()

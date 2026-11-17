@@ -115,3 +115,26 @@ def test_unknown_mass_does_not_block_known_nutrition_cache(setup):
         await cache.food({'text':'egg,toast'})
         assert len(models.calls) == 2
     asyncio.run(run())
+
+
+def test_maximum_cold_meal_fits_allowance_after_another_meal(tmp_path):
+    from euros_server.security import LimitedProvider
+    class Provider:
+        calls = 0
+        async def generate(self, **kwargs):
+            self.calls += 1
+            return {k: deepcopy(DRAFT[k]) for k in ('nutrients', 'quantity_g', 'clarification')}
+    provider = Provider()
+    store = Store(tmp_path/'db')
+    cache = FoodCache(store, ModelService(LimitedProvider(provider, store, clock=lambda: 1_000_000)))
+    async def run():
+        await cache.food({'text': ','.join(f'previous item {i}' for i in range(6))})
+        text = ','.join(f'new item {i}' for i in range(30))
+        result = await cache.food({'text': text})
+        assert result['nutrients']['kcal'] == '1503.0'
+        assert provider.calls == 36
+        assert await cache.food({'text': text}) == result
+        assert provider.calls == 36
+        assert store.records() == {'records': []}
+        assert store.changes()['changes'] == []
+    asyncio.run(run())

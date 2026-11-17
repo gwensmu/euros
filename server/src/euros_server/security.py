@@ -45,7 +45,7 @@ class LimitedProvider:
     Daily and rolling-minute reservations survive service restarts. Concurrency is process
     local: deployment runs one Uvicorn worker. No user text or model outputs are stored.
     """
-    def __init__(self, provider, store, daily_food=50, per_minute=6, concurrent=2, clock=time.time):
+    def __init__(self, provider, store, daily_food=120, per_minute=60, concurrent=2, clock=time.time):
         self.provider, self.store, self.clock = provider, store, clock
         self.limits = {'food_draft': daily_food, 'reminder_copy': 12}
         self.per_minute, self.concurrent = per_minute, concurrent

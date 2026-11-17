@@ -30,3 +30,6 @@ The Python `create_app(Store(path), api_token, mcp_token)` factory remains avail
 Back up the entire PostgreSQL database with `pg_dump` and verify recovery with `pg_restore` into a separate database. In local SQLite mode use SQLite's online backup API to include WAL contents. Keep backups private and test restoration separately. `--list-accounts`, `--set-password USERNAME` and `--import-plan FILE --username USERNAME` support local administration. Account deletion/export and automatic phone account switching are not implemented. Live external OAuth/client compatibility still requires deployment-specific verification.
 
 See the [API contract](../docs/API_CONTRACT.md) and [recreation recipe](../docs/shareable/PERSONAL_TRAINING_APP_BLUEPRINT.md). No demo records are installed automatically. The explicit demo seeder creates an isolated personal database for development only.
+
+
+November 17 food item allowances: 60 starts per rolling minute and 120 food calls per local calendar day per account. Two-call concurrency and persistent counters remain. Exact cache hits do not consume allowance.
