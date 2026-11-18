@@ -7,12 +7,14 @@ three things in the same order: who is asking (browser.py), whether they are all
 plan_form.py). Nothing is rendered before the first two are settled.
 """
 import hmac
+import json
 
-from starlette.responses import RedirectResponse
+from starlette.responses import RedirectResponse, Response
 from starlette.routing import Route
 
-from .account_pages import (apps_body, login_body, message_for, overview_body, password_body,
-                            signup_body, signup_closed_body)
+from .account_data import delete_account, export_account
+from .account_pages import (apps_body, data_body, deleted_body, login_body, message_for, overview_body,
+                            password_body, signup_body, signup_closed_body)
 from .browser import same_origin
 from .domain import DomainError
 from .localtime import local_today
@@ -214,6 +216,46 @@ class AccountSite:
             return self._apps_page(request, user, 'That application was already disconnected.')
         return self._apps_page(request, user, 'Application disconnected.')
 
+    # --- your data: export and deletion -------------------------------------------------
+
+    def _data_page(self, request, user, message=None, kind='notice', status=200):
+        body = data_body(self.sessions.csrf(request) or '', user['username'], message, kind)
+        return page('Your data', body, user=user, status=status)
+
+    async def data_page(self, request):
+        session, redirect = self._require(request)
+        if redirect:
+            return redirect
+        return self._data_page(request, session['user'])
+
+    async def export(self, request):
+        session, redirect = self._require(request)
+        if redirect:
+            return redirect
+        user = session['user']
+        snapshot = export_account(self.accounts.path, user['user_id'])
+        name = f'euros-{user["username"]}-{snapshot["exported_at"][:10]}.json'.replace('@', '_at_')
+        return Response(json.dumps(snapshot, indent=1, sort_keys=True), media_type='application/json',
+                        headers={'Content-Disposition': f'attachment; filename="{name}"',
+                                 'Cache-Control': 'no-store', 'X-Content-Type-Options': 'nosniff'})
+
+    async def delete(self, request):
+        form = dict(await request.form())
+        user = self._checked(request, form)['user']
+        if str(form.get('confirm', '')).strip().lower() != user['username']:
+            return self._data_page(request, user, message_for(DomainError('confirmation_mismatch')), 'error', 422)
+        try:
+            # The sign-in check, with its throttling, so a left-open browser cannot be used
+            # to guess the password here either.
+            self.accounts.users.authenticate(user['username'], form.get('password', ''))
+        except DomainError as exc:
+            return self._data_page(request, user, message_for(exc), 'error', exc.status)
+        delete_account(self.accounts.path, user['user_id'])
+        self.workspaces.forget(user['user_id'])
+        response = page('Account deleted', deleted_body())
+        self.sessions.end(request, response)
+        return response
+
     def routes(self):
         return [Route('/account/', self.overview),
                 Route('/account/login', self.login, methods=['GET', 'POST']),
@@ -225,4 +267,7 @@ class AccountSite:
                 Route('/account/password', self.password_page, methods=['GET']),
                 Route('/account/password', self.change_password, methods=['POST']),
                 Route('/account/apps', self.apps_page),
-                Route('/account/apps/revoke', self.revoke_app, methods=['POST'])]
+                Route('/account/apps/revoke', self.revoke_app, methods=['POST']),
+                Route('/account/data', self.data_page),
+                Route('/account/export', self.export),
+                Route('/account/delete', self.delete, methods=['POST'])]

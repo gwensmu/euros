@@ -48,17 +48,27 @@ class Provider:
     async def generate(self, **kwargs):return 'ok'
 
 
-def test_persistent_daily_budget_and_day_reset(tmp_path):
+def test_persistent_hourly_food_allowance(tmp_path):
     store=Store(tmp_path/'db');now=[datetime(2026,10,14,12,tzinfo=timezone.utc).timestamp()]
-    def limiter():return LimitedProvider(Provider(),store,daily_food=2,clock=lambda:now[0])
-    limiter().reserve('food_draft');limiter().reserve('food_draft')
-    with pytest.raises(DomainError,match='model_daily_limit'):limiter().reserve('food_draft')
-    limiter().reserve('reminder_copy')
-    now[0]+=86400
+    def limiter():return LimitedProvider(Provider(),store,hourly_food=2,per_minute=100,clock=lambda:now[0])
+    limiter().reserve('food_draft');now[0]+=1800;limiter().reserve('food_draft')
+    with pytest.raises(DomainError,match='model_hourly_limit'):limiter().reserve('food_draft')
+    # The window rolls: an hour after the first call, one slot is free again.
+    now[0]+=1801
     limiter().reserve('food_draft')
+    with pytest.raises(DomainError,match='model_hourly_limit'):limiter().reserve('food_draft')
+    limiter().reserve('reminder_copy')
 
 
-def test_minute_budget_shared_between_kinds_and_atomic(tmp_path):
+def test_default_food_allowance_is_120_items_an_hour(tmp_path):
+    store=Store(tmp_path/'db');now=[1_000_000.0]
+    lim=LimitedProvider(Provider(),store,per_minute=1000,clock=lambda:now[0])
+    for _ in range(120):
+        now[0]+=1;lim.reserve('food_draft')
+    with pytest.raises(DomainError,match='model_hourly_limit'):lim.reserve('food_draft')
+
+
+def test_minute_budget_is_atomic(tmp_path):
     store=Store(tmp_path/'db');lim=LimitedProvider(Provider(),store,per_minute=2,clock=lambda:1000000)
     lim.reserve('food_draft');lim.reserve('reminder_copy')
     with pytest.raises(DomainError,match='model_rate_limit'):lim.reserve('food_draft')

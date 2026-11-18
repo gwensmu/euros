@@ -91,9 +91,9 @@ def test_postgres_orm_guards_cache_expiry_and_quotas(pg):
     stores=[Store(pg,accounts.users.create(n,PASSWORD)['user_id']) for n in ('first','second')]
     test_orm_scope_covers_reads_counts_aliases_deletes_and_rejects_unscoped_writes((accounts,stores))
     for store in stores:
-        quota=LimitedProvider(None,store,daily_food=1)
+        quota=LimitedProvider(None,store,hourly_food=1)
         quota.reserve('food_draft')
-        with pytest.raises(Exception,match='model_daily_limit'):
+        with pytest.raises(Exception,match='model_hourly_limit'):
             quota.reserve('food_draft')
 
 
@@ -102,3 +102,46 @@ def test_postgres_import_refuses_uncheckpointed_source(pg,tmp_path):
     Path(str(source)+'-wal').write_bytes(b'pending writes')
     with pytest.raises(ValueError,match='standalone'):
         import_snapshot(pg,source)
+
+
+def test_postgres_shared_budget_export_delete_and_report(pg):
+    from euros_server.account_data import delete_account, export_account, row_counts
+    from euros_server.operator_view import account_report
+    from euros_server.security import ESTIMATED_TOKENS, TokenBudget
+    from euros_server.domain import DomainError
+    accounts=AccountStore(pg,iterations=1000)
+    stores=[Store(pg,accounts.users.create(n,PASSWORD)['user_id']) for n in ('first','second')]
+    for store in stores:
+        store.command(activity('a-'+store.user_id[-4:],'x'))
+    # The advisory lock: concurrent accounts cannot both take the last reservation.
+    budget=TokenBudget(pg,3*ESTIMATED_TOKENS['food_draft'])
+    def take(store):
+        try:
+            budget.reserve(store.user_id,'food_draft');return True
+        except DomainError:
+            return False
+    with ThreadPoolExecutor(max_workers=6) as pool:
+        assert sum(pool.map(take,stores*4))==3
+    first,second=stores
+    snapshot=export_account(pg,first.user_id)
+    assert len(snapshot['tables']['records'])==1 and snapshot['account']['username']=='first'
+    removed=delete_account(pg,first.user_id)
+    assert removed['rows']['records']==1 and accounts.users.read(first.user_id) is None
+    with accounts.transaction() as db:
+        assert not any(row_counts(db,first.user_id).values())
+        assert row_counts(db,second.user_id)['records']==1
+    # The per-account share under the same lock: one account, many threads.
+    capped=TokenBudget(pg,100*ESTIMATED_TOKENS['food_draft'],account_monthly_tokens=2*ESTIMATED_TOKENS['food_draft'])
+    def mine(_):
+        try:
+            capped.reserve(second.user_id,'food_draft');return True
+        except DomainError:
+            return False
+    with ThreadPoolExecutor(max_workers=6) as pool:
+        # second already holds some of the shared reservations above; whatever is left of
+        # its 3,000-token share fits exactly that many 1,500-token reservations.
+        held=capped.spent(user_id=second.user_id)
+        assert sum(pool.map(mine,range(8)))==max(0,2*ESTIMATED_TOKENS['food_draft']-held)//ESTIMATED_TOKENS['food_draft']
+    report=account_report(accounts,budget)
+    assert [a['username'] for a in report['accounts']]==['second']
+    assert report['model_budget']['spent_tokens']==capped.spent()

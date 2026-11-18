@@ -131,3 +131,18 @@ class UserStore:
 
     def _store_password(self, db, user_id, password):
         return db.execute(update(users).where(users.c.user_id == user_id).values(password_hash=hash_password(password, self.iterations), password_changed_at=datetime.now(timezone.utc).isoformat())).rowcount
+
+    def all_ids(self):
+        """Every account, including disabled ones, for the operator view."""
+        with self.database.transaction() as db:
+            return list(db.scalars(select(users.c.user_id).where(users.c.password_hash != '!').order_by(users.c.created_at)))
+
+    def set_disabled(self, user_id, disabled):
+        """Operator switch. A disabled account cannot sign in, and its sessions and tokens stop
+        working at once (sessions.read and oauth.access both check); grants are kept so that
+        enabling the account again restores its connected apps."""
+        with self.database.transaction(write=True) as db:
+            changed = db.execute(update(users).where(users.c.user_id == user_id).values(disabled=1 if disabled else 0)).rowcount
+        if not changed:
+            raise DomainError('user_not_found', 404)
+        return self.read(user_id)

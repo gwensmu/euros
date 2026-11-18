@@ -97,9 +97,9 @@ def test_food_and_reminder_caches_and_quota_are_account_owned(pair):
     provider=Fake()
     for store in (a,b,a):asyncio.run(ReminderCopyService(ModelService(provider),store).copy(body()))
     assert provider.calls==2
-    one=LimitedProvider(provider,a,daily_food=1);two=LimitedProvider(provider,b,daily_food=1)
+    one=LimitedProvider(provider,a,hourly_food=1);two=LimitedProvider(provider,b,hourly_food=1)
     one.reserve('food_draft');two.reserve('food_draft')
-    with pytest.raises(DomainError,match='model_daily_limit'):one.reserve('food_draft')
+    with pytest.raises(DomainError,match='model_hourly_limit'):one.reserve('food_draft')
     services=Workspaces(accounts,ModelService(SilentProvider()))
     with accounts.connect() as db:db.execute('UPDATE users SET disabled=1 WHERE user_id=?',(a.user_id,))
     with pytest.raises(DomainError,match='unauthorized'):services.get(a.user_id)

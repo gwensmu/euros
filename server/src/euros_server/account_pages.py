@@ -93,6 +93,28 @@ def apps_body(csrf, grants, message=None):
             f'{rows or "<tr><td>None yet</td><td></td><td></td><td></td></tr>"}</table>')
 
 
+def data_body(csrf, username, message=None, kind='notice'):
+    return (f'{notice(message, kind)}'
+            f'<h2>Download your data</h2>'
+            f'<p class="muted">One JSON file with your account details, training plan, activities, '
+            f'food and weight entries, meal plans, tracker workouts and saved history. It does '
+            f'not include your password or sign-in tokens.</p>'
+            f'<p><a href="/account/export">Download JSON</a></p>'
+            f'<h2>Delete your account</h2>'
+            f'<p class="muted">Deletes this account and all of its data immediately. Connected apps '
+            f'and other browsers are signed out. This cannot be undone; download your data first '
+            f'if you want a copy.</p>'
+            f'<form method="post" action="/account/delete">{hidden("csrf", csrf)}'
+            f'{field("Password", "password", kind="password")}'
+            f'{field(f"Type {username} to confirm", "confirm")}'
+            f'<button class="danger">Delete account</button></form>')
+
+
+def deleted_body():
+    return (f'{notice("Your account and its data were deleted.")}'
+            f'<p><a href="/account/login">Sign in</a></p>')
+
+
 def message_for(exc):
     """A short sentence for a page; never the raw error body."""
     return {
@@ -100,6 +122,7 @@ def message_for(exc):
         'invalid_username': 'Use a 3-32 character username or an email address.',
         'invalid_password': f'Passwords are {MIN_PASSWORD}-200 characters.',
         'invalid_credentials': 'That password is not correct.',
+        'confirmation_mismatch': 'Type your username exactly to confirm.',
         'too_many_attempts': 'Too many sign-in attempts. Try again later.',
         'revision_conflict': 'Your plan changed in another window. Reload and try again.',
         'invalid_competition_date': 'Enter a valid competition date.',

@@ -29,6 +29,9 @@ def import_training(target, source, user_id):
                 if old.execute(f'SELECT 1 FROM {table} LIMIT 1').fetchone():
                     raise ValueError('Adoption requires a personal source, not an account registry')
             tables -= empty_auth
+            # The source deployment's own spend ledger: token counts, not the person's data, and
+            # importing it would charge another deployment's spend to this one's budget.
+            tables.discard('model_usage')
             allowed = set(SCHEMA) | {'review_jobs','imported_databases','retired_account_data','users'}
             if 'users' in tables:
                 users = old.execute('SELECT user_id, disabled, password_hash FROM users').fetchall()

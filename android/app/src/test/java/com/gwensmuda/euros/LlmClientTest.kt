@@ -67,6 +67,9 @@ class LlmClientTest {
         assertTrue(backendErrorMessage(503,"{\"error\":\"model_busy\"}").contains("Try again"))
         assertFalse(backendErrorMessage(502,"secret provider detail").contains("secret"))
         assertFalse(backendErrorMessage(503,"{\"error\":\"model_busy\"}").contains("configured"))
+        assertTrue(backendErrorMessage(429,"{\"error\":\"model_hourly_limit\"}").contains("Hourly"))
+        assertTrue(backendErrorMessage(429,"{\"error\":\"model_budget_exhausted\"}").contains("monthly"))
+        assertTrue(backendErrorMessage(429,"{\"error\":\"model_account_budget_exhausted\"}").contains("Your monthly"))
     }
 
     @Test fun invalidInputDoesNotReachServer()=runBlocking {

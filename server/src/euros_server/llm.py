@@ -76,7 +76,8 @@ class OpenAIProvider:
             raise ValueError("Cannot read configured OPENAI_API_KEY_FILE") from None
         return cls(key)
 
-    async def generate(self, *, model, instructions, data, schema, name, reasoning):
+    async def generate(self, *, model, instructions, data, schema, name, reasoning, usage=None):
+        """The parsed JSON answer. When given, usage receives the provider's total_tokens."""
         if not self.api_key:
             raise DomainError("model_not_configured", 503)
         body = {"model": model, "instructions": instructions,
@@ -95,6 +96,9 @@ class OpenAIProvider:
             if response.status_code != 200:
                 raise DomainError("model_unavailable", 502)
             result = response.json()
+            reported = (result.get("usage") or {}).get("total_tokens")
+            if usage is not None and isinstance(reported, int) and not isinstance(reported, bool):
+                usage["total_tokens"] = reported
             if result.get("status") != "completed":
                 raise DomainError("model_incomplete", 502)
             messages = [item for item in result.get("output", []) if item.get("type") == "message"]

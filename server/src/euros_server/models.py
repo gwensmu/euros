@@ -162,3 +162,11 @@ imported_databases = Table('imported_databases', Base.metadata,
 retired_account_data = Table('retired_account_data', Base.metadata,
     Column('user_id', ForeignKey('users.user_id'), nullable=False), Column('table_name', String, nullable=False),
     Column('row_json', Text, nullable=False))
+# Deployment-wide model spend. Deliberately not an account-owned table and not a foreign key:
+# deleting an account removes its data but must not refund the deployment's monthly budget.
+# Rows hold token counts and a kind, never user text or model output.
+model_usage = Table('model_usage', Base.metadata,
+    Column('id', Integer, primary_key=True, autoincrement=True), Column('user_id', String, nullable=False),
+    Column('at', Float, nullable=False), Column('month', String, nullable=False), Column('kind', String, nullable=False),
+    Column('tokens', Integer, nullable=False), Column('measured', Integer, nullable=False, server_default='0'))
+Index('model_usage_month', model_usage.c.month, model_usage.c.user_id)

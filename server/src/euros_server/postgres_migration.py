@@ -32,6 +32,7 @@ def import_snapshot(url, source, user_id=LEGACY_OWNER):
         if old.execute('PRAGMA integrity_check').fetchone()[0] != 'ok':
             raise ValueError('Source integrity check failed')
         names = {r[0] for r in old.execute("SELECT name FROM sqlite_master WHERE type='table' AND name NOT LIKE 'sqlite_%'")}
+        names.discard('model_usage')  # another deployment's spend ledger, not account data
         if names - set(OWNED_TABLES) - {'review_jobs'}:
             raise ValueError('Unexpected source tables; refusing to omit data')
         source_columns = {}

@@ -27,7 +27,7 @@ from .domain import DomainError, Store
 from .llm import ModelService
 from .oauth import OAuthServer
 from .plan import PlanSettings, generate_sessions
-from .security import BodyLimit
+from .security import DEFAULT_ACCOUNT_MONTHLY_TOKENS, DEFAULT_MONTHLY_TOKENS, BodyLimit, TokenBudget
 from .browser import BrowserSessions
 from .web import AccountSite
 from .workspace import FixedWorkspace, Workspaces
@@ -355,11 +355,12 @@ def _build(workspaces, accounts, public_hosts=(), static=None, issuer=None, allo
         return JSONResponse(workspace(request).trackers.list(request.query_params.get("date_from"),
                                                              request.query_params.get("date_to")))
 
+    async def reminder_copy(request):
+        return JSONResponse(await workspace(request).reminder_copy.copy(await read_json(request, 16384)))
+
     async def interpret_food(request):
         return JSONResponse(await workspace(request).food_cache.food(await read_json(request, 40000)))
 
-    async def reminder_copy(request):
-        return JSONResponse(await workspace(request).reminder_copy.copy(await read_json(request, 16384)))
 
 
 
@@ -434,7 +435,8 @@ def _build(workspaces, accounts, public_hosts=(), static=None, issuer=None, allo
     return TrustedHostMiddleware(AuthGate(BodyLimit(app), accounts, static, origins, issuer), allowed_hosts=hosts)
 
 
-def create_app(store, api_token, mcp_token, public_hosts=(), model_service=None):
+def create_app(store, api_token, mcp_token, public_hosts=(), model_service=None,
+               monthly_tokens=DEFAULT_MONTHLY_TOKENS, account_monthly_tokens=DEFAULT_ACCOUNT_MONTHLY_TOKENS):
     """The single-account service: one database, static bearer tokens, no account site.
 
     Kept for the already enrolled deployment and its tests. New deployments use create_service,
@@ -443,22 +445,25 @@ def create_app(store, api_token, mcp_token, public_hosts=(), model_service=None)
     if len(api_token) < 32 or len(mcp_token) < 32 or api_token == mcp_token:
         raise ValueError("Separate app and MCP tokens of at least 32 characters are required")
     models = model_service or ModelService.from_environment()
-    workspaces = FixedWorkspace(OWNER, store, models)
+    workspaces = FixedWorkspace(OWNER, store, models, monthly_tokens, account_monthly_tokens)
     return _build(workspaces, None, public_hosts,
                   static=dict(user_id=OWNER, tokens={"api": api_token, "mcp": mcp_token}))
 
 
 def create_service(data_dir, public_hosts=(), model_service=None, static_tokens=None,
-                   static_username=None, issuer=None, allow_signup=False, accounts=None):
+                   static_username=None, issuer=None, allow_signup=False, accounts=None,
+                   monthly_tokens=DEFAULT_MONTHLY_TOKENS, account_monthly_tokens=DEFAULT_ACCOUNT_MONTHLY_TOKENS):
     """The multi-account service: accounts, OAuth, the account site and per-account workspaces.
 
     static_tokens keeps an already enrolled client working during migration: it authenticates
     as the named account and nothing else. Signing up is closed unless allow_signup is set,
     because every account spends the deployment's own model budget; --create-account always works.
+    monthly_tokens is that budget: one allowance shared by every account; account_monthly_tokens
+    caps any one account's share of it.
     """
     models = model_service or ModelService.from_environment()
     accounts = accounts or _accounts(data_dir)
-    workspaces = Workspaces(accounts, models)
+    workspaces = Workspaces(accounts, models, monthly_tokens, account_monthly_tokens)
     static = None
     if static_tokens:
         user = accounts.users.by_username(static_username or "")
@@ -516,6 +521,24 @@ def _adopt(accounts, data_dir, source, username):
             "source":str(source), "rows":counts, "note":"The source database was copied, not deleted."}
 
 
+def _monthly_tokens(flag, environment, default):
+    value = flag if flag is not None else os.environ.get(environment, default)
+    try:
+        tokens = int(value)
+    except (TypeError, ValueError):
+        raise ValueError(f"{environment} must be a whole number of tokens") from None
+    if tokens < 0:
+        raise ValueError("The model token budget cannot be negative")
+    return tokens
+
+
+def _named_account(accounts, username):
+    user = accounts.users.by_username(username)
+    if user is None:
+        raise ValueError(f"No account named {username}")
+    return user
+
+
 def _accounts(data_dir):
     from .database import is_postgres
     if is_postgres(data_dir):
@@ -533,6 +556,20 @@ def main():
     parser.add_argument("--create-account", metavar="USERNAME", help="Create an account and exit")
     parser.add_argument("--set-password", metavar="USERNAME", help="Set an account's password and exit")
     parser.add_argument("--list-accounts", action="store_true", help="List accounts and exit")
+    parser.add_argument("--account-report", action="store_true",
+                        help="Show every account's activity and this month's model spend, then exit")
+    parser.add_argument("--account-details", metavar="USERNAME", help="Show one account's apps, data and spend, then exit")
+    parser.add_argument("--disable-account", metavar="USERNAME", help="Stop an account signing in or using its apps, then exit")
+    parser.add_argument("--enable-account", metavar="USERNAME", help="Let a disabled account sign in again, then exit")
+    parser.add_argument("--delete-account", metavar="USERNAME",
+                        help="Permanently delete an account and its data; needs --confirm USERNAME")
+    parser.add_argument("--confirm", metavar="USERNAME", help="Repeat the username for --delete-account")
+    parser.add_argument("--model-token-budget", type=int, metavar="TOKENS",
+                        help="Monthly model tokens shared by all accounts "
+                             f"(default EUROS_MODEL_TOKEN_BUDGET or {DEFAULT_MONTHLY_TOKENS:,})")
+    parser.add_argument("--account-token-budget", type=int, metavar="TOKENS",
+                        help="Monthly model tokens any one account may use "
+                             f"(default EUROS_ACCOUNT_TOKEN_BUDGET or {DEFAULT_ACCOUNT_MONTHLY_TOKENS:,})")
     parser.add_argument("--adopt-database", metavar="PATH", help="Copy an existing single-account database to --username and exit")
     parser.add_argument("--username", help="Account for --import-plan or --adopt-database")
     parser.add_argument("--display-name", help="Display name for --create-account")
@@ -551,6 +588,9 @@ def main():
         print(json.dumps(consolidate(data_dir), indent=2))
         return
     accounts = _accounts(data_dir)
+    monthly_tokens = _monthly_tokens(args.model_token_budget, "EUROS_MODEL_TOKEN_BUDGET", DEFAULT_MONTHLY_TOKENS)
+    account_tokens = _monthly_tokens(args.account_token_budget, "EUROS_ACCOUNT_TOKEN_BUDGET",
+                                     DEFAULT_ACCOUNT_MONTHLY_TOKENS)
 
     if args.list_accounts:
         print(json.dumps([accounts.users.read(user_id) for user_id in accounts.users.ids()], indent=2))
@@ -568,6 +608,27 @@ def main():
         accounts.users.reset_password(user["user_id"], _read_password("New password: "))
         accounts.sessions.end_all(user["user_id"])
         print(json.dumps({"username": user["username"], "password_changed": True}))
+        return
+    if args.account_report or args.account_details:
+        from .operator_view import account_details, account_report
+        budget = TokenBudget(accounts.path, monthly_tokens, account_tokens)
+        report = (account_report(accounts, budget) if args.account_report
+                  else account_details(accounts, budget, args.account_details))
+        print(json.dumps(report, indent=2))
+        return
+    if args.disable_account or args.enable_account:
+        user = _named_account(accounts, args.disable_account or args.enable_account)
+        changed = accounts.users.set_disabled(user["user_id"], bool(args.disable_account))
+        if args.disable_account:
+            accounts.sessions.end_all(user["user_id"])
+        print(json.dumps({"username": changed["username"], "disabled": changed["disabled"]}))
+        return
+    if args.delete_account:
+        user = _named_account(accounts, args.delete_account)
+        if args.confirm != user["username"]:
+            raise ValueError("--delete-account permanently removes the account; repeat its username with --confirm")
+        from .account_data import delete_account
+        print(json.dumps(delete_account(accounts.path, user["user_id"]), indent=2))
         return
     if args.adopt_database:
         if not args.username:
@@ -594,7 +655,8 @@ def main():
     import uvicorn
     app = create_service(data_dir, args.public_host, static_tokens=static_tokens,
                          static_username=static_username, issuer=args.public_url,
-                         allow_signup=args.allow_signup)
+                         allow_signup=args.allow_signup, monthly_tokens=monthly_tokens,
+                         account_monthly_tokens=account_tokens)
     uvicorn.run(app, host="127.0.0.1", port=args.port, access_log=False)
 
 

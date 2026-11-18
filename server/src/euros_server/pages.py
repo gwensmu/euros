@@ -27,6 +27,7 @@ input.small { max-width:150px }
 button { background:#1558d6; color:#fff; border:0; border-radius:8px; padding:10px 16px;
          font-size:16px; cursor:pointer; margin-top:16px }
 button.quiet { background:#fff; color:#1558d6; border:1px solid #1558d6 }
+button.danger { background:#b3261e }
 table { border-collapse:collapse; width:100%; margin-top:8px }
 th, td { text-align:left; padding:6px 8px 6px 0; font-size:15px; vertical-align:bottom }
 th { font-weight:600; color:#444; font-size:13px }
@@ -44,7 +45,7 @@ def page(title, body, user=None, status=200, headers=None):
     nav = ''
     if user:
         nav = ('<nav><a href="/account/">Account</a><a href="/account/plan">Training plan</a>'
-               '<a href="/account/apps">Connected apps</a><a href="/account/password">Password</a>'
+               '<a href="/account/apps">Connected apps</a><a href="/account/password">Password</a><a href="/account/data">Your data</a>'
                f'<span class="muted">{escape(user["display_name"])}</span></nav>')
     document = (f'<!doctype html><html lang="en"><head><meta charset="utf-8">'
                 f'<meta name="viewport" content="width=device-width, initial-scale=1">'

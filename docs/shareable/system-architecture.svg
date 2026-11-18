@@ -20,7 +20,7 @@
 <rect x="620" y="445" width="240" height="65" rx="10" class="box"/><text x="740" y="472" text-anchor="middle" class="head">MCP server interface</text><text x="740" y="496" text-anchor="middle" class="small">Templates · previews · explicit edits</text>
 <path d="M445 220V340H110V432H260V445" class="edge"/><path d="M555 220V340H890V432H740V445" class="edge"/>
 <text x="650" y="269" class="small">Same backend,</text><text x="650" y="290" class="small">separate entry points</text>
-<rect x="350" y="540" width="300" height="65" rx="10" class="blue"/><text x="500" y="567" text-anchor="middle" class="head">Shared application rules</text><text x="500" y="591" text-anchor="middle" class="small">Validation · revisions · request limits</text>
+<rect x="350" y="540" width="300" height="65" rx="10" class="blue"/><text x="500" y="567" text-anchor="middle" class="head">Shared application rules</text><text x="500" y="591" text-anchor="middle" class="small">Validation · revisions · limits · budget</text>
 <path d="M260 510V572H350" class="edge"/><path d="M740 510V572H650" class="edge"/>
 <rect x="350" y="630" width="300" height="35" rx="8" class="box"/><text x="500" y="653" text-anchor="middle">Account-owned records + food cache</text><path d="M500 605V630" class="edge"/><rect x="690" y="600" width="200" height="70" rx="10" class="box"/><text x="790" y="626" text-anchor="middle" class="head">Accounts</text><text x="790" y="648" text-anchor="middle" class="small">Sign-in, tokens, grants</text><text x="790" y="666" text-anchor="middle" class="small">PostgreSQL / scoped ORM</text><path d="M650 635H690" class="one"/>
 <text x="120" y="641" class="small">Provider key stays</text><text x="120" y="662" class="small">on this computer</text>
