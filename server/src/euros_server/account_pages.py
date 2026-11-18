@@ -106,7 +106,7 @@ def data_body(csrf, username, message=None, kind='notice'):
             f'if you want a copy.</p>'
             f'<form method="post" action="/account/delete">{hidden("csrf", csrf)}'
             f'{field("Password", "password", kind="password")}'
-            f'{field(f"Type {username} to confirm", "confirm")}'
+            f'{field("Type your username or email to confirm", "confirm")}'
             f'<button class="danger">Delete account</button></form>')
 
 
