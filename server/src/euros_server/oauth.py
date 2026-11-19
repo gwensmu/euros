@@ -11,6 +11,7 @@ import json
 from html import escape
 from urllib.parse import unquote, urlencode, urlsplit, urlunsplit
 
+from starlette.concurrency import run_in_threadpool
 from starlette.responses import JSONResponse, RedirectResponse
 from starlette.routing import Route
 
@@ -18,6 +19,7 @@ from .oauth_store import AUTH_METHODS, SCOPES, validate_scope
 from .domain import DomainError
 from .pages import field, hidden, notice, page
 from .browser import base_url
+from .credentials import password_work
 
 
 def _issuer(request, configured=None):
@@ -72,7 +74,7 @@ class OAuthServer:
             body = json.loads(await request.body() or b'{}')
         except ValueError:
             raise DomainError('invalid_client_metadata', 400) from None
-        client = self.accounts.oauth.register_client(body)
+        client = await run_in_threadpool(self.accounts.oauth.register_client, body)
         return JSONResponse({'client_id': client['client_id'],
                              **({'client_secret': client['client_secret']} if client['client_secret'] else {}),
                              'client_name': client['name'], 'redirect_uris': client['redirect_uris'],
@@ -148,9 +150,34 @@ class OAuthServer:
         return response
 
     async def authorize(self, request):
+        """Database steps run on request threads; the password check on its own (password_work)."""
         params = dict(request.query_params)
         if request.method == 'POST':
             params = dict(await request.form())
+        prepared = await run_in_threadpool(self._prepare, request, params)
+        if not isinstance(prepared, tuple):
+            return prepared
+        client, redirect_uri, flow, session = prepared
+        user = session['user'] if session else None
+        if request.method == 'GET':
+            return await run_in_threadpool(self._consent_page, request, client, flow, user)
+        if not self.sessions.valid_form(request, params.get('form_token')):
+            return await run_in_threadpool(self._consent_page, request, client, flow, user,
+                                           'That form expired. Try again.', 400)
+        if params.get('decision') != 'allow':
+            return RedirectResponse(_redirect_with(redirect_uri, {'error': 'access_denied', 'state': flow['state']}),
+                                    status_code=303)
+        if not user:
+            try:
+                user = await password_work(self.accounts.users.authenticate, params.get('username', ''),
+                                                params.get('password', ''))
+            except DomainError as exc:
+                return await run_in_threadpool(self._consent_page, request, client, flow, None,
+                                               _describe(exc), exc.status)
+        return await run_in_threadpool(self._grant, request, client, redirect_uri, flow, user, session)
+
+    def _prepare(self, request, params):
+        """(client, redirect_uri, flow, session), or the response that ends the request."""
         try:
             client, redirect_uri = self._request_params(params)
         except DomainError as exc:
@@ -161,20 +188,9 @@ class OAuthServer:
             return RedirectResponse(_redirect_with(redirect_uri, {'error': exc.body['error'],
                                                                   'error_description': exc.body.get('error_description'),
                                                                   'state': params.get('state')}), status_code=303)
-        session = self.sessions.current(request)
-        user = session['user'] if session else None
-        if request.method == 'GET':
-            return self._consent_page(request, client, flow, user)
-        if not self.sessions.valid_form(request, params.get('form_token')):
-            return self._consent_page(request, client, flow, user, 'That form expired. Try again.', status=400)
-        if params.get('decision') != 'allow':
-            return RedirectResponse(_redirect_with(redirect_uri, {'error': 'access_denied', 'state': flow['state']}),
-                                    status_code=303)
-        if not user:
-            try:
-                user = self.accounts.users.authenticate(params.get('username', ''), params.get('password', ''))
-            except DomainError as exc:
-                return self._consent_page(request, client, flow, None, _describe(exc), status=exc.status)
+        return client, redirect_uri, flow, self.sessions.current(request)
+
+    def _grant(self, request, client, redirect_uri, flow, user, session):
         code = self.accounts.oauth.create_code(client['client_id'], user['user_id'], redirect_uri,
                                          flow['challenge'], flow['scope'], flow['resource'])
         target = _redirect_with(redirect_uri, {'code': code, 'state': flow['state']})
@@ -203,7 +219,9 @@ class OAuthServer:
         return client_id
 
     async def token(self, request):
-        form = dict(await request.form())
+        return await run_in_threadpool(self._token, request, dict(await request.form()))
+
+    def _token(self, request, form):
         client_id = self._client_credentials(request, form)
         grant_type = form.get('grant_type')
         if grant_type == 'authorization_code':
@@ -216,7 +234,9 @@ class OAuthServer:
         return JSONResponse(tokens, headers={'Cache-Control': 'no-store', 'Pragma': 'no-cache'})
 
     async def revoke(self, request):
-        form = dict(await request.form())
+        return await run_in_threadpool(self._revoke, request, dict(await request.form()))
+
+    def _revoke(self, request, form):
         self._client_credentials(request, form)
         self.accounts.oauth.revoke_token(form.get('token'))
         return JSONResponse({}, headers={'Cache-Control': 'no-store'})

@@ -1,0 +1,49 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  Daily PostgreSQL backup on the deployment host. A template: nothing installs it.
+  Replace DEPLOYMENT_ROOT with the remote deployment root (the directory holding
+  compose.production.yaml) and DOCKER_BIN_DIR with the directory containing `docker`
+  (`dirname "$(command -v docker)"`). Run the backup once by hand first; that creates the
+  owner-only backups/postgres directory this job logs into. Then:
+
+    cp com.euros.postgres-backup.plist.example ~/Library/LaunchAgents/com.euros.postgres-backup.plist
+    launchctl bootstrap gui/$(id -u) ~/Library/LaunchAgents/com.euros.postgres-backup.plist
+    launchctl kickstart -p gui/$(id -u)/com.euros.postgres-backup     # run once now
+
+  A missed run (host asleep or off) runs at next wake. Results go to backups/postgres/backup.log
+  as one JSON line per run; `backup-postgres.py --check-recent 26` reports staleness.
+-->
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+  <key>Label</key>
+  <string>com.euros.postgres-backup</string>
+  <key>ProgramArguments</key>
+  <array>
+    <string>/usr/bin/python3</string>
+    <string>DEPLOYMENT_ROOT/backup-postgres.py</string>
+    <string>--compose</string>
+    <string>DEPLOYMENT_ROOT/compose.production.yaml</string>
+    <string>--output</string>
+    <string>DEPLOYMENT_ROOT/backups/postgres</string>
+  </array>
+  <key>EnvironmentVariables</key>
+  <dict>
+    <key>PATH</key>
+    <string>DOCKER_BIN_DIR:/usr/bin:/bin</string>
+  </dict>
+  <key>StartCalendarInterval</key>
+  <dict>
+    <key>Hour</key>
+    <integer>3</integer>
+    <key>Minute</key>
+    <integer>30</integer>
+  </dict>
+  <key>StandardOutPath</key>
+  <string>DEPLOYMENT_ROOT/backups/postgres/backup.log</string>
+  <key>StandardErrorPath</key>
+  <string>DEPLOYMENT_ROOT/backups/postgres/backup.log</string>
+  <key>ProcessType</key>
+  <string>Background</string>
+</dict>
+</plist>

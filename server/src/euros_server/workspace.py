@@ -10,21 +10,20 @@ from .domain import DomainError, Store
 from .food_cache import FoodCache
 from .meal_week import MealWeeks
 from .plan import PlanSettings
-from .reminder_copy import ReminderCopyService
-from .security import DEFAULT_ACCOUNT_MONTHLY_TOKENS, DEFAULT_MONTHLY_TOKENS, LimitedProvider, TokenBudget
+from .security import (DEFAULT_ACCOUNT_MONTHLY_TOKENS, DEFAULT_DEPLOYMENT_CONCURRENT, DEFAULT_MONTHLY_TOKENS,
+                       ConcurrencyGate, LimitedProvider, TokenBudget)
 from .tracker import TrackerStore
 
 
 class Workspace:
-    def __init__(self, store, models, budget=None):
+    def __init__(self, store, models, budget=None, shared=None):
         self.store = store
         self.plans = PlanSettings(store)
         self.models = copy.copy(models)
-        self.models.provider = LimitedProvider(models.provider, store, budget=budget)
+        self.models.provider = LimitedProvider(models.provider, store, budget=budget, shared=shared)
         self.trackers = TrackerStore(store)
         self.meal_weeks = MealWeeks(store, self.plans)
         self.food_cache = FoodCache(store, self.models)
-        self.reminder_copy = ReminderCopyService(self.models, store)
 
     @property
     def catalog(self):
@@ -40,6 +39,8 @@ class Workspaces:
         self.accounts, self.models = accounts, models
         # One allowance for the whole deployment, shared by every account's workspace.
         self.budget = TokenBudget(accounts.path, monthly_tokens, account_monthly_tokens)
+        # One bound on model calls in flight, shared by every account's workspace.
+        self.model_calls = ConcurrencyGate(DEFAULT_DEPLOYMENT_CONCURRENT)
         self.lock = threading.Lock()
         self._services = {}
 
@@ -48,7 +49,8 @@ class Workspaces:
             raise DomainError('unauthorized', 401)
         with self.lock:
             if user_id not in self._services:
-                self._services[user_id] = Workspace(Store(self.accounts.path, user_id), self.models, self.budget)
+                self._services[user_id] = Workspace(Store(self.accounts.path, user_id), self.models, self.budget,
+                                                     self.model_calls)
             return self._services[user_id]
 
     def forget(self, user_id):

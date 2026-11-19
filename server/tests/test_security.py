@@ -57,7 +57,8 @@ def test_persistent_hourly_food_allowance(tmp_path):
     now[0]+=1801
     limiter().reserve('food_draft')
     with pytest.raises(DomainError,match='model_hourly_limit'):limiter().reserve('food_draft')
-    limiter().reserve('reminder_copy')
+    # Reminder jokes no longer use a model; that allowance is gone.
+    with pytest.raises(DomainError,match='model_not_configured'):limiter().reserve('reminder_copy')
 
 
 def test_default_food_allowance_is_120_items_an_hour(tmp_path):
@@ -70,7 +71,7 @@ def test_default_food_allowance_is_120_items_an_hour(tmp_path):
 
 def test_minute_budget_is_atomic(tmp_path):
     store=Store(tmp_path/'db');lim=LimitedProvider(Provider(),store,per_minute=2,clock=lambda:1000000)
-    lim.reserve('food_draft');lim.reserve('reminder_copy')
+    lim.reserve('food_draft');lim.reserve('food_draft')
     with pytest.raises(DomainError,match='model_rate_limit'):lim.reserve('food_draft')
     lim.clock=lambda:1000060
     lim.reserve('food_draft')

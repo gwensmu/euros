@@ -22,6 +22,40 @@ def configured_database_url():
     return Path(filename).read_text().strip() if filename else os.environ.get('EUROS_DATABASE_URL')
 
 
+# Connections the app may hold to PostgreSQL. Handlers run on worker threads (app.py), and the
+# thread pool is sized from this so a request never waits on the pool for a connection a busy
+# thread is holding. Each request opens one connection at a time. PostgreSQL's default
+# max_connections is 100; one backend uses roughly 10 MB of the database container's memory.
+DEFAULT_POOL_SIZE, DEFAULT_MAX_OVERFLOW = 8, 4
+# Waiting longer than this for a connection fails the request instead of queueing it forever.
+POOL_TIMEOUT = 10
+
+
+def _setting(name, default, minimum):
+    raw = os.environ.get(name)
+    if raw is None or not raw.strip():
+        return default
+    try:
+        value = int(raw)
+    except ValueError:
+        raise ValueError(f"{name} must be a whole number") from None
+    if value < minimum:
+        raise ValueError(f"{name} must be at least {minimum}")
+    return value
+
+
+def pool_settings():
+    """(pool_size, max_overflow) from EUROS_DB_POOL_SIZE and EUROS_DB_MAX_OVERFLOW."""
+    return (_setting('EUROS_DB_POOL_SIZE', DEFAULT_POOL_SIZE, 1),
+            _setting('EUROS_DB_MAX_OVERFLOW', DEFAULT_MAX_OVERFLOW, 0))
+
+
+def connection_capacity():
+    """Connections one process may hold at once: the pool plus its overflow."""
+    size, overflow = pool_settings()
+    return size + overflow
+
+
 def is_postgres(path):
     return str(path).startswith(('postgresql://', 'postgresql+psycopg://'))
 
@@ -30,7 +64,9 @@ def is_postgres(path):
 def engine(path):
     if is_postgres(path):
         url = str(path).replace('postgresql://', 'postgresql+psycopg://', 1)
-        return create_engine(url, pool_pre_ping=True, pool_size=5, max_overflow=5)
+        size, overflow = pool_settings()
+        return create_engine(url, pool_pre_ping=True, pool_size=size, max_overflow=overflow,
+                             pool_timeout=POOL_TIMEOUT)
     result = create_engine('sqlite:///' + str(Path(path).resolve()), poolclass=NullPool,
                            connect_args={'timeout':10})
     @event.listens_for(result, 'connect')
@@ -115,7 +151,10 @@ def connect(path):
 def initialize(path, legacy_owner=LEGACY_OWNER):
     """Atomic v1 upgrade; all new table definitions come from SQLAlchemy metadata."""
     if is_postgres(path):
-        Base.metadata.create_all(engine(path))
+        # Versioned migrations own the PostgreSQL schema (migrations/__init__.py): an empty
+        # database is created, and one behind this release is refused until --migrate runs.
+        from .migrations import ensure_current
+        ensure_current(path)
         if legacy_owner is not None:
             with transaction(path, write=True) as db:
                 found = db.scalar(select(User.user_id).where(User.user_id == legacy_owner))

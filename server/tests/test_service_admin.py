@@ -95,3 +95,5 @@ def test_retired_review_routes_are_absent_for_every_account(service):
     assert athlete('POST', '/v1/review/jobs', json={}).status_code == 404
     assert athlete('POST', '/v1/review/week', json={}).status_code == 404
     assert athlete('GET', '/v1/review/jobs/old').status_code == 404
+    # Reminder jokes are chosen on the phone; the model-backed route is gone.
+    assert athlete('POST', '/v1/reminders/copy', json={}).status_code == 404

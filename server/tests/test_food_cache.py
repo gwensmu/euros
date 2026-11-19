@@ -36,7 +36,8 @@ def test_components_reuse_restart_exact_keys_and_decimal_totals(setup):
         assert len(models.calls) == 2
         restarted = FoodCache(Store(store.path), models)
         await restarted.food({'text': ' 100g yogurt , 20g oats '})
-        assert models.calls == ['100g yogurt', '10g chicken', '20g oats']
+        # The first entry's two items are looked up concurrently, so either may call first.
+        assert sorted(models.calls[:2]) == ['100g yogurt', '10g chicken'] and models.calls[2:] == ['20g oats']
         await restarted.food({'text': '200g yogurt'})
         assert models.calls[-1] == '200g yogurt'
         assert store.records() == {'records': []} and store.changes()['changes'] == []

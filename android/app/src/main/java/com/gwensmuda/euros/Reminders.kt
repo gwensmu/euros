@@ -54,7 +54,7 @@ object ReminderRules {
  }
 }
 class ReminderScheduler(private val context:Context,private val dao:EurosDao,private val clock:java.time.Clock=java.time.Clock.systemUTC()) {
- companion object { const val KEY="reminders_v1";const val CHANNEL="euros_activity";private val mutex=Mutex() }
+ companion object { const val KEY="reminders_v1";const val CHANNEL="euros_activity";private const val RECENT_JOKES=12;private val mutex=Mutex() }
  private suspend fun state()=dao.meta(KEY)?.let{JSONObject(it)} ?: JSONObject().put("enabled",false).put("scheduled",JSONObject()).put("snoozes",JSONObject())
  private fun decode(s:JSONObject)=ReminderSettings(s.optBoolean("enabled"),s.optString("quiet_start").takeIf{it.isNotBlank()},s.optString("quiet_end").takeIf{it.isNotBlank()})
  suspend fun settings():ReminderSettings=decode(state())
@@ -96,7 +96,8 @@ class ReminderScheduler(private val context:Context,private val dao:EurosDao,pri
   s.put("scheduled",next).put("delivered",delivered).put("delivered_context",deliveredContext);dao.meta(Metadata(KEY,s.toString()))
   previous.keys().forEach{id->if(!next.has(id)){alarm.cancel(intent(id));if(!delivered.has(id))manager.cancel(id,0)}}
   next.keys().forEach{id->alarm.setAndAllowWhileIdle(AlarmManager.RTC_WAKEUP,Instant.parse(next.getJSONObject(id).getString("due")).toEpochMilli(),intent(id))}
-  ReminderCopyCache(context,dao).prefetch(plans.filter{it.due>now && it.due<now.plusSeconds(86400)})
+  // Jokes used to be fetched from the backend into this cache; they are now chosen locally.
+  (dao.metadataWithPrefix("reminder_copy:")+dao.metadataWithPrefix("reminder_copy_retry:")).forEach{dao.removeMeta(it.key)}
  }
  private fun intent(id:String)=PendingIntent.getBroadcast(context,0,Intent(context,ReminderReceiver::class.java).setAction("euros.reminder").setData(Uri.parse("euros://reminder/"+Uri.encode(id))).putExtra("activity_id",id),PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE)
  suspend fun snooze(activityId:String,minutes:Int) {require(minutes in 1..1440);snoozeUntil(activityId,Instant.now(clock).plusSeconds(minutes*60L))}
@@ -125,8 +126,10 @@ class ReminderScheduler(private val context:Context,private val dao:EurosDao,pri
    if(p==null || now.epochSecond-due.epochSecond>7200 || ReminderRules.afterQuiet(now,decode(s),PlanDomain.zone)!=now){dao.meta(Metadata(KEY,s.toString()));return@withLock}
    val manager=context.getSystemService(NotificationManager::class.java);manager.createNotificationChannel(NotificationChannel(CHANNEL,"Weasel reminders",NotificationManager.IMPORTANCE_DEFAULT))
    val open=PendingIntent.getActivity(context,0,Intent(context,MainActivity::class.java).setData(Uri.parse("euros://activity/"+Uri.encode(p.destination))).putExtra("activity_id",p.destination).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP),PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE)
-   val joke=ReminderCopyCache(context,dao).joke(p)
-   val copy=p.facts+(joke?.let{" $it"} ?: "")
+   val recent=s.optJSONArray("recent_jokes")?.let{a->(0 until a.length()).map{a.optString(it)}}.orEmpty()
+   val joke=ReminderJokes.choose(p.kind,p.allowSkipJoke,p.due.atZone(PlanDomain.zone).dayOfWeek==java.time.DayOfWeek.SUNDAY,recent)
+   joke?.let{s.put("recent_jokes",JSONArray((listOf(it.id)+recent.filter{id->id!=it.id}).take(RECENT_JOKES)))}
+   val copy=p.facts+(joke?.let{" ${it.text}"} ?: "")
    val builder=Notification.Builder(context,CHANNEL).setSmallIcon(R.drawable.ic_notification_weasel).setContentTitle(p.title).setContentText(copy).setStyle(Notification.BigTextStyle().bigText(copy)).setContentIntent(open).setAutoCancel(true)
    val choose=PendingIntent.getActivity(context,0,Intent(context,MainActivity::class.java).setData(Uri.parse("euros://snooze-picker/"+Uri.encode(activityId))).putExtra("activity_id","@snooze:$activityId").addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP),PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE)
    builder.addAction(Notification.Action.Builder(android.graphics.drawable.Icon.createWithResource(context,android.R.drawable.ic_lock_idle_alarm),"Snooze",choose).build())

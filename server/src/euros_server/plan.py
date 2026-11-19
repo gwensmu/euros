@@ -168,6 +168,10 @@ class PlanSettings:
     def read(self):
         with self.store.session() as db:
             row = db.get(TrainingPlan, (db.user_id, 1))
+        return self._shape(row)
+
+    @staticmethod
+    def _shape(row):
         if row is None:
             return {'revision': 0, 'plan': json.loads(canonical(DEFAULTS)), 'source': 'default',
                     'updated_at': None}
@@ -186,7 +190,9 @@ class PlanSettings:
             row = db.get(TrainingPlan, (db.user_id, 1))
             current = row.revision if row else 0
             if expected_revision != current:
-                raise DomainError('revision_conflict', 409, current=self.read())
+                # From the row already loaded: opening a second session here would hold two
+                # pooled connections in one request.
+                raise DomainError('revision_conflict', 409, current=self._shape(row))
             db.merge(TrainingPlan(user_id=db.user_id, id=1, revision=current+1, payload=canonical(clean), updated_at=updated))
         return self.read()
 

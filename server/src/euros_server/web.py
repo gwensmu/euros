@@ -9,6 +9,7 @@ plan_form.py). Nothing is rendered before the first two are settled.
 import hmac
 import json
 
+from starlette.concurrency import run_in_threadpool
 from starlette.responses import RedirectResponse, Response
 from starlette.routing import Route
 
@@ -16,6 +17,7 @@ from .account_data import delete_account, export_account
 from .account_pages import (apps_body, data_body, deleted_body, login_body, message_for, overview_body,
                             password_body, signup_body, signup_closed_body)
 from .browser import same_origin
+from .credentials import password_work
 from .domain import DomainError
 from .localtime import local_today
 from .pages import page
@@ -63,32 +65,44 @@ class AccountSite:
         return response
 
     # --- sign in and sign up -----------------------------------------------------------
+    #
+    # Pages without a form are plain functions, which Starlette runs on a request thread.
+    # Form handlers parse the form on the event loop and pass the rest to a thread
+    # (_threaded). Password checks go through password_work, which has threads of its own.
+
+    @staticmethod
+    async def _form(request):
+        return dict(await request.form())
+
+    def _login_page(self, request):
+        if self.sessions.current(request):
+            return RedirectResponse('/account/', status_code=303)
+        return self._form_page(request, 'Sign in', login_body, allow_signup=self.allow_signup)
 
     async def login(self, request):
         if request.method == 'GET':
-            if self.sessions.current(request):
-                return RedirectResponse('/account/', status_code=303)
-            return self._form_page(request, 'Sign in', login_body, allow_signup=self.allow_signup)
-        form = dict(await request.form())
+            return await run_in_threadpool(self._login_page, request)
+        form = await self._form(request)
         if not same_origin(request, self.issuer) or not self.sessions.valid_form(request, form.get('form_token')):
             return self._form_page(request, 'Sign in', login_body, status=400,
                                    message='That form expired. Try again.', allow_signup=self.allow_signup)
         try:
-            user = self.accounts.users.authenticate(form.get('username', ''), form.get('password', ''))
+            user = await password_work(self.accounts.users.authenticate, form.get('username', ''),
+                                        form.get('password', ''))
         except DomainError as exc:
             # Sign-in says the same thing for a wrong password and an unknown username.
             message = ('Wrong username or password.' if exc.body['error'] == 'invalid_credentials'
                        else message_for(exc))
             return self._form_page(request, 'Sign in', login_body, status=exc.status, message=message,
                                    username=str(form.get('username', ''))[:32], allow_signup=self.allow_signup)
-        return self._signed_in(request, user['user_id'])
+        return await run_in_threadpool(self._signed_in, request, user['user_id'])
 
     async def signup(self, request):
         if not self.allow_signup:
             return page('Create your account', signup_closed_body(), status=403)
         if request.method == 'GET':
             return self._form_page(request, 'Create your account', signup_body)
-        form = dict(await request.form())
+        form = await self._form(request)
         if not same_origin(request, self.issuer) or not self.sessions.valid_form(request, form.get('form_token')):
             return self._form_page(request, 'Create your account', signup_body, status=400,
                                    message='That form expired. Try again.')
@@ -97,19 +111,24 @@ class AccountSite:
             return self._form_page(request, 'Create your account', signup_body, status=422,
                                    message='The two passwords do not match.', values=values)
         try:
-            user = self.accounts.users.create(form.get('username', ''), form.get('password', ''),
-                                              form.get('display_name') or None)
+            user = await password_work(self.accounts.users.create, form.get('username', ''),
+                                        form.get('password', ''), form.get('display_name') or None)
         except DomainError as exc:
             return self._form_page(request, 'Create your account', signup_body, status=exc.status,
                                    message=message_for(exc), values=values)
+        return await run_in_threadpool(self._new_account, request, user['user_id'])
+
+    def _new_account(self, request, user_id):
         # Initialize this account's services in the shared database.
-        self.workspaces.get(user['user_id'])
-        return self._signed_in(request, user['user_id'])
+        self.workspaces.get(user_id)
+        return self._signed_in(request, user_id)
 
     async def logout(self, request):
-        form = dict(await request.form())
+        return await run_in_threadpool(self._logout, request, await self._form(request))
+
+    def _logout(self, request, form):
         destination = form.get('next', '/account/login')
-        if not isinstance(destination, str) or not destination.startswith('/'):
+        if not local_path(destination):
             destination = '/account/login'
         response = RedirectResponse(destination, status_code=303)
         session = self.sessions.current(request)
@@ -121,7 +140,7 @@ class AccountSite:
 
     # --- overview ----------------------------------------------------------------------
 
-    async def overview(self, request):
+    def overview(self, request):
         session, redirect = self._require(request)
         if redirect:
             return redirect
@@ -136,14 +155,13 @@ class AccountSite:
         body = plan_body(record, self.sessions.csrf(request) or '', local_today(), message, kind)
         return page('Training plan', body, user=user, status=status)
 
-    async def plan_page(self, request):
+    def plan_page(self, request):
         session, redirect = self._require(request)
         if redirect:
             return redirect
         return self._plan_page(request, session['user'])
 
-    async def save_plan(self, request):
-        form = dict(await request.form())
+    def _save_plan(self, request, form):
         user = self._checked(request, form)['user']
         try:
             payload = plan_from_form(form)
@@ -158,8 +176,7 @@ class AccountSite:
             return self._plan_page(request, user, message_for(exc), 'error', exc.status)
         return self._plan_page(request, user, 'Training plan saved.')
 
-    async def generate(self, request):
-        form = dict(await request.form())
+    def _generate(self, request, form):
         user = self._checked(request, form)['user']
         workspace = self.workspaces.get(user['user_id'])
         try:
@@ -177,21 +194,27 @@ class AccountSite:
         return page('Password', password_body(self.sessions.csrf(request) or '', message, kind),
                     user=user, status=status)
 
-    async def password_page(self, request):
+    def password_page(self, request):
         session, redirect = self._require(request)
         if redirect:
             return redirect
         return self._password_page(request, session['user'])
 
     async def change_password(self, request):
-        form = dict(await request.form())
-        user = self._checked(request, form)['user']
+        form = await self._form(request)
+        user = (await run_in_threadpool(self._checked, request, form))['user']
         if form.get('password') != form.get('password2'):
-            return self._password_page(request, user, 'The two new passwords do not match.', 'error', 422)
+            return await run_in_threadpool(self._password_page, request, user,
+                                           'The two new passwords do not match.', 'error', 422)
         try:
-            self.accounts.users.set_password(user['user_id'], form.get('current', ''), form.get('password', ''))
+            await password_work(self.accounts.users.set_password, user['user_id'], form.get('current', ''),
+                                form.get('password', ''))
         except DomainError as exc:
-            return self._password_page(request, user, message_for(exc), 'error', exc.status)
+            return await run_in_threadpool(self._password_page, request, user, message_for(exc), 'error',
+                                           exc.status)
+        return await run_in_threadpool(self._password_changed, request, user)
+
+    def _password_changed(self, request, user):
         self.accounts.sessions.end_all(user['user_id'], keep=self.sessions.cookie(request))
         return self._password_page(request, user, 'Password changed. Other browsers were signed out.')
 
@@ -201,14 +224,13 @@ class AccountSite:
         grants = self.accounts.oauth.grants(user['user_id'])
         return page('Connected apps', apps_body(self.sessions.csrf(request) or '', grants, message), user=user)
 
-    async def apps_page(self, request):
+    def apps_page(self, request):
         session, redirect = self._require(request)
         if redirect:
             return redirect
         return self._apps_page(request, session['user'])
 
-    async def revoke_app(self, request):
-        form = dict(await request.form())
+    def _revoke_app(self, request, form):
         user = self._checked(request, form)['user']
         try:
             self.accounts.oauth.revoke_grant(user['user_id'], str(form.get('grant_id', '')))
@@ -222,13 +244,13 @@ class AccountSite:
         body = data_body(self.sessions.csrf(request) or '', user['username'], message, kind)
         return page('Your data', body, user=user, status=status)
 
-    async def data_page(self, request):
+    def data_page(self, request):
         session, redirect = self._require(request)
         if redirect:
             return redirect
         return self._data_page(request, session['user'])
 
-    async def export(self, request):
+    def export(self, request):
         session, redirect = self._require(request)
         if redirect:
             return redirect
@@ -240,21 +262,31 @@ class AccountSite:
                                  'Cache-Control': 'no-store', 'X-Content-Type-Options': 'nosniff'})
 
     async def delete(self, request):
-        form = dict(await request.form())
-        user = self._checked(request, form)['user']
+        form = await self._form(request)
+        user = (await run_in_threadpool(self._checked, request, form))['user']
         if str(form.get('confirm', '')).strip().lower() != user['username']:
-            return self._data_page(request, user, message_for(DomainError('confirmation_mismatch')), 'error', 422)
+            return await run_in_threadpool(self._data_page, request, user,
+                                           message_for(DomainError('confirmation_mismatch')), 'error', 422)
         try:
             # The sign-in check, with its throttling, so a left-open browser cannot be used
             # to guess the password here either.
-            self.accounts.users.authenticate(user['username'], form.get('password', ''))
+            await password_work(self.accounts.users.authenticate, user['username'], form.get('password', ''))
         except DomainError as exc:
-            return self._data_page(request, user, message_for(exc), 'error', exc.status)
+            return await run_in_threadpool(self._data_page, request, user, message_for(exc), 'error', exc.status)
+        return await run_in_threadpool(self._deleted, request, user)
+
+    def _deleted(self, request, user):
         delete_account(self.accounts.path, user['user_id'])
         self.workspaces.forget(user['user_id'])
         response = page('Account deleted', deleted_body())
         self.sessions.end(request, response)
         return response
+
+    def _threaded(self, handler):
+        """An endpoint that parses its form on the event loop and runs `handler` on a thread."""
+        async def endpoint(request):
+            return await run_in_threadpool(handler, request, await self._form(request))
+        return endpoint
 
     def routes(self):
         return [Route('/account/', self.overview),
@@ -262,12 +294,19 @@ class AccountSite:
                 Route('/account/signup', self.signup, methods=['GET', 'POST']),
                 Route('/account/logout', self.logout, methods=['POST']),
                 Route('/account/plan', self.plan_page, methods=['GET']),
-                Route('/account/plan', self.save_plan, methods=['POST']),
-                Route('/account/plan/sessions', self.generate, methods=['POST']),
+                Route('/account/plan', self._threaded(self._save_plan), methods=['POST']),
+                Route('/account/plan/sessions', self._threaded(self._generate), methods=['POST']),
                 Route('/account/password', self.password_page, methods=['GET']),
                 Route('/account/password', self.change_password, methods=['POST']),
                 Route('/account/apps', self.apps_page),
-                Route('/account/apps/revoke', self.revoke_app, methods=['POST']),
+                Route('/account/apps/revoke', self._threaded(self._revoke_app), methods=['POST']),
                 Route('/account/data', self.data_page),
                 Route('/account/export', self.export),
                 Route('/account/delete', self.delete, methods=['POST'])]
+
+
+def local_path(destination):
+    """A path on this site. "//host/..." and "/\\host" are other sites to a browser."""
+    return (isinstance(destination, str) and destination.startswith('/')
+            and not destination.startswith(('//', '/\\')) and '\\' not in destination
+            and not any(ord(c) < 32 for c in destination))

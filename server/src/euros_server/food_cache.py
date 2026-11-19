@@ -1,4 +1,6 @@
 """Persistent exact-item nutrition estimates; never consumption records."""
+from starlette.concurrency import run_in_threadpool
+
 from .models import FoodEstimate
 import asyncio
 import hashlib
@@ -19,16 +21,23 @@ class FoodCache:
     async def item(self, text):
         key = hashlib.sha256(text.encode()).hexdigest()
         async with self.locks[int(key[:8], 16) % len(self.locks)]:
-            with self.store.session() as db:
-                row = db.get(FoodEstimate, (db.user_id, key))
-            if row and row.input == text:
-                return json.loads(row.result)
+            cached = await run_in_threadpool(self._cached, key, text)
+            if cached is not None:
+                return cached
             async with self.slots:
                 result = await self.models.food({'text': text})
             if result['clarification'] is None and all(v is not None for v in result['nutrients'].values()):
-                with self.store.session(write=True) as db:
-                    db.merge(FoodEstimate(user_id=db.user_id, key=key, input=text, result=canonical(result)))
+                await run_in_threadpool(self._remember, key, text, result)
             return result
+
+    def _cached(self, key, text):
+        with self.store.session() as db:
+            row = db.get(FoodEstimate, (db.user_id, key))
+        return json.loads(row.result) if row and row.input == text else None
+
+    def _remember(self, key, text, result):
+        with self.store.session(write=True) as db:
+            db.merge(FoodEstimate(user_id=db.user_id, key=key, input=text, result=canonical(result)))
 
     async def food(self, body):
         exact_object(body, {'text'}, 'invalid_food_request', 422)

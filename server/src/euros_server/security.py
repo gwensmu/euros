@@ -2,9 +2,12 @@
 from sqlalchemy import select, func, delete, insert, update, text
 from .database import transaction
 from .models import InferenceRequest, model_usage
+import json
 import threading
 import time
 from datetime import datetime, timezone
+import anyio
+from starlette.concurrency import run_in_threadpool
 from starlette.responses import JSONResponse
 from .domain import DomainError
 from .localtime import ZONE
@@ -18,7 +21,7 @@ class BodyLimit:
         if scope['type'] != 'http':
             return await self.app(scope, receive, send)
         limit = {'/v1/tracker/import': 4194304,
-                 '/v1/interpret/food': 40000, '/v1/reminders/copy': 16384}.get(scope['path'], 1048576 if scope['path'].startswith('/mcp') else 262144)
+                 '/v1/interpret/food': 40000}.get(scope['path'], 1048576 if scope['path'].startswith('/mcp') else 262144)
         body = bytearray()
         while True:
             message = await receive()
@@ -30,6 +33,8 @@ class BodyLimit:
             body.extend(chunk)
             if not message.get('more_body', False):
                 break
+        if scope['path'].startswith('/mcp'):
+            scope['euros_rpc'] = rpc_summary(bytes(body))
         delivered = False
         async def bounded_receive():
             nonlocal delivered
@@ -40,11 +45,33 @@ class BodyLimit:
         await self.app(scope, bounded_receive, send)
 
 
+def _name(value):
+    return value[:64] if isinstance(value, str) else None
+
+
+def rpc_summary(body):
+    """The JSON-RPC method and tool name of an MCP request, for the request log; never its
+    arguments, which hold the user's records and food text."""
+    try:
+        message = json.loads(body)
+    except (ValueError, UnicodeDecodeError, RecursionError):
+        return {}
+    if isinstance(message, list):
+        return {'rpc_method': 'batch'}
+    if not isinstance(message, dict):
+        return {}
+    summary = {'rpc_method': _name(message.get('method'))}
+    params = message.get('params')
+    if summary['rpc_method'] == 'tools/call' and isinstance(params, dict):
+        summary['tool'] = _name(params.get('name'))
+    return {k: v for k, v in summary.items() if v}
+
+
 # Tokens held for one call before the provider reports its real usage. A food draft sends
 # about 1.35 KB of instructions and schema plus the item (~400 input tokens) and returns ~80
 # tokens of JSON plus low-effort reasoning. Reservations
 # are deliberately above typical use so concurrent calls cannot overrun the cap by much.
-ESTIMATED_TOKENS = {'food_draft': 1500, 'reminder_copy': 1500}
+ESTIMATED_TOKENS = {'food_draft': 1500}
 # Operator-configurable deployment and per-account monthly token allowances.
 DEFAULT_MONTHLY_TOKENS = 5_000_000
 DEFAULT_ACCOUNT_MONTHLY_TOKENS = 1_000_000
@@ -106,18 +133,41 @@ class TokenBudget:
             db.execute(update(model_usage).where(model_usage.c.id == reservation).values(tokens=tokens, measured=1))
 
 
+# Model calls in flight across every account in this process.
+DEFAULT_DEPLOYMENT_CONCURRENT = 6
+
+
+class ConcurrencyGate:
+    """Calls in flight, refused rather than queued once the limit is reached."""
+    def __init__(self, limit):
+        self.limit, self.active = limit, 0
+        self.lock = threading.Lock()
+
+    def enter(self):
+        with self.lock:
+            if self.active >= self.limit:
+                return False
+            self.active += 1
+            return True
+
+    def leave(self):
+        with self.lock:
+            self.active -= 1
+
+
 class LimitedProvider:
     """Reserve before spending; failures count because provider billing may have occurred.
 
     Per account: food drafts per rolling hour and any call per rolling minute, all surviving restarts. Across accounts: the deployment's TokenBudget.
-    Concurrency is process local: deployment runs one Uvicorn worker. No user text or model
-    outputs are stored.
+    Concurrency is process local (deployment runs one Uvicorn worker): `concurrent` calls per
+    account, and `shared`, when given, bounds calls across every account so many accounts
+    cannot together exhaust the process. No user text or model outputs are stored.
     """
     def __init__(self, provider, store, hourly_food=120, per_minute=60, concurrent=2, budget=None,
-                 clock=time.time):
+                 clock=time.time, shared=None):
         self.provider, self.store, self.clock, self.budget = provider, store, clock, budget
         self.windows = {'food_draft': (hourly_food, 3600)}
-        self.per_minute, self.concurrent = per_minute, concurrent
+        self.per_minute, self.concurrent, self.shared = per_minute, concurrent, shared
         self.active = 0
         self.lock = threading.Lock()
 
@@ -125,15 +175,11 @@ class LimitedProvider:
         now = self.clock()
         day = datetime.fromtimestamp(now, ZONE).date().isoformat()
         with self.store.session(write=True) as db:
-            if kind != 'reminder_copy' and kind not in self.windows:
+            if kind not in self.windows:
                 raise DomainError('model_not_configured', 503)
-            if kind == 'reminder_copy':
-                if db.scalar(select(func.count(InferenceRequest.id)).where(InferenceRequest.day == day, InferenceRequest.kind == kind)) >= 12:
-                    raise DomainError('model_daily_limit', 429)
-            else:
-                limit, seconds = self.windows[kind]
-                if db.scalar(select(func.count(InferenceRequest.id)).where(InferenceRequest.at > now - seconds, InferenceRequest.kind == kind)) >= limit:
-                    raise DomainError('model_hourly_limit', 429)
+            limit, seconds = self.windows[kind]
+            if db.scalar(select(func.count(InferenceRequest.id)).where(InferenceRequest.at > now - seconds, InferenceRequest.kind == kind)) >= limit:
+                raise DomainError('model_hourly_limit', 429)
             if db.scalar(select(func.count(InferenceRequest.id)).where(InferenceRequest.at > now - 60)) >= self.per_minute:
                 raise DomainError('model_rate_limit', 429)
             db.execute(delete(InferenceRequest).where(InferenceRequest.day < day, InferenceRequest.at <= now - 86400 * 7))
@@ -155,15 +201,23 @@ class LimitedProvider:
             if self.active >= self.concurrent:
                 raise DomainError('model_busy', 429)
             self.active += 1
+        if self.shared is not None and not self.shared.enter():
+            with self.lock:
+                self.active -= 1
+            raise DomainError('model_busy', 429)
         try:
-            reservation = self.reserve(kwargs['name'])
+            reservation = await run_in_threadpool(self.reserve, kwargs['name'])
             usage = {}
             try:
                 return await self.provider.generate(**kwargs, usage=usage)
             finally:
                 # Reported usage is billed usage, including for a refused or invalid answer.
+                # Shielded, so a cancelled request still records what the provider billed.
                 if reservation is not None and 'total_tokens' in usage:
-                    self.budget.settle(reservation, usage['total_tokens'])
+                    with anyio.CancelScope(shield=True):
+                        await run_in_threadpool(self.budget.settle, reservation, usage['total_tokens'])
         finally:
+            if self.shared is not None:
+                self.shared.leave()
             with self.lock:
                 self.active -= 1

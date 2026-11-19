@@ -14,14 +14,12 @@ from euros_server.catalog import Catalog
 from euros_server.food_cache import FoodCache
 from euros_server.llm import ModelService
 from euros_server.meal_week import MealWeeks
-from euros_server.reminder_copy import ReminderCopyService
 from euros_server.security import LimitedProvider
 from euros_server.tracker import TrackerStore
 from euros_server.workspace import Workspaces
 from conftest import PASSWORD, SilentProvider
 from test_isolation import two_accounts, activity
 from test_food_cache import Models
-from test_reminder_copy import Fake, body
 
 
 @pytest.fixture
@@ -85,7 +83,7 @@ def test_catalog_drafts_and_expiry_stay_with_the_owner(pair):
         assert db.execute('SELECT 1 FROM meal_week_drafts WHERE user_id=? AND draft_id=?',(b.user_id,'b-old')).fetchone()
 
 
-def test_food_and_reminder_caches_and_quota_are_account_owned(pair):
+def test_food_cache_and_quota_are_account_owned(pair):
     accounts,(a,b)=pair
     async def food():
         models=Models()
@@ -94,10 +92,7 @@ def test_food_and_reminder_caches_and_quota_are_account_owned(pair):
         await FoodCache(a,models).food({'text':'same food'})
         assert len(models.calls)==2
     asyncio.run(food())
-    provider=Fake()
-    for store in (a,b,a):asyncio.run(ReminderCopyService(ModelService(provider),store).copy(body()))
-    assert provider.calls==2
-    one=LimitedProvider(provider,a,hourly_food=1);two=LimitedProvider(provider,b,hourly_food=1)
+    one=LimitedProvider(None,a,hourly_food=1);two=LimitedProvider(None,b,hourly_food=1)
     one.reserve('food_draft');two.reserve('food_draft')
     with pytest.raises(DomainError,match='model_hourly_limit'):one.reserve('food_draft')
     services=Workspaces(accounts,ModelService(SilentProvider()))

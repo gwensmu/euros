@@ -96,6 +96,8 @@ class FoodEstimate(Owned, Base):
 
 
 class ReminderEstimate(Owned, Base):
+    # Retired November 16, 2026: reminder jokes are now chosen on the phone. Kept so existing
+    # rows stay preserved, exported and deleted with their account; nothing writes here.
     __tablename__ = 'reminder_copy_cache'
     key: Mapped[str] = mapped_column(primary_key=True)
     result: Mapped[str] = mapped_column(Text)

@@ -14,11 +14,10 @@ class Repository(private val db:EurosDatabase, llmClient:LlmClient?=null) {
  private val completionEvents=kotlinx.coroutines.flow.MutableSharedFlow<MascotPose>(extraBufferCapacity=1,onBufferOverflow=kotlinx.coroutines.channels.BufferOverflow.DROP_OLDEST)
  val localCompletions:kotlinx.coroutines.flow.SharedFlow<MascotPose> = completionEvents
  @Volatile private var interpreter:LlmClient?=llmClient
- @Volatile internal var reminderApi:SyncApi?=null
  suspend fun interpretFood(text:String):JSONObject = requireInterpreter().interpretFood(text)
  private fun requireInterpreter():LlmClient = interpreter ?: error("Connect to your server in Settings to continue")
- fun connectInterpretation(api:SyncApi) { interpreter=BackendLlmClient(api);reminderApi=api }
- fun disconnectInterpretation() { interpreter=null;reminderApi=null }
+ fun connectInterpretation(api:SyncApi) { interpreter=BackendLlmClient(api) }
+ fun disconnectInterpretation() { interpreter=null }
 
  val dao=db.dao(); private val mutex=Mutex()
  suspend fun bootstrapAuthoredSchedule(context:Context):Int {

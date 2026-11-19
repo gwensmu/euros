@@ -6,7 +6,7 @@ The AI weekly wrap-up is not part of this product. Today has no Sunday review ca
 
 There is no weekly-review API, MCP tool, model configuration or background generation service. Upgrade compatibility completes previously queued phone workers without network/model calls. Historical review caches and server job rows remain inert; removing this feature does not delete activity, food, weight, tracker or sync records. No replacement coaching feature is implied.
 
-Acceptance: no review entry points on Today/Week; week navigation still works; retired routes return 404 and MCP does not advertise review_week; queued legacy workers cannot generate; food interpretation/cache, reminder copy and ordinary sync retain their existing behavior. Do not restore review generation from an older design.
+Acceptance: no review entry points on Today/Week; week navigation still works; retired routes return 404 and MCP does not advertise review_week; queued legacy workers cannot generate; food interpretation/cache, local reminder jokes and ordinary sync retain their existing behavior. Do not restore review generation from an older design.
 
 ## A technology-agnostic implementation blueprint and AI build recipe
 
@@ -49,7 +49,7 @@ Ask the owner for the following in small groups. Record answers in a human-reada
 | Nutrition | Owner-selected calorie/protein/carbohydrate/fat targets, preferences, restrictions, meal timing, and two optional reference meal days. |
 | Weight | Whether to use it, observation day, known baseline/goal, and whether maintenance targets are established. |
 | Trackers | Which sources supply workouts, HR, walks and weight; available permissions; how source sport labels map to the owner's activities. |
-| AI | Preferred provider, a capable low-cost food model, optional constrained reminder-joke selection, private provisioning method, and acceptable request allowances. |
+| AI | Preferred provider, a capable low-cost food model, private provisioning method, and acceptable request allowances. |
 | Visuals | Accent color, animal character, event clothing/accessories, and whether mildly judgy expressions are welcome. |
 | Reminders | OS permission, quiet hours, and code/data-authored times/types. |
 
@@ -164,7 +164,7 @@ Home exposes an icon-only **Sync Health Connect** action beside the Settings gea
 
 ### Settings and reminders
 
-Reminders speak in the mascot's voice: conversational, specific, occasional animal puns or light teasing, without motivational filler. Deterministic code builds factual sentences from actual plans and explicit logs. An optional lightweight model selects an approved contextual joke; it cannot invent facts, timing or actions. Missing logs never become accusations of skipping. No weight/food shaming or pressure to train through injury. Cache against reminder identity, due time, destination and factual context. Prefetch only upcoming copy; delivery never waits for the network and uses the complete local fact sentences on failure or budget exhaustion.
+Reminders speak in the mascot's voice: conversational, specific, occasional animal puns or light teasing, without motivational filler. Deterministic code builds factual sentences from actual plans and explicit logs. The app appends a line from a static catalog kept with the app, one list per reminder kind with several lines each, chosen at random at delivery and avoiding recently used lines. Write lines about the mascot or the moment rather than claims about the user, so any line fits any reminder of its kind. Missing logs never become accusations of skipping. No weight/food shaming or pressure to train through injury. A fixed list needs no model: random local selection is cheaper, works offline and never waits on the network.
 
 Settings groups: synchronization, tracker access/refresh, notification preferences, goal information, nutrition targets, and data export/restore. Keep connection diagnostics secondary to ordinary use. Separate Disconnect, clear local tracker cache, and delete a real record.
 
@@ -223,9 +223,9 @@ flowchart TB
 
 **The mobile API and MCP server are two interfaces to the same backend, not two independent databases.** The mobile app reads cached data and queues offline changes; the backend accepts canonical revisions. Tracker data enters through the phone and selected records are uploaded.
 
-**There are two AI roles.** The app calls its configured models through the backend for food drafts and optional constrained reminder jokes. Separately, the owner chats with their own AI, whose tool client calls MCP to read or explicitly update records. Those AI roles can use different providers. MCP exposes tools; it is not itself an LLM.
+**There are two AI roles.** The app calls its configured model through the backend for food drafts. Separately, the owner chats with their own AI, whose tool client calls MCP to read or explicitly update records. Those AI roles can use different providers. MCP exposes tools; it is not itself an LLM.
 
-**Saving is explicit.** Model responses do not write to the database. Food requires review/save; reminder jokes cannot change factual sentences, schedules or records; and external edits use authorized revision-checked commands. The provider credential remains on the local computer; the phone and external AI use separate app/agent credentials. The public tunnel provides reachability and HTTPS, while backend authentication still controls access.
+**Saving is explicit.** Model responses do not write to the database. Food requires review/save; and external edits use authorized revision-checked commands. The provider credential remains on the local computer; the phone and external AI use separate app/agent credentials. The public tunnel provides reachability and HTTPS, while backend authentication still controls access.
 
 Logical flow:
 
@@ -316,7 +316,7 @@ The personal reference deployment deliberately grants its owner-controlled agent
 
 Apply body-size bounds before parsing on **both** phone and agent transports. Apply the same canonical command bound in shared domain validation, not just one HTTP route. Reference allowances: 256 KiB commands; 1 MiB agent payloads; 4 MiB bounded tracker uploads; approximately 40 KB food-interpretation request. Limits are implementation policy, adjustable after measured needs; no route may bypass them.
 
-Within each account, share inference allowances across its clients: reference baseline is two concurrent calls, 60 starts per rolling minute, 120 food calls per rolling hour and 12 reminder-copy calls per local calendar day. Persist reservations so restarting does not reset the counters. Failures/cancellations that reach the provider count because billing may already occur. Reject invalid input before reserving. Never store prompt text in usage counters. These request limits plus input/output caps are per-account controls. Across accounts, keep one token budget per billing month for the whole installation: reserve an estimate before each call, replace it with the provider's reported usage afterwards, keep the estimate when a failure reports none, and serialize reservations so concurrent accounts cannot both take the last of it. Record only counts. Deleting an account must not refund what it spent. Cap each account's share of that budget per month as well, checked in the same serialized reservation, so one heavy user cannot exhaust everyone's; size it from observed use with room to spare. When either is spent, refuse calls with a distinct error the app can explain (the installation's budget versus the user's own allowance), and do not let a refused call use up the account's hourly allowance. Also configure provider-side spending controls where available. Use no automatic paid retries and finite time/output limits.
+Within each account, share inference allowances across its clients: reference baseline is two concurrent calls, 60 starts per rolling minute, 120 food calls per rolling hour (a few meals an hour with room to spare) Persist reservations so restarting does not reset the counters. Failures/cancellations that reach the provider count because billing may already occur. Reject invalid input before reserving. Never store prompt text in usage counters. These request limits plus input/output caps are per-account controls. Across accounts, keep one token budget per billing month for the whole installation: reserve an estimate before each call, replace it with the provider's reported usage afterwards, keep the estimate when a failure reports none, and serialize reservations so concurrent accounts cannot both take the last of it. Record only counts. Deleting an account must not refund what it spent. Cap each account's share of that budget per month as well, checked in the same serialized reservation, so one heavy user cannot exhaust everyone's; size it from observed use with room to spare. When either is spent, refuse calls with a distinct error the app can explain (the installation's budget versus the user's own allowance), and do not let a refused call use up the account's hourly allowance. Also configure provider-side spending controls where available. Use no automatic paid retries and finite time/output limits.
 
 ## 9. Animal companion
 
@@ -366,7 +366,7 @@ Recommended implementation sequence:
 4. **Shared service:** implement canonical commands, auth, revisions, idempotency, tombstones, incremental sync and durable outbox. Add pre-parser limits and usage allowances before exposing inference.
 5. **Everyday flows:** build Today, Week, food/manual review/save, weight, recovery and reminders. No synthetic data may appear as the owner's recorded history.
 6. **Tracker slice:** prove one real permitted source import on the target device; implement correction/deletion windows, explicit matching, HR analytics and source-owned publication. Verify against source observations and known synthetic curves.
-7. **AI last:** food proposals first, then constrained optional reminder jokes and external agent tools. Test prompt-injection-shaped input as data and retain explicit save boundaries.
+7. **AI last:** food proposals first, then external agent tools. Test prompt-injection-shaped input as data and retain explicit save boundaries.
 8. **Mascot and polish:** integrate character poses, deterministic mood rules, reduced motion, icon and accessible status handling.
 9. **Deploy and validate:** establish public authenticated access from outside the home network, verify backup/restore and client enrollment, install without data loss, then document handoff and known gaps.
 
@@ -408,7 +408,7 @@ Below the next activity, show a next-meal card with the planned meal name, 12-ho
 
 ### Reminder copy implementation
 
-Deterministic code builds factual conversational sentences and owns eligibility/timing. A low-cost model selects an optional joke from an approved context-specific catalog; unsupported skip jokes cannot be selected. This is constrained variation, not free-form model-written factual prose. Cache against the complete context and copy version; never make a network/model call during notification delivery. The backend bounds requests and daily spending; device failures back off and use factual template copy.
+Deterministic code builds factual conversational sentences and owns eligibility/timing. At delivery the app picks a random joke line from the catalog for that reminder kind, skipping the last dozen lines used and falling back to the least recently used when every line is recent. The skip line is offered only when the facts already cite an explicit logged skip. No network or model call is involved.
 
 ### Activity date heading and meal water prompts
 
@@ -666,7 +666,7 @@ SQLAlchemy owns model definitions and database transactions. Account-scoped writ
 
 For a personal SQLite migration, stop the old writer, retain its original files, and make a consistent standalone snapshot from a copy. Import into an empty destination account in one PostgreSQL transaction. Compare every source column and row, including tombstones, retry receipts, changes, tracker data, caches and usage. Preserve retired review rows as inaccessible history. Unknown source schema, live WAL or any mismatch aborts the import. Preserve the existing personal account identity when binding an enrolled phone; never clear its Room cache or pending writes. This importer handles the legacy single-account schema; migrating an existing multi-account SQLite v2 database to PostgreSQL is not implemented.
 
-Back up the entire PostgreSQL database with pg_dump and test pg_restore into an isolated database. Retain the original SQLite, prior release and phone backup through live verification. Once new writes reach PostgreSQL, reverting to the old SQLite snapshot would lose those writes; preserve the current database before recovery. Automatic scheduled PostgreSQL backups and versioned DDL migrations are not implemented; schema creation currently uses SQLAlchemy metadata.
+Back up the entire PostgreSQL database with pg_dump and test pg_restore into an isolated database. Retain the original SQLite, prior release and phone backup through live verification. Once new writes reach PostgreSQL, reverting to the old SQLite snapshot would lose those writes; preserve the current database before recovery. PostgreSQL schema changes use reviewed, versioned migrations. Empty databases initialize at the current revision; existing unversioned or behind databases refuse startup until an operator backs up and runs the migration command. Adoption verifies baseline tables, columns, types, keys, indexes and check constraints; adoption and upgrades commit together under one transaction-scoped migration lock. Unknown newer revisions refuse startup unless an operator explicitly allows a reviewed compatible rollback. SQLite retains its separate local/legacy upgrade path. Restore-verified backup tooling and a daily scheduler template are provided; installing the schedule and choosing off-host storage remain deployment steps, not effects of starting the app.
 
 Acceptance includes real PostgreSQL API/MCP account isolation, concurrent writes and rollback, original-source row hashes, next-cursor continuity, restored backups, container restart with retained data, and the actual HTTPS hostname's login, OAuth, API, MCP and enrolled phone paths. Verify Today, Week, Food, offline outbox retention and food interpretation/cache without inventing consumption.
 
@@ -680,3 +680,12 @@ Compare imported scale payloads structurally, ignoring object-key order, whitesp
 Food item estimates allow 60 provider starts per rolling minute and 120 food calls per rolling hour, with two concurrent calls. A comma-separated request can use up to 30 item calls; an exact cache hit uses none. API and MCP share the authenticated account's counters, successful sibling estimates survive a failed request, and interpretation never saves consumption.
 
 Acceptance: visible refresh bypasses a queued retry, retries after a network failure, and stops on leaving the screen; incoming MCP food appears without reopening; two scale refreshes after accepted sync leave revisions and the outbox unchanged; true scale corrections still publish; a cold 30-item request after six recent item calls completes, a repeat uses the cache, and account isolation and explicit final-save semantics remain.
+
+
+## Backend operation and recovery — November 19, 2026
+
+Synchronous account, API and tool operations run on bounded workers so database work and password derivation do not block the request loop. Password derivation has separate bounded capacity; model calls are capped per account and across the service process. Capacity refusal returns an actionable retry error and saves no draft consumption. Ordinary offline logging and durable retry remain available. The health endpoint reports database availability without account detail. Request IDs correlate method/path/status/timing logs; request bodies, query strings and credentials are excluded from normal request fields.
+
+Backups include accounts, authorization and all account-owned records. Verify each dump by restoring into a disposable isolated database, record a checksum, schema revision and restored table counts, and only then apply retention. Keep the newest backup per retained day/week/month. Failure must retain earlier verified backups and clean up the restore target, including startup failure. Restore into a separate database; verify identity, revisions, API/tool/site and phone sync before retiring the prior database. Code publication alone does not deploy migrations, activate a backup schedule or update a phone.
+
+Acceptance: empty initialization; exact-baseline adoption preserving rows; refusal of schema drift or unknown revisions; simultaneous migrations serialize; failed upgrade rolls back adoption and DDL together; model/schema parity; dump/restore and retention; failed restore startup cleanup; account-isolated API/tool reads and writes after migration. No user-interface or accessibility controls change in this operational work.

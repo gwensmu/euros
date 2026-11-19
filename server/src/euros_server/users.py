@@ -41,6 +41,10 @@ class UserStore:
 
     def __init__(self, database, iterations=ITERATIONS):
         self.database, self.iterations = database, iterations
+        # Verified against when the username is unknown, so that check costs exactly one
+        # derivation like a wrong password does. Hashing a fresh one per attempt would cost two
+        # and tell an attacker by timing which usernames exist.
+        self._unknown = hash_password('unknown-account', iterations)
 
     @staticmethod
     def account(row):
@@ -98,7 +102,7 @@ class UserStore:
             row = db.execute(select(users).where(users.c.username == name)).mappings().first()
         if failures >= MAX_FAILURES:
             raise DomainError('too_many_attempts', 429)
-        stored = row['password_hash'] if row else hash_password('unknown-account', self.iterations)
+        stored = row['password_hash'] if row else self._unknown
         if not verify_password(stored, password) or (row and row['disabled']):
             with self.database.transaction(write=True) as db:
                 db.execute(insert(login_failures).values(username=name, at=time.time()))

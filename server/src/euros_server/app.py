@@ -18,6 +18,7 @@ from mcp.server.fastmcp import FastMCP
 from mcp.server.transport_security import TransportSecuritySettings
 from mcp.types import ToolAnnotations, CallToolResult, TextContent
 from starlette.applications import Starlette
+from starlette.concurrency import run_in_threadpool
 from starlette.middleware.trustedhost import TrustedHostMiddleware
 from starlette.responses import JSONResponse, RedirectResponse
 from starlette.routing import Mount, Route
@@ -29,12 +30,15 @@ from .oauth import OAuthServer
 from .plan import PlanSettings, generate_sessions
 from .security import DEFAULT_ACCOUNT_MONTHLY_TOKENS, DEFAULT_MONTHLY_TOKENS, BodyLimit, TokenBudget
 from .browser import BrowserSessions
+from .observability import RequestLog, configure_logging
 from .web import AccountSite
 from .workspace import FixedWorkspace, Workspaces
 
 OWNER = 'usr-' + '0' * 32
 PUBLIC_PREFIXES = ('/oauth/', '/account', '/.well-known/')
 READ_SCOPE, WRITE_SCOPE = 'training.read', 'training.write'
+# Liveness for the container healthcheck: reports only whether the database answers.
+HEALTH_PATH = '/healthz'
 
 
 def load_token(name):
@@ -79,7 +83,7 @@ class AuthGate:
         return self.accounts is not None and (path == "/" or path.startswith(PUBLIC_PREFIXES))
 
     async def __call__(self, scope, receive, send):
-        if scope["type"] != "http" or self._public(scope["path"]):
+        if scope["type"] != "http" or scope["path"] == HEALTH_PATH or self._public(scope["path"]):
             return await self.app(scope, receive, send)
         headers = scope.get("headers", [])
         origins = [v for k, v in headers if k == b"origin"]
@@ -89,7 +93,11 @@ class AuthGate:
         parts = auths[0].split(b" ", 1) if len(auths) == 1 else []
         token = parts[1] if len(parts) == 2 and parts[0].lower() == b"bearer" else b""
         surface = "api" if scope["path"].startswith("/v1/") else "mcp"
-        principal = (self._static_principal(surface, token) or self._oauth_principal(token)) if token else None
+        principal = None
+        if token:
+            # A static token is checked in memory; an OAuth token needs the database.
+            principal = (self._static_principal(surface, token)
+                         or await run_in_threadpool(self._oauth_principal, token))
         if principal is None:
             return await self._challenge(scope, receive, send, "unauthorized", 401)
         needed = WRITE_SCOPE if surface == "api" and scope["method"] not in ("GET", "HEAD") else READ_SCOPE
@@ -110,6 +118,22 @@ class AuthGate:
             challenge += f', resource_metadata="{base}/.well-known/oauth-protected-resource"'
         await JSONResponse({"error": error}, status,
                            headers={"WWW-Authenticate": challenge, "Cache-Control": "no-store"})(scope, receive, send)
+
+
+def request_threads():
+    """Size the worker threads that run handlers to the connections they may hold.
+
+    Every handler's database work runs on AnyIO's default thread pool, one connection per
+    thread at a time. Password derivation has its own threads (credentials.password_work), and
+    their connections are kept out of this count, so a request thread never waits on the pool
+    for a connection another thread is holding. Called inside the running event loop.
+    """
+    import anyio.to_thread
+    from .credentials import CONCURRENT_DERIVATIONS
+    from .database import connection_capacity
+    threads = max(1, connection_capacity() - CONCURRENT_DERIVATIONS)
+    anyio.to_thread.current_default_thread_limiter().total_tokens = threads
+    return threads
 
 
 def _build(workspaces, accounts, public_hosts=(), static=None, issuer=None, allow_signup=False):
@@ -143,9 +167,11 @@ def _build(workspaces, accounts, public_hosts=(), static=None, issuer=None, allo
 
     # --- MCP tools ----------------------------------------------------------------------
 
-    def tool_result(call):
+    async def tool_result(call):
+        """Run a tool's synchronous domain work on a request thread. AnyIO copies the MCP
+        request context into the thread, so mcp_workspace() still finds the caller."""
         try:
-            result = call()
+            result = await run_in_threadpool(call)
             return CallToolResult(content=[TextContent(type="text", text=json.dumps(result))], structuredContent=result)
         except DomainError as exc:
             result = {**exc.body, "status": exc.status}
@@ -160,29 +186,29 @@ def _build(workspaces, accounts, public_hosts=(), static=None, issuer=None, allo
             return CallToolResult(isError=True, content=[TextContent(type="text", text=json.dumps(result))], structuredContent=result)
 
     @mcp.tool(annotations=read)
-    def meal_planning_context() -> CallToolResult:
+    async def meal_planning_context() -> CallToolResult:
         """Read nutrition policy, meal templates, provenance and safe planning workflow first."""
         from .meal_planning import context
-        return tool_result(lambda: context(mcp_workspace().catalog))
+        return await tool_result(lambda: context(mcp_workspace().catalog))
 
     @mcp.tool(annotations=read)
-    def preview_meal_plan(payload: dict) -> CallToolResult:
+    async def preview_meal_plan(payload: dict) -> CallToolResult:
         """Validate a dated meal proposal and calculate known planned totals; never save."""
         from .meal_planning import preview
-        return tool_result(lambda: preview(payload))
+        return await tool_result(lambda: preview(payload))
 
     @mcp.tool(annotations=read)
-    def read_training_plan() -> CallToolResult:
+    async def read_training_plan() -> CallToolResult:
         """Read this account's training plan: competition, calorie goals, meals and weekly workouts.
 
         These are the user's own settings, changed by them on the account site, not records.
         Meal drafting and daily targets already follow them; read them to explain or plan around
         the user's schedule rather than assuming the defaults.
         """
-        return tool_result(lambda: mcp_workspace().plans.read())
+        return await tool_result(lambda: mcp_workspace().plans.read())
 
     @mcp.tool(annotations=ToolAnnotations(readOnlyHint=True, destructiveHint=False, idempotentHint=False, openWorldHint=False))
-    def draft_week(week_start: str, dates: list[str] | None = None, swaps: list[dict] | None = None,
+    async def draft_week(week_start: str, dates: list[str] | None = None, swaps: list[dict] | None = None,
                    avoid_foods: list[str] | None = None) -> CallToolResult:
         """Draft a Mon–Sun meal week balanced to each day's nutrition targets; saves nothing.
 
@@ -192,19 +218,19 @@ def _build(workspaces, accounts, public_hosts=(), static=None, issuer=None, allo
         for "no eggs this week". Valid meal_ids, templates and food_ids are in meal_planning_context.
         Show the user the returned week, redraft for changes, then apply_week(draft_id) once accepted.
         """
-        return tool_result(lambda: mcp_workspace().meal_weeks.draft(week_start, dates, swaps, avoid_foods))
+        return await tool_result(lambda: mcp_workspace().meal_weeks.draft(week_start, dates, swaps, avoid_foods))
 
     @mcp.tool(annotations=ToolAnnotations(readOnlyHint=False, destructiveHint=True, idempotentHint=True, openWorldHint=False))
-    def apply_week(draft_id: str) -> CallToolResult:
+    async def apply_week(draft_id: str) -> CallToolResult:
         """Save an accepted draft_week: all meal plans and prep activities atomically, or nothing.
 
         Call only after the user accepts the draft. If anything changed since drafting it
         returns draft_stale and saves nothing; draft again. Never logs food.
         """
-        return tool_result(lambda: mcp_workspace(write=True).meal_weeks.apply(draft_id))
+        return await tool_result(lambda: mcp_workspace(write=True).meal_weeks.apply(draft_id))
 
     @mcp.tool(annotations=read)
-    def grocery_list(week_start: str) -> CallToolResult:
+    async def grocery_list(week_start: str) -> CallToolResult:
         """Aggregate the saved Mon–Sun meal plans into a purchase-form grocery list; buys and saves nothing.
 
         week_start is a Monday (YYYY-MM-DD). Only applied plans count — draft first, apply_week,
@@ -220,12 +246,12 @@ def _build(workspaces, accounts, public_hosts=(), static=None, issuer=None, allo
         tell the user to strike items they already have.
         """
         from .grocery import grocery_list as build
-        return tool_result(lambda: build(mcp_workspace().store, mcp_workspace().catalog, week_start))
+        return await tool_result(lambda: build(mcp_workspace().store, mcp_workspace().catalog, week_start))
 
     catalog_write = ToolAnnotations(readOnlyHint=False, destructiveHint=False, idempotentHint=True, openWorldHint=False)
 
     @mcp.tool(annotations=catalog_write)
-    def upsert_food(food_id: str, food: dict, expected_revision: int) -> CallToolResult:
+    async def upsert_food(food_id: str, food: dict, expected_revision: int) -> CallToolResult:
         """Add or edit a planning food; expected_revision is 0 for new, else the revision from meal_planning_context.
 
         food: name, per100g {kcal, proteinG, carbohydrateG, fatG}, role (protein/carb/fat/fixed),
@@ -238,63 +264,63 @@ def _build(workspaces, accounts, public_hosts=(), static=None, issuer=None, allo
         shelf-stable pantry item that grocery lists only flag to check stock. Set active false to stop drafting it; true to switch it back on.
         Prefer label values when the user has them and name the label in source. Saved plans keep their snapshots.
         """
-        return tool_result(lambda: mcp_workspace(write=True).catalog.upsert('food', food_id, food, expected_revision))
+        return await tool_result(lambda: mcp_workspace(write=True).catalog.upsert('food', food_id, food, expected_revision))
 
     @mcp.tool(annotations=catalog_write)
-    def upsert_template(template_id: str, template: dict, expected_revision: int) -> CallToolResult:
+    async def upsert_template(template_id: str, template: dict, expected_revision: int) -> CallToolResult:
         """Add or edit a meal template; expected_revision is 0 for new, else the revision from meal_planning_context.
 
         template: title, slots (breakfast/lunch/dinner/recovery-snack/pre-training), items
         [{food_id, grams, min_g?, max_g?}], optional batch (covered by prep), use_up (swap only,
         never rotated or replenished), active. Grams are starting amounts that daily balancing scales.
         """
-        return tool_result(lambda: mcp_workspace(write=True).catalog.upsert('template', template_id, template, expected_revision))
+        return await tool_result(lambda: mcp_workspace(write=True).catalog.upsert('template', template_id, template, expected_revision))
 
     @mcp.tool(annotations=read)
-    def read_records(entity_type: str | None = None) -> CallToolResult:
+    async def read_records(entity_type: str | None = None) -> CallToolResult:
         """Read saved activities, food_entries, weight_entries or meal_plans; no inferred completions."""
-        return tool_result(lambda: mcp_workspace().store.records(entity_type))
+        return await tool_result(lambda: mcp_workspace().store.records(entity_type))
 
     @mcp.tool(annotations=read)
-    def read_changes(after: int = 0, limit: int = 100) -> CallToolResult:
+    async def read_changes(after: int = 0, limit: int = 100) -> CallToolResult:
         """Read revision history and tombstones after an exclusive cursor."""
-        return tool_result(lambda: mcp_workspace().store.changes(after, limit))
+        return await tool_result(lambda: mcp_workspace().store.changes(after, limit))
 
     @mcp.tool(annotations=read)
-    def nutrition_totals(local_date: str) -> CallToolResult:
+    async def nutrition_totals(local_date: str) -> CallToolResult:
         """Known daily nutrient subtotal and missing-value counts; not an intake target."""
-        return tool_result(lambda: _nutrition(mcp_workspace(), local_date))
+        return await tool_result(lambda: _nutrition(mcp_workspace(), local_date))
 
     @mcp.tool(annotations=read)
-    def read_meal_plan(local_date: str) -> CallToolResult:
+    async def read_meal_plan(local_date: str) -> CallToolResult:
         """Read the saved dated meal plan and targets, or null when none is saved.
 
         To edit, pass its full payload and current revision to apply_command with
         entity_type meal_plans and entity_id meal-plan-YYYY-MM-DD. Never log consumption.
         """
-        return tool_result(lambda: mcp_workspace().store.meal_plan(local_date))
+        return await tool_result(lambda: mcp_workspace().store.meal_plan(local_date))
 
     @mcp.tool(annotations=read)
-    def read_meal_plans(date_from: str, date_to: str) -> CallToolResult:
+    async def read_meal_plans(date_from: str, date_to: str) -> CallToolResult:
         """Read saved meal plans in an inclusive date range (at most 31 days).
 
         Missing/deleted dates are omitted, not filled from a repeating template.
         Update individual records with apply_command and their accepted revisions.
         """
-        return tool_result(lambda: mcp_workspace().store.meal_plans(date_from, date_to))
+        return await tool_result(lambda: mcp_workspace().store.meal_plans(date_from, date_to))
 
     @mcp.tool(annotations=read)
-    def list_tracker_workouts(date_from: str, date_to: str) -> CallToolResult:
+    async def list_tracker_workouts(date_from: str, date_to: str) -> CallToolResult:
         """Read source-owned Polar workout summaries and tombstones by Chicago start date.
 
         Compare recorded durations, HR statistics and coverage across sessions. Imported
         workouts never imply planned completion. Missing HR is unknown, not rest or zero.
         No cortisol, CNS readiness or recovery diagnosis can be inferred from this data.
         """
-        return tool_result(lambda: mcp_workspace().trackers.list(date_from, date_to))
+        return await tool_result(lambda: mcp_workspace().trackers.list(date_from, date_to))
 
     @mcp.tool(annotations=read)
-    def read_tracker_workout(source_key: str, zone_boundaries_bpm: list[int] | None = None) -> CallToolResult:
+    async def read_tracker_workout(source_key: str, zone_boundaries_bpm: list[int] | None = None) -> CallToolResult:
         """Read a Polar workout's HR curve, provenance, coverage and fixed time windows.
 
         The curve preserves bucket extrema with at most 600 points; summary metrics use
@@ -304,10 +330,10 @@ def _build(workspaces, accounts, public_hosts=(), static=None, issuer=None, allo
         Optional custom time bands remain separate. Do not infer max HR from observed peak.
         Training benefit is unavailable. No cortisol/CNS/readiness claims.
         """
-        return tool_result(lambda: mcp_workspace().trackers.read(source_key, zone_boundaries_bpm))
+        return await tool_result(lambda: mcp_workspace().trackers.read(source_key, zone_boundaries_bpm))
 
     @mcp.tool(annotations=ToolAnnotations(readOnlyHint=False, destructiveHint=True, idempotentHint=True, openWorldHint=False))
-    def apply_command(command: dict) -> CallToolResult:
+    async def apply_command(command: dict) -> CallToolResult:
         """Explicitly save/correct/delete a record using the same revision-checked app command.
 
         Requires command_id, entity_type, entity_id, expected_revision, operation (upsert/delete), payload.
@@ -315,7 +341,7 @@ def _build(workspaces, accounts, public_hosts=(), static=None, issuer=None, allo
         Use interpret_food for an editable model proposal, then explicitly save food_entries
         only when the user wants to log consumption. Preserve prior payload fields on correction.
         """
-        return tool_result(lambda: mcp_workspace(write=True).store.command(command))
+        return await tool_result(lambda: mcp_workspace(write=True).store.command(command))
 
     proposal = ToolAnnotations(readOnlyHint=True, destructiveHint=False,
                                idempotentHint=False, openWorldHint=True)
@@ -323,7 +349,8 @@ def _build(workspaces, accounts, public_hosts=(), static=None, issuer=None, allo
     @mcp.tool(name="interpret_food", annotations=proposal)
     async def interpret_food_tool(text: str) -> CallToolResult:
         """Reuse exact comma-separated food estimates; send only uncached items to the model. Returns an editable draft, never logs consumption."""
-        return await model_result(mcp_workspace().food_cache.food({"text": text}))
+        space = await run_in_threadpool(mcp_workspace)
+        return await model_result(space.food_cache.food({"text": text}))
 
 
     async def _oversized_model_request():
@@ -345,27 +372,30 @@ def _build(workspaces, accounts, public_hosts=(), static=None, issuer=None, allo
         except (ValueError, UnicodeDecodeError, RecursionError):
             raise DomainError("invalid_json", 400) from None
 
+    # Handlers without a body are plain functions: Starlette runs them on a request thread.
+    # Handlers with a body read it on the event loop, then hand the domain work to a thread.
+    # The account check comes before the body, as it always has.
+
     async def command(request):
-        return JSONResponse(workspace(request, write=True).store.command(await read_json(request)))
+        space = await run_in_threadpool(workspace, request, True)
+        body = await read_json(request)
+        return JSONResponse(await run_in_threadpool(space.store.command, body))
 
     async def tracker_import(request):
-        return JSONResponse(workspace(request, write=True).trackers.ingest(await read_json(request, 4194304)))
+        space = await run_in_threadpool(workspace, request, True)
+        body = await read_json(request, 4194304)
+        return JSONResponse(await run_in_threadpool(space.trackers.ingest, body))
 
-    async def tracker_workouts(request):
+    def tracker_workouts(request):
         return JSONResponse(workspace(request).trackers.list(request.query_params.get("date_from"),
                                                              request.query_params.get("date_to")))
 
-    async def reminder_copy(request):
-        return JSONResponse(await workspace(request).reminder_copy.copy(await read_json(request, 16384)))
-
     async def interpret_food(request):
-        return JSONResponse(await workspace(request).food_cache.food(await read_json(request, 40000)))
+        # The model call is awaited on the loop; its cache and allowance steps use threads.
+        space = await run_in_threadpool(workspace, request)
+        return JSONResponse(await space.food_cache.food(await read_json(request, 40000)))
 
-
-
-
-
-    async def changes(request):
+    def changes(request):
         try:
             after = int(request.query_params.get("after", 0))
             limit = int(request.query_params.get("limit", 100))
@@ -373,19 +403,19 @@ def _build(workspaces, accounts, public_hosts=(), static=None, issuer=None, allo
             raise DomainError("invalid_pagination")
         return JSONResponse(workspace(request).store.changes(after, limit))
 
-    async def records(request):
+    def records(request):
         return JSONResponse(workspace(request).store.records(request.query_params.get("entity_type")))
 
-    async def nutrition(request):
+    def nutrition(request):
         return JSONResponse(_nutrition(workspace(request), request.query_params.get("local_date")))
 
-    async def read_account(request):
+    def read_account(request):
         principal = principal_of(request)
         if accounts is not None and accounts.users.active(principal['user_id']) is None:
             raise DomainError('unauthorized', 401)
         return JSONResponse({'user_id': principal['user_id']})
 
-    async def read_plan(request):
+    def read_plan(request):
         space = workspace(request)
         found = principal_of(request)
         account = accounts.users.read(found["user_id"]) if accounts else None
@@ -395,34 +425,52 @@ def _build(workspaces, accounts, public_hosts=(), static=None, issuer=None, allo
                                          "display_name": account["display_name"] if account else None}})
 
     async def write_plan(request):
+        space = await run_in_threadpool(workspace, request, True)
         body = await read_json(request, 262144)
         if not isinstance(body, dict) or set(body) != {"plan", "expected_revision"}:
             raise DomainError("invalid_training_plan_request", 422, fields=["plan", "expected_revision"])
-        return JSONResponse(workspace(request, write=True).plans.write(body["plan"], body["expected_revision"]))
+        return JSONResponse(await run_in_threadpool(space.plans.write, body["plan"], body["expected_revision"]))
 
     async def plan_sessions(request):
+        space = await run_in_threadpool(workspace, request, True)
         body = await read_json(request, 16384)
         if not isinstance(body, dict) or set(body) != {"date_from", "date_to"}:
             raise DomainError("invalid_plan_date_range", 422, fields=["date_from", "date_to"])
-        space = workspace(request, write=True)
-        return JSONResponse(generate_sessions(space.store, space.plan(), body["date_from"], body["date_to"]))
+        return JSONResponse(await run_in_threadpool(
+            lambda: generate_sessions(space.store, space.plan(), body["date_from"], body["date_to"])))
+
+    def database_answers():
+        from sqlalchemy import text
+        from .database import transaction
+        try:
+            with transaction(workspaces.budget.path) as db:
+                db.execute(text("SELECT 1"))
+            return True
+        except Exception:
+            return False
+
+    def health(request):
+        # No account, version or error detail: this path is reachable without credentials.
+        ok = database_answers()
+        return JSONResponse({"status": "ok" if ok else "unavailable"}, 200 if ok else 503,
+                            headers={"Cache-Control": "no-store"})
 
     async def domain_error(request, exc):
         return JSONResponse(exc.body, exc.status)
 
     @asynccontextmanager
     async def lifespan(app):
+        request_threads()
         async with mcp.session_manager.run():
             yield
 
-    routes = [Route("/v1/account", read_account), Route("/v1/commands", command, methods=["POST"]),
+    routes = [Route(HEALTH_PATH, health), Route("/v1/account", read_account), Route("/v1/commands", command, methods=["POST"]),
               Route("/v1/changes", changes), Route("/v1/records", records),
               Route("/v1/plan", read_plan), Route("/v1/plan", write_plan, methods=["PUT"]),
               Route("/v1/plan/sessions", plan_sessions, methods=["POST"]),
               Route("/v1/tracker/import", tracker_import, methods=["POST"]),
               Route("/v1/tracker/workouts", tracker_workouts),
               Route("/v1/interpret/food", interpret_food, methods=["POST"]),
-              Route("/v1/reminders/copy", reminder_copy, methods=["POST"]),
               Route("/v1/nutrition", nutrition)]
     if accounts is not None:
         sessions = BrowserSessions(accounts, issuer)
@@ -432,7 +480,8 @@ def _build(workspaces, accounts, public_hosts=(), static=None, issuer=None, allo
     app = Starlette(routes=[*routes, Mount("/", mcp.streamable_http_app())],
                     lifespan=lifespan, exception_handlers={DomainError: domain_error})
     app.state.mcp = mcp
-    return TrustedHostMiddleware(AuthGate(BodyLimit(app), accounts, static, origins, issuer), allowed_hosts=hosts)
+    return RequestLog(TrustedHostMiddleware(AuthGate(BodyLimit(app), accounts, static, origins, issuer),
+                                            allowed_hosts=hosts))
 
 
 def create_app(store, api_token, mcp_token, public_hosts=(), model_service=None,
@@ -551,6 +600,10 @@ def _accounts(data_dir):
 
 def main():
     parser = argparse.ArgumentParser(description="Euros backend: serve, or administer accounts.")
+    parser.add_argument("--migrate", action="store_true",
+                        help="Apply pending PostgreSQL schema migrations and exit; back up first")
+    parser.add_argument("--migration-status", action="store_true",
+                        help="Show the PostgreSQL schema revision and pending migrations, then exit")
     parser.add_argument("--consolidate-databases", action="store_true", help="With the service stopped, copy accounts.db and per-user databases into one euros.db")
     parser.add_argument("--import-plan", help="Explicitly import an authored JSON array of activity commands, then exit")
     parser.add_argument("--create-account", metavar="USERNAME", help="Create an account and exit")
@@ -586,6 +639,14 @@ def main():
             raise ValueError('--consolidate-databases is only for the legacy SQLite directory layout')
         from .storage_migration import consolidate
         print(json.dumps(consolidate(data_dir), indent=2))
+        return
+    if args.migrate or args.migration_status:
+        from .database import is_postgres
+        if not is_postgres(data_dir):
+            raise ValueError("Versioned migrations are for PostgreSQL; SQLite upgrades itself on startup")
+        from . import migrations
+        result = migrations.upgrade(data_dir) if args.migrate else migrations.status(data_dir)
+        print(json.dumps(result, indent=2))
         return
     accounts = _accounts(data_dir)
     monthly_tokens = _monthly_tokens(args.model_token_budget, "EUROS_MODEL_TOKEN_BUDGET", DEFAULT_MONTHLY_TOKENS)
@@ -653,6 +714,7 @@ def main():
         if static_tokens["api"] == static_tokens["mcp"]:
             raise ValueError("Separate app and MCP tokens are required")
     import uvicorn
+    configure_logging()
     app = create_service(data_dir, args.public_host, static_tokens=static_tokens,
                          static_username=static_username, issuer=args.public_url,
                          allow_signup=args.allow_signup, monthly_tokens=monthly_tokens,

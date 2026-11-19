@@ -53,7 +53,11 @@ class BrowserSessions:
         return base_url(request, self.issuer).startswith('https://')
 
     def current(self, request):
-        return self.accounts.sessions.read(request.cookies.get(SESSION_COOKIE, ''))
+        session = self.accounts.sessions.read(request.cookies.get(SESSION_COOKIE, ''))
+        if session:
+            # For the request log only: which account this page or form belonged to.
+            request.scope['euros_session_user'] = session['user']['user_id']
+        return session
 
     def csrf(self, request):
         session = self.current(request)
